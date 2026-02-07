@@ -1,0 +1,18 @@
+<tr th:fragment="row"
+    th:id="${'row-' + row.responseId}"
+    th:attr="data-edit-row=${row.name}">
+    <th scope="row" class="votes-table__name" th:text="${row.name}">Name</th>
+    <td th:each="cell : ${row.cells}" class="votes-table__cell">
+        <span class="votes-table__marker" th:text="${cell.symbol}">✓</span>
+    </td>
+    <td class="votes-table__edit">
+        <button type="button"
+                class="icon-button"
+                th:attr="aria-label=${'Zeile bearbeiten: ' + row.name},
+                         hx-get=@{/poll/{pollId}/responses/{responseId}/edit(pollId=${pollId},responseId=${row.responseId})}"
+                hx-target="closest tr"
+                hx-swap="outerHTML">
+            ✎
+        </button>
+    </td>
+</tr>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="/poll/{id}" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-02-07T16:40:09.138Z" hostname="bodos-16z" time="0.028">
+  <properties/>
+  <testcase name="renders participant view" classname="io.github.bodote.woodle.PollViewControllerTest" time="0.005"/>
+  <testcase name="renders admin sections with options editor before share links" classname="io.github.bodote.woodle.PollViewControllerTest" time="0.008"/>
+  <testcase name="renders admin view" classname="io.github.bodote.woodle.PollViewControllerTest" time="0.008"/>
+  <testcase name="renders admin delete with start time for intraday options" classname="io.github.bodote.woodle.PollViewControllerTest" time="0.007"/>
+  <system-out><![CDATA[2026-02-07T17:40:09.132+01:00  INFO 59749 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [io.github.bodote.woodle.PollViewControllerTest]: PollViewControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-02-07T17:40:09.136+01:00  INFO 59749 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration io.github.bodote.woodle.WoodleApplication for test class io.github.bodote.woodle.PollViewControllerTest
+2026-02-07T17:40:09.147+01:00  WARN 59749 --- [    Test worker] actStandardFragmentInsertionTagProcessor : [THYMELEAF][Test worker][poll/view] Deprecated unwrapped fragment expression "poll/options-list :: optionsList" found in template poll/view, line 99, col 14. Please use the complete syntax of fragment expressions instead ("~{poll/options-list :: optionsList}"). The old, unwrapped syntax for fragment expressions will be removed in future versions of Thymeleaf.
+2026-02-07T17:40:09.154+01:00  WARN 59749 --- [    Test worker] actStandardFragmentInsertionTagProcessor : [THYMELEAF][Test worker][poll/view] Deprecated unwrapped fragment expression "poll/options-list :: optionsList" found in template poll/view, line 99, col 14. Please use the complete syntax of fragment expressions instead ("~{poll/options-list :: optionsList}"). The old, unwrapped syntax for fragment expressions will be removed in future versions of Thymeleaf.
+2026-02-07T17:40:09.163+01:00  WARN 59749 --- [    Test worker] actStandardFragmentInsertionTagProcessor : [THYMELEAF][Test worker][poll/view] Deprecated unwrapped fragment expression "poll/options-list :: optionsList" found in template poll/view, line 99, col 14. Please use the complete syntax of fragment expressions instead ("~{poll/options-list :: optionsList}"). The old, unwrapped syntax for fragment expressions will be removed in future versions of Thymeleaf.
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

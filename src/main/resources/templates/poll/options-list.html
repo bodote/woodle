@@ -1,0 +1,20 @@
+<div id="options-list" th:fragment="optionsList">
+    <ul>
+        <li th:each="option : ${poll.options}">
+            <span th:if="${option.startTime != null}"
+                  th:text="${option.date + ' ' + option.startTime}">Datum</span>
+            <span th:if="${option.startTime == null}"
+                  th:text="${option.date}">Datum</span>
+            <form th:if="${adminView}"
+                  th:action="@{/poll/{pollId}-{adminSecret}/options/remove(pollId=${pollId},adminSecret=${adminSecret})}"
+                  th:attr="hx-post=@{/poll/{pollId}-{adminSecret}/options/remove(pollId=${pollId},adminSecret=${adminSecret})}"
+                  method="post"
+                  hx-target="#options-list"
+                  hx-swap="outerHTML">
+                <input type="hidden" name="date" th:value="${option.date}">
+                <input th:if="${option.startTime != null}" type="hidden" name="startTime" th:value="${option.startTime}">
+                <button type="submit">Termin löschen</button>
+            </form>
+        </li>
+    </ul>
+</div>

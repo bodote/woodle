@@ -1,0 +1,30 @@
+<tr th:fragment="row"
+    th:id="${'row-' + editRow.responseId}"
+    th:attr="data-edit-row=${editRow.name}">
+    <th scope="row" class="votes-table__name">
+        <span th:text="${editRow.name}">Name</span>
+        <form th:id="${'edit-form-' + editRow.responseId}"
+              th:action="@{/poll/{pollId}/vote(pollId=${pollId})}"
+              th:attr="hx-post=@{/poll/{pollId}/vote(pollId=${pollId})}"
+              hx-target="closest tr"
+              hx-swap="outerHTML"
+              method="post"></form>
+        <input type="hidden" name="participantName"
+               th:value="${editRow.name}"
+               th:attr="form=${'edit-form-' + editRow.responseId}">
+        <input type="hidden" name="responseId"
+               th:value="${editRow.responseId}"
+               th:attr="form=${'edit-form-' + editRow.responseId}">
+    </th>
+    <td th:each="cell : ${editRow.cells}" class="votes-table__cell">
+        <select th:name="${'vote_edit_' + cell.optionId}"
+                th:attr="form=${'edit-form-' + editRow.responseId}">
+            <option value="YES" th:selected="${cell.value == T(io.github.bodote.woodle.domain.model.PollVoteValue).YES}">Ja</option>
+            <option value="IF_NEEDED" th:selected="${cell.value == T(io.github.bodote.woodle.domain.model.PollVoteValue).IF_NEEDED}">Wenn nötig</option>
+            <option value="NO" th:selected="${cell.value == T(io.github.bodote.woodle.domain.model.PollVoteValue).NO}">Nein</option>
+        </select>
+    </td>
+    <td class="votes-table__edit">
+        <button type="submit" th:attr="form=${'edit-form-' + editRow.responseId}">Speichern</button>
+    </td>
+</tr>

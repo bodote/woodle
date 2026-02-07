@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="de"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PollDAO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">woodle</a> &gt; <a href="index.source.html" class="el_package">io.github.bodote.woodle.adapter.out.persistence</a> &gt; <span class="el_source">PollDAO.java</span></div><h1>PollDAO.java</h1><pre class="source lang-java linenums">package io.github.bodote.woodle.adapter.out.persistence;
+
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
+<span class="nc" id="L8">public record PollDAO(</span>
+        UUID pollId,
+        String type,
+        String title,
+        String descriptionHtml,
+        String language,
+        OffsetDateTime createdAt,
+        OffsetDateTime updatedAt,
+        Author author,
+        Access access,
+        Permissions permissions,
+        Notifications notifications,
+        ResultsVisibility resultsVisibility,
+        String status,
+        LocalDate expiresAt,
+        Options options,
+        List&lt;Response&gt; responses
+) {
+<span class="nc" id="L26">    public record Author(String name, String email) {</span>
+    }
+
+<span class="nc" id="L29">    public record Access(String customSlug, String passwordHash, boolean resultsPublic, String adminToken) {</span>
+    }
+
+<span class="nc" id="L32">    public record Permissions(String voteChangePolicy) {</span>
+    }
+
+<span class="nc" id="L35">    public record Notifications(boolean onVote, boolean onComment) {</span>
+    }
+
+<span class="nc" id="L38">    public record ResultsVisibility(boolean onlyAuthor) {</span>
+    }
+
+<span class="nc" id="L41">    public record Options(String eventType, Integer durationMinutes, List&lt;OptionItem&gt; items) {</span>
+    }
+
+<span class="nc" id="L44">    public record OptionItem(UUID optionId, LocalDate date, String startTime, String endTime) {</span>
+    }
+
+<span class="nc" id="L47">    public record Response(UUID responseId, String participantName, OffsetDateTime createdAt, List&lt;Vote&gt; votes,</span>
+                           String comment) {
+    }
+
+<span class="nc" id="L51">    public record Vote(UUID optionId, String value) {</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

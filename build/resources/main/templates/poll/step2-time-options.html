@@ -1,0 +1,8 @@
+<div id="time-options" th:fragment="timeOptions">
+    <div th:each="i : ${#numbers.sequence(1, timeCount)}">
+        <label th:for="${'start-time-' + i}" th:text="'Startzeit ' + i">Startzeit</label>
+        <input th:id="${'start-time-' + i}"
+               th:name="${'startTime' + i}"
+               type="time">
+    </div>
+</div>

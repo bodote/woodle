@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="poll wizard flow" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-02-07T16:40:09.344Z" hostname="bodos-16z" time="0.005">
+  <properties/>
+  <testcase name="step-2 submits and stores dates in session" classname="io.github.bodote.woodle.PollWizardFlowTest" time="0.003"/>
+  <testcase name="step-1 submits and stores basics in session" classname="io.github.bodote.woodle.PollWizardFlowTest" time="0.002"/>
+  <system-out><![CDATA[2026-02-07T17:40:09.339+01:00  INFO 59749 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [io.github.bodote.woodle.PollWizardFlowTest]: PollWizardFlowTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-02-07T17:40:09.342+01:00  INFO 59749 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration io.github.bodote.woodle.WoodleApplication for test class io.github.bodote.woodle.PollWizardFlowTest
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

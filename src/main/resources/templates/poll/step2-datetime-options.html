@@ -1,0 +1,17 @@
+<div id="date-options" th:fragment="dateTimeOptions">
+    <div th:each="i : ${#numbers.sequence(1, dateCount)}" class="stack">
+        <label th:for="${'date-option-' + i}" th:text="'Tag ' + i">Tag</label>
+        <div class="form-row">
+            <input th:id="${'date-option-' + i}"
+                   th:name="${'dateOption' + i}"
+                   type="date"
+                   placeholder="yyyy-mm-dd">
+        </div>
+        <div class="form-row">
+            <label th:for="${'start-time-' + i}" th:text="'Startzeit ' + i">Startzeit</label>
+            <input th:id="${'start-time-' + i}"
+                   th:name="${'startTime' + i}"
+                   type="time">
+        </div>
+    </div>
+</div>

@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="de"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PollViewController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">woodle</a> &gt; <a href="index.source.html" class="el_package">io.github.bodote.woodle.adapter.in.web</a> &gt; <span class="el_source">PollViewController.java</span></div><h1>PollViewController.java</h1><pre class="source lang-java linenums">package io.github.bodote.woodle.adapter.in.web;
+
+import io.github.bodote.woodle.application.port.in.ReadPollUseCase;
+import io.github.bodote.woodle.domain.model.Poll;
+import io.github.bodote.woodle.domain.model.PollOption;
+import io.github.bodote.woodle.domain.model.PollResponse;
+import io.github.bodote.woodle.domain.model.PollVote;
+import io.github.bodote.woodle.domain.model.PollVoteValue;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+@Controller
+public class PollViewController {
+
+    private final ReadPollUseCase readPollUseCase;
+
+<span class="fc" id="L33">    public PollViewController(ReadPollUseCase readPollUseCase) {</span>
+<span class="fc" id="L34">        this.readPollUseCase = readPollUseCase;</span>
+<span class="fc" id="L35">    }</span>
+
+    @GetMapping(&quot;/poll/{pollId:[0-9a-fA-F\\-]{36}}&quot;)
+    public String viewPoll(@PathVariable UUID pollId, Model model) {
+<span class="fc" id="L39">        Poll poll = readPollUseCase.getPublic(pollId);</span>
+<span class="fc" id="L40">        model.addAttribute(&quot;poll&quot;, poll);</span>
+<span class="fc" id="L41">        model.addAttribute(&quot;adminView&quot;, false);</span>
+<span class="fc" id="L42">        model.addAttribute(&quot;pollId&quot;, pollId);</span>
+<span class="fc" id="L43">        applyParticipantView(model, poll);</span>
+<span class="fc" id="L44">        return &quot;poll/view&quot;;</span>
+    }
+
+    @GetMapping(&quot;/poll/{pollId:[0-9a-fA-F\\-]{36}}-{adminSecret}&quot;)
+    public String viewPollAdmin(@PathVariable UUID pollId, @PathVariable String adminSecret, Model model) {
+<span class="fc" id="L49">        Poll poll = readPollUseCase.getAdmin(pollId, adminSecret);</span>
+<span class="fc" id="L50">        model.addAttribute(&quot;poll&quot;, poll);</span>
+<span class="fc" id="L51">        model.addAttribute(&quot;adminView&quot;, true);</span>
+<span class="fc" id="L52">        model.addAttribute(&quot;pollId&quot;, pollId);</span>
+<span class="fc" id="L53">        model.addAttribute(&quot;adminSecret&quot;, adminSecret);</span>
+<span class="fc" id="L54">        return &quot;poll/view&quot;;</span>
+    }
+
+    @GetMapping(&quot;/poll/{pollId:[0-9a-fA-F\\-]{36}}/responses/{responseId:[0-9a-fA-F\\-]{36}}/edit&quot;)
+    public String editResponseRow(@PathVariable UUID pollId, @PathVariable UUID responseId, Model model) {
+<span class="fc" id="L59">        Poll poll = readPollUseCase.getPublic(pollId);</span>
+<span class="fc" id="L60">        PollResponse response = poll.responses().stream()</span>
+<span class="fc" id="L61">                .filter(candidate -&gt; candidate.responseId().equals(responseId))</span>
+<span class="fc" id="L62">                .findFirst()</span>
+<span class="pc" id="L63">                .orElseThrow(() -&gt; new IllegalArgumentException(&quot;Response not found&quot;));</span>
+
+<span class="fc" id="L65">        List&lt;PollOption&gt; options = poll.options().stream()</span>
+<span class="fc" id="L66">                .sorted(Comparator.comparing(PollOption::date)</span>
+<span class="fc" id="L67">                        .thenComparing(PollOption::startTime, Comparator.nullsFirst(Comparator.naturalOrder())))</span>
+<span class="fc" id="L68">                .toList();</span>
+
+<span class="fc" id="L70">        model.addAttribute(&quot;pollId&quot;, pollId);</span>
+<span class="fc" id="L71">        model.addAttribute(&quot;response&quot;, response);</span>
+<span class="fc" id="L72">        model.addAttribute(&quot;voteOptions&quot;, options);</span>
+<span class="fc" id="L73">        model.addAttribute(&quot;voteOptionHeaders&quot;, buildOptionHeaders(options));</span>
+<span class="fc" id="L74">        model.addAttribute(&quot;editRow&quot;, new EditableRow(</span>
+<span class="fc" id="L75">                response.responseId(),</span>
+<span class="fc" id="L76">                response.participantName(),</span>
+<span class="fc" id="L77">                buildVoteCells(options, response.votes())</span>
+        ));
+<span class="fc" id="L79">        return &quot;poll/participant-row-edit :: row&quot;;</span>
+    }
+
+    private void applyParticipantView(Model model, Poll poll) {
+<span class="fc" id="L83">        List&lt;PollOption&gt; options = poll.options().stream()</span>
+<span class="fc" id="L84">                .sorted(Comparator.comparing(PollOption::date)</span>
+<span class="fc" id="L85">                        .thenComparing(PollOption::startTime, Comparator.nullsFirst(Comparator.naturalOrder())))</span>
+<span class="fc" id="L86">                .toList();</span>
+<span class="fc" id="L87">        List&lt;LocalDate&gt; dates = options.stream().map(PollOption::date).toList();</span>
+<span class="fc" id="L88">        model.addAttribute(&quot;voteOptionHeaders&quot;, buildOptionHeaders(options));</span>
+<span class="fc" id="L89">        model.addAttribute(&quot;voteOptions&quot;, options);</span>
+<span class="fc" id="L90">        model.addAttribute(&quot;monthGroups&quot;, buildMonthGroups(dates));</span>
+<span class="fc" id="L91">        model.addAttribute(&quot;participantRows&quot;, buildParticipantRows(options, poll.responses()));</span>
+<span class="fc" id="L92">        model.addAttribute(&quot;summaryCells&quot;, buildSummaryCells(options, poll.responses()));</span>
+<span class="fc" id="L93">    }</span>
+
+    private List&lt;MonthGroup&gt; buildMonthGroups(List&lt;LocalDate&gt; dates) {
+<span class="fc" id="L96">        List&lt;MonthGroup&gt; groups = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L97">        YearMonth current = null;</span>
+<span class="fc" id="L98">        int startIndex = 0;</span>
+<span class="fc bfc" id="L99" title="All 2 branches covered.">        for (int i = 0; i &lt; dates.size(); i++) {</span>
+<span class="fc" id="L100">            YearMonth month = YearMonth.from(dates.get(i));</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">            if (current == null) {</span>
+<span class="fc" id="L102">                current = month;</span>
+<span class="fc" id="L103">                startIndex = i;</span>
+<span class="fc" id="L104">                continue;</span>
+            }
+<span class="fc bfc" id="L106" title="All 2 branches covered.">            if (!month.equals(current)) {</span>
+<span class="fc" id="L107">                groups.add(new MonthGroup(labelFor(current), startIndex, i - startIndex));</span>
+<span class="fc" id="L108">                current = month;</span>
+<span class="fc" id="L109">                startIndex = i;</span>
+            }
+        }
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">        if (current != null) {</span>
+<span class="fc" id="L113">            groups.add(new MonthGroup(labelFor(current), startIndex, dates.size() - startIndex));</span>
+        }
+<span class="fc" id="L115">        return groups;</span>
+    }
+
+    private String labelFor(YearMonth month) {
+<span class="fc" id="L119">        String name = month.getMonth().getDisplayName(TextStyle.FULL, Locale.GERMAN);</span>
+<span class="fc" id="L120">        return name.substring(0, 1).toUpperCase(Locale.GERMAN) + name.substring(1) + &quot; &quot; + month.getYear();</span>
+    }
+
+    private List&lt;OptionHeader&gt; buildOptionHeaders(List&lt;PollOption&gt; options) {
+<span class="fc" id="L124">        return options.stream()</span>
+<span class="fc" id="L125">                .map(option -&gt; new OptionHeader(option, formatOptionLabel(option)))</span>
+<span class="fc" id="L126">                .toList();</span>
+    }
+
+    private String formatOptionLabel(PollOption option) {
+<span class="fc" id="L130">        DateTimeFormatter dayFormatter = DateTimeFormatter.ofPattern(&quot;EEE, dd.MM.&quot;, Locale.GERMAN);</span>
+<span class="fc" id="L131">        String dayLabel = option.date().format(dayFormatter);</span>
+<span class="fc" id="L132">        LocalTime startTime = option.startTime();</span>
+<span class="pc bpc" id="L133" title="1 of 2 branches missed.">        if (startTime == null) {</span>
+<span class="fc" id="L134">            return dayLabel;</span>
+        }
+<span class="nc" id="L136">        return dayLabel + &quot; &quot; + startTime;</span>
+    }
+
+    private List&lt;ParticipantRow&gt; buildParticipantRows(List&lt;PollOption&gt; options, List&lt;PollResponse&gt; responses) {
+<span class="fc" id="L140">        return responses.stream()</span>
+<span class="fc" id="L141">                .map(response -&gt; new ParticipantRow(</span>
+<span class="fc" id="L142">                        response.responseId(),</span>
+<span class="fc" id="L143">                        response.participantName(),</span>
+<span class="fc" id="L144">                        buildVoteCells(options, response.votes())</span>
+                ))
+<span class="fc" id="L146">                .toList();</span>
+    }
+
+    private List&lt;VoteCell&gt; buildVoteCells(List&lt;PollOption&gt; options, List&lt;PollVote&gt; votes) {
+<span class="fc" id="L150">        Map&lt;UUID, PollVoteValue&gt; byOptionId = votes.stream()</span>
+<span class="fc" id="L151">                .collect(Collectors.toMap(PollVote::optionId, PollVote::value));</span>
+<span class="fc" id="L152">        List&lt;VoteCell&gt; cells = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">        for (PollOption option : options) {</span>
+<span class="fc" id="L154">            PollVoteValue value = byOptionId.get(option.optionId());</span>
+<span class="fc" id="L155">            cells.add(new VoteCell(option.optionId(), value, symbolFor(value)));</span>
+<span class="fc" id="L156">        }</span>
+<span class="fc" id="L157">        return cells;</span>
+    }
+
+    private List&lt;SummaryCell&gt; buildSummaryCells(List&lt;PollOption&gt; options, List&lt;PollResponse&gt; responses) {
+<span class="fc" id="L161">        Map&lt;UUID, Long&gt; yesCounts = responses.stream()</span>
+<span class="fc" id="L162">                .flatMap(response -&gt; response.votes().stream())</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">                .filter(vote -&gt; vote.value() == PollVoteValue.YES)</span>
+<span class="fc" id="L164">                .collect(Collectors.groupingBy(PollVote::optionId, Collectors.counting()));</span>
+<span class="fc" id="L165">        long max = yesCounts.values().stream().mapToLong(Long::longValue).max().orElse(0);</span>
+<span class="fc" id="L166">        List&lt;SummaryCell&gt; cells = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L167" title="All 2 branches covered.">        for (PollOption option : options) {</span>
+<span class="fc" id="L168">            long count = yesCounts.getOrDefault(option.optionId(), 0L);</span>
+<span class="fc bfc" id="L169" title="All 4 branches covered.">            cells.add(new SummaryCell(option.optionId(), (int) count, count == max &amp;&amp; count &gt; 0));</span>
+<span class="fc" id="L170">        }</span>
+<span class="fc" id="L171">        return cells;</span>
+    }
+
+    private String symbolFor(PollVoteValue value) {
+<span class="pc bpc" id="L175" title="1 of 2 branches missed.">        if (value == null) {</span>
+<span class="nc" id="L176">            return &quot;&quot;;</span>
+        }
+<span class="fc bfc" id="L178" title="All 3 branches covered.">        return switch (value) {</span>
+<span class="fc" id="L179">            case YES -&gt; &quot;✓&quot;;</span>
+<span class="fc" id="L180">            case IF_NEEDED -&gt; &quot;(✓)&quot;;</span>
+<span class="fc" id="L181">            case NO -&gt; &quot;✗&quot;;</span>
+        };
+    }
+
+<span class="fc" id="L185">    record MonthGroup(String label, int startIndex, int span) {</span>
+    }
+
+<span class="fc" id="L188">    record OptionHeader(PollOption option, String label) {</span>
+    }
+
+<span class="fc" id="L191">    record ParticipantRow(UUID responseId, String name, List&lt;VoteCell&gt; cells) {</span>
+    }
+
+<span class="fc" id="L194">    record EditableRow(UUID responseId, String name, List&lt;VoteCell&gt; cells) {</span>
+    }
+
+<span class="fc" id="L197">    record VoteCell(UUID optionId, PollVoteValue value, String symbol) {</span>
+    }
+
+<span class="fc" id="L200">    record SummaryCell(UUID optionId, int count, boolean best) {</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

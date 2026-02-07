@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="S3PollRepository" tests="1" skipped="1" failures="0" errors="0" timestamp="2026-02-07T16:40:09.884Z" hostname="bodos-16z" time="0.0">
+  <properties/>
+  <testcase name="stores poll as json in S3" classname="io.github.bodote.woodle.S3PollRepositoryIT" time="0.0">
+    <skipped/>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

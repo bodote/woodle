@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="de"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WizardState.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">woodle</a> &gt; <a href="index.source.html" class="el_package">io.github.bodote.woodle.adapter.in.web</a> &gt; <span class="el_source">WizardState.java</span></div><h1>WizardState.java</h1><pre class="source lang-java linenums">package io.github.bodote.woodle.adapter.in.web;
+
+import io.github.bodote.woodle.domain.model.EventType;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+
+<span class="fc" id="L10">public class WizardState {</span>
+
+    public static final String SESSION_KEY = &quot;wizardState&quot;;
+
+    private String authorName;
+    private String authorEmail;
+    private String title;
+    private String description;
+<span class="fc" id="L18">    private EventType eventType = EventType.ALL_DAY;</span>
+    private Integer durationMinutes;
+<span class="fc" id="L20">    private List&lt;LocalDate&gt; dates = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L21">    private List&lt;LocalTime&gt; startTimes = new ArrayList&lt;&gt;();</span>
+    private LocalDate expiresAtOverride;
+
+    public String authorName() {
+<span class="fc" id="L25">        return authorName;</span>
+    }
+
+    public void setAuthorName(String authorName) {
+<span class="fc" id="L29">        this.authorName = authorName;</span>
+<span class="fc" id="L30">    }</span>
+
+    public String authorEmail() {
+<span class="fc" id="L33">        return authorEmail;</span>
+    }
+
+    public void setAuthorEmail(String authorEmail) {
+<span class="fc" id="L37">        this.authorEmail = authorEmail;</span>
+<span class="fc" id="L38">    }</span>
+
+    public String title() {
+<span class="fc" id="L41">        return title;</span>
+    }
+
+    public void setTitle(String title) {
+<span class="fc" id="L45">        this.title = title;</span>
+<span class="fc" id="L46">    }</span>
+
+    public String description() {
+<span class="fc" id="L49">        return description;</span>
+    }
+
+    public void setDescription(String description) {
+<span class="fc" id="L53">        this.description = description;</span>
+<span class="fc" id="L54">    }</span>
+
+    public EventType eventType() {
+<span class="fc" id="L57">        return eventType;</span>
+    }
+
+    public void setEventType(EventType eventType) {
+<span class="fc" id="L61">        this.eventType = eventType;</span>
+<span class="fc" id="L62">    }</span>
+
+    public Integer durationMinutes() {
+<span class="fc" id="L65">        return durationMinutes;</span>
+    }
+
+    public void setDurationMinutes(Integer durationMinutes) {
+<span class="fc" id="L69">        this.durationMinutes = durationMinutes;</span>
+<span class="fc" id="L70">    }</span>
+
+    public List&lt;LocalDate&gt; dates() {
+<span class="fc" id="L73">        return dates;</span>
+    }
+
+    public void setDates(List&lt;LocalDate&gt; dates) {
+<span class="fc" id="L77">        this.dates = new ArrayList&lt;&gt;(dates);</span>
+<span class="fc" id="L78">    }</span>
+
+    public List&lt;LocalTime&gt; startTimes() {
+<span class="fc" id="L81">        return startTimes;</span>
+    }
+
+    public void setStartTimes(List&lt;LocalTime&gt; startTimes) {
+<span class="fc" id="L85">        this.startTimes = new ArrayList&lt;&gt;(startTimes);</span>
+<span class="fc" id="L86">    }</span>
+
+    public LocalDate expiresAtOverride() {
+<span class="fc" id="L89">        return expiresAtOverride;</span>
+    }
+
+    public void setExpiresAtOverride(LocalDate expiresAtOverride) {
+<span class="fc" id="L93">        this.expiresAtOverride = expiresAtOverride;</span>
+<span class="fc" id="L94">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Abstimmungszeitraum und Bestätigung (3 von 3) - woodle</title>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header>
+    <h1>Abstimmungszeitraum und Bestätigung (3 von 3)</h1>
+    <p class="step-indicator">Schritt 3 von 3</p>
+</header>
+
+<main>
+    <form action="/poll/submit" method="post">
+        <section>
+            <h2>Liste Ihrer Auswahlmöglichkeiten</h2>
+            <ul class="summary-list"
+                th:if="${eventType == T(io.github.bodote.woodle.domain.model.EventType).ALL_DAY}">
+                <li th:each="date : ${dates}" th:text="${date}">Datum</li>
+            </ul>
+            <ul class="summary-list"
+                th:if="${eventType == T(io.github.bodote.woodle.domain.model.EventType).INTRADAY}">
+                <li th:each="summary : ${dateSummaries}" th:text="${summary}">Datum</li>
+            </ul>
+        </section>
+
+        <div class="form-row">
+            <label for="expires-at">Tag der Löschung</label>
+            <input id="expires-at" name="expiresAt" type="date" placeholder="yyyy-mm-dd"
+                   th:value="${expiresAt}">
+            <p class="form-help">Standard: 4 Wochen nach dem letzten Termin.</p>
+        </div>
+
+        <div class="actions">
+            <button type="submit">Umfrage erstellen</button>
+        </div>
+    </form>
+</main>
+</body>
+</html>

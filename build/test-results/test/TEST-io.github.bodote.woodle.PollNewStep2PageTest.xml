@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="/poll/new step-2" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-02-07T16:40:08.486Z" hostname="bodos-16z" time="0.301">
+  <properties/>
+  <testcase name="adds intraday options statefully via HTMX" classname="io.github.bodote.woodle.PollNewStep2PageTest" time="0.032"/>
+  <testcase name="renders step-2 date selection page" classname="io.github.bodote.woodle.PollNewStep2PageTest" time="0.214"/>
+  <testcase name="switches to intraday options via HTMX" classname="io.github.bodote.woodle.PollNewStep2PageTest" time="0.025"/>
+  <testcase name="updates date options statefully via HTMX" classname="io.github.bodote.woodle.PollNewStep2PageTest" time="0.03"/>
+  <system-out><![CDATA[2026-02-07T17:40:08.480+01:00  INFO 59749 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [io.github.bodote.woodle.PollNewStep2PageTest]: PollNewStep2PageTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-02-07T17:40:08.483+01:00  INFO 59749 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration io.github.bodote.woodle.WoodleApplication for test class io.github.bodote.woodle.PollNewStep2PageTest
+2026-02-07T17:40:08.522+01:00  WARN 59749 --- [    Test worker] actStandardFragmentInsertionTagProcessor : [THYMELEAF][Test worker][poll/new-step2] Deprecated unwrapped fragment expression "poll/step2-event-options :: eventOptions" found in template poll/new-step2, line 41, col 33. Please use the complete syntax of fragment expressions instead ("~{poll/step2-event-options :: eventOptions}"). The old, unwrapped syntax for fragment expressions will be removed in future versions of Thymeleaf.
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
