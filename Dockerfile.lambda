@@ -1,0 +1,18 @@
+FROM public.ecr.aws/docker/library/amazoncorretto:21-alpine
+
+# AWS Lambda Web Adapter extension for container images
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
+
+WORKDIR /app
+
+# Expect a prebuilt Spring Boot jar copied by CI/CD build step.
+COPY build/libs/*.jar /app/app.jar
+
+# Lambda Web Adapter will route events to this local web port.
+ENV PORT=8080
+ENV SERVER_PORT=8080
+ENV JAVA_OPTS="-XX:+UseSerialGC -Xms256m -Xmx512m"
+
+EXPOSE 8080
+
+CMD ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]

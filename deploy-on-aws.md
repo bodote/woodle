@@ -14,6 +14,10 @@ Deploy Woodle so that cost is as low as possible when no one is using the app, w
 6. IAM roles with least-privilege access.
 7. CloudWatch Logs for API and Lambda.
 
+### Domain targets
+- Frontend domain: `https://woodle.click`
+- API domain: `https://api.woodle.click/v1`
+
 ### Why this minimizes idle cost
 - No EC2/ECS/RDS always-on compute.
 - Lambda billed per request and execution duration.
@@ -70,7 +74,7 @@ Notes:
 ## API Endpoints (HTTP API)
 
 Base URL example:
-- `https://api.<domain>/v1`
+- `https://api.woodle.click/v1`
 
 ### Global API contract rules
 - Content type: `application/json; charset=utf-8`
@@ -201,7 +205,7 @@ This avoids silent overwrite on concurrent admin edits.
 ## CORS Policy (CloudFront Frontend -> API)
 
 Allow only known frontend origins:
-- `https://woodle.example.com`
+- `https://woodle.click`
 - `https://<cloudfront-distribution-domain>` (for rollout/testing)
 
 Allowed methods:
@@ -240,7 +244,7 @@ CORS operational notes:
 2. Deploy frontend assets to `woodle-web-<env>`.
 3. Create Lambda function and API Gateway HTTP API routes.
 4. Grant Lambda least-privilege IAM access to poll bucket prefix.
-5. Configure CloudFront + custom domain (Route53 + ACM) if needed.
+5. Configure CloudFront + custom domain (`woodle.click`) and API custom domain (`api.woodle.click`) with Route53 + ACM.
 6. Add budget/anomaly alerts.
 7. Smoke test:
    - create poll

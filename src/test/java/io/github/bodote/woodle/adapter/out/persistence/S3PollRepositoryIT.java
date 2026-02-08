@@ -20,6 +20,8 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.core.sync.RequestBody;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -27,9 +29,12 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Testcontainers(disabledWithoutDocker = true)
 @DisplayName("S3PollRepository")
@@ -87,5 +92,65 @@ class S3PollRepositoryIT {
             assertTrue(json.contains(pollId.toString()));
             assertTrue(json.contains("\"title\":\"Test\""));
         }
+    }
+
+    @Test
+    @DisplayName("returns empty when poll object does not exist")
+    void returnsEmptyWhenPollObjectDoesNotExist() {
+        S3Client s3Client = S3Client.builder()
+                .endpointOverride(localstack.getEndpointOverride(LocalStackContainer.Service.S3))
+                .region(Region.of(localstack.getRegion()))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(localstack.getAccessKey(), localstack.getSecretKey())
+                ))
+                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+                .build();
+
+        s3Client.createBucket(CreateBucketRequest.builder().bucket(BUCKET).build());
+        S3PollRepository repository = new S3PollRepository(s3Client, new ObjectMapper(), BUCKET);
+
+        Optional<Poll> result = repository.findById(UUID.fromString("00000000-0000-0000-0000-00000000abcd"));
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @DisplayName("throws on missing bucket instead of masking infrastructure error")
+    void throwsOnMissingBucket() {
+        S3Client s3Client = S3Client.builder()
+                .endpointOverride(localstack.getEndpointOverride(LocalStackContainer.Service.S3))
+                .region(Region.of(localstack.getRegion()))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(localstack.getAccessKey(), localstack.getSecretKey())
+                ))
+                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+                .build();
+
+        S3PollRepository repository = new S3PollRepository(s3Client, new ObjectMapper(), "missing-bucket");
+        assertThrows(IllegalStateException.class,
+                () -> repository.findById(UUID.fromString("00000000-0000-0000-0000-00000000dcba")));
+    }
+
+    @Test
+    @DisplayName("throws on invalid poll json instead of returning empty")
+    void throwsOnInvalidPollJson() {
+        S3Client s3Client = S3Client.builder()
+                .endpointOverride(localstack.getEndpointOverride(LocalStackContainer.Service.S3))
+                .region(Region.of(localstack.getRegion()))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(localstack.getAccessKey(), localstack.getSecretKey())
+                ))
+                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+                .build();
+
+        s3Client.createBucket(CreateBucketRequest.builder().bucket(BUCKET).build());
+        s3Client.putObject(
+                PutObjectRequest.builder().bucket(BUCKET).key("polls/00000000-0000-0000-0000-0000000000aa.json").build(),
+                RequestBody.fromString("{invalid-json")
+        );
+
+        S3PollRepository repository = new S3PollRepository(s3Client, new ObjectMapper(), BUCKET);
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> repository.findById(UUID.fromString("00000000-0000-0000-0000-0000000000aa")));
+        assertEquals("Failed to deserialize poll", exception.getMessage());
     }
 }

@@ -1,0 +1,190 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Woodle serverless deployment (Lambda container + HTTP API + S3 + CloudFront)
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+  LambdaImageUri:
+    Type: String
+    Description: ECR image URI for woodle lambda container image
+  AppDomainName:
+    Type: String
+    Default: ""
+    Description: Optional custom domain for CloudFront (leave empty to use distribution domain)
+  AcmCertificateArn:
+    Type: String
+    Default: ""
+    Description: Optional ACM certificate ARN (us-east-1) for CloudFront custom domain
+
+Conditions:
+  HasCustomDomain: !Not [!Equals [!Ref AppDomainName, ""]]
+  HasCertificate: !Not [!Equals [!Ref AcmCertificateArn, ""]]
+  UseAliasConfig: !And [!Condition HasCustomDomain, !Condition HasCertificate]
+
+Resources:
+  WebBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub woodle-web-${EnvironmentName}-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+
+  PollsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub woodle-polls-${EnvironmentName}-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+
+  WebBucketOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub woodle-web-oac-${EnvironmentName}
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  WebDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: poll/new-step1.html
+        HttpVersion: http2
+        Origins:
+          - Id: web-bucket-origin
+            DomainName: !GetAtt WebBucket.RegionalDomainName
+            S3OriginConfig: {}
+            OriginAccessControlId: !Ref WebBucketOriginAccessControl
+        DefaultCacheBehavior:
+          TargetOriginId: web-bucket-origin
+          ViewerProtocolPolicy: redirect-to-https
+          Compress: true
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachedMethods: [GET, HEAD, OPTIONS]
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /poll/new-step1.html
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /poll/new-step1.html
+        PriceClass: PriceClass_100
+        Aliases: !If [HasCustomDomain, [!Ref AppDomainName], !Ref "AWS::NoValue"]
+        ViewerCertificate: !If
+          - UseAliasConfig
+          - AcmCertificateArn: !Ref AcmCertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+
+  WebBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudFrontRead
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub ${WebBucket.Arn}/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebDistribution}
+
+  Api:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: "$default"
+      CorsConfiguration:
+        AllowOrigins:
+          - !Sub https://${WebDistribution.DomainName}
+        AllowHeaders:
+          - Content-Type
+          - If-Match
+          - Authorization
+          - X-Requested-With
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        ExposeHeaders:
+          - ETag
+          - Location
+
+  AppFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      ImageUri: !Ref LambdaImageUri
+      Timeout: 30
+      MemorySize: 1024
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          WOODLE_S3_ENABLED: "true"
+          WOODLE_S3_REGION: !Ref AWS::Region
+          WOODLE_S3_BUCKET: !Ref PollsBucket
+          WOODLE_S3_PATH_STYLE: "false"
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Sid: PollBucketAccess
+              Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:DeleteObject
+              Resource: !Sub ${PollsBucket.Arn}/polls/*
+      Events:
+        ProxyAny:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Path: /{proxy+}
+            Method: ANY
+        RootAny:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref Api
+            Path: /
+            Method: ANY
+
+Outputs:
+  ApiBaseUrl:
+    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com
+  FrontendCloudFrontUrl:
+    Value: !Sub https://${WebDistribution.DomainName}
+  PollsBucketName:
+    Value: !Ref PollsBucket
+  WebBucketName:
+    Value: !Ref WebBucket

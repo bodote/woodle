@@ -6,6 +6,10 @@
 3. Poll data persisted in S3 (`polls/{pollId}.json`).
 4. No database.
 
+Current domain target:
+- frontend: `woodle.click`
+- API: `api.woodle.click`
+
 ## Guiding Constraints
 1. Keep idle cost near zero (serverless only, no always-on compute).
 2. Follow project TDD workflow for every behavior change.

@@ -12,6 +12,8 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -60,8 +62,12 @@ public class S3PollRepository implements PollRepository {
             String json = new String(response.readAllBytes(), StandardCharsets.UTF_8);
             PollDAO pollDAO = objectMapper.readValue(json, PollDAO.class);
             return Optional.of(fromDao(pollDAO));
-        } catch (Exception e) {
+        } catch (NoSuchKeyException e) {
             return Optional.empty();
+        } catch (S3Exception e) {
+            throw new IllegalStateException("Failed to fetch poll from S3", e);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to deserialize poll", e);
         }
     }
 
