@@ -24,10 +24,9 @@ public class PollNewPageController {
     private static final String EMAIL_ERROR_MESSAGE = "Bitte eine gültige E-Mail-Adresse eingeben";
 
     @GetMapping("/poll/new")
-    public String renderStep1(Model model, HttpSession session) {
-        WizardState state = getOrInitWizard(session);
-        applyStep1Model(model, state, null, false);
-        return "poll/new-step1";
+    public String renderStep1(HttpSession session) {
+        getOrInitWizard(session);
+        return "redirect:/poll/new-step1.html";
     }
 
     @GetMapping("/poll/step-1/email-check")

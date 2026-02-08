@@ -208,3 +208,9 @@ Die Benutzersicht zeigt eine tabellenbasierte Übersicht aller Teilnehmenden und
   - Globales Dauerfeld ist erforderlich und muss positiv sein (z. B. `180` Minuten).
   - Startzeit-Format: `HH:MM` im 24h-Format.
   - Validierung: Keine leeren Startzeiten; Dauerfeld muss gesetzt sein.
+
+# Routing-Fallback (neu)
+- Für **alle undefinierten Pfade** soll die Anwendung **nicht** auf eine Fehlerseite (z. B. 404/Whitelabel) gehen.
+- Stattdessen erfolgt eine Weiterleitung auf die Startseite zum Erstellen einer neuen Umfrage:
+  - Ziel: `/poll/new`
+- Dies gilt für alle HTTP-Methoden (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`).

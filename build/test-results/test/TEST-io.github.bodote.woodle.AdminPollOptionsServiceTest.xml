@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="AdminPollOptionsService" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-02-07T16:39:59.098Z" hostname="bodos-16z" time="0.027">
-  <properties/>
-  <testcase name="removes date option" classname="io.github.bodote.woodle.AdminPollOptionsServiceTest" time="0.025"/>
-  <testcase name="removes intraday option by date and time" classname="io.github.bodote.woodle.AdminPollOptionsServiceTest" time="0.0"/>
-  <testcase name="adds date option" classname="io.github.bodote.woodle.AdminPollOptionsServiceTest" time="0.001"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

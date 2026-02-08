@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ReadPollService" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-02-07T16:40:09.350Z" hostname="bodos-16z" time="0.001">
-  <properties/>
-  <testcase name="rejects invalid admin secret" classname="io.github.bodote.woodle.ReadPollServiceTest" time="0.001"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

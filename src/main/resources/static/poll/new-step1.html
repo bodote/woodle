@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Umfrage erstellen (Schritt 1 von 3) - woodle</title>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header>
+    <h1>Umfrage erstellen (Schritt 1 von 3)</h1>
+    <p class="step-indicator">Schritt 1 von 3</p>
+</header>
+
+<main>
+    <form action="/poll/step-2" method="post">
+        <div class="form-row">
+            <label for="author-name">Ihr Name</label>
+            <input id="author-name" name="authorName" type="text" required>
+        </div>
+
+        <div id="author-email-field" class="form-row">
+            <label for="author-email">Ihre E-Mail-Adresse</label>
+            <input id="author-email"
+                   name="authorEmail"
+                   type="email"
+                   required
+                   hx-get="/poll/step-1/email-check"
+                   hx-trigger="blur changed"
+                   hx-target="#author-email-field"
+                   hx-swap="outerHTML">
+            <p class="form-help">E-Mail wird nur für Admin-Link genutzt.</p>
+        </div>
+
+        <div class="form-row">
+            <label for="poll-title">Titel der Umfrage</label>
+            <input id="poll-title" name="pollTitle" type="text" required>
+        </div>
+
+        <div class="form-row">
+            <label for="poll-description">Beschreibung</label>
+            <textarea id="poll-description" name="description" rows="6"></textarea>
+        </div>
+
+        <section>
+            <h2>Benachrichtigungen</h2>
+            <fieldset class="stack">
+                <legend>E-Mail-Benachrichtigungen</legend>
+                <label>
+                    <input name="notifyOnVote" type="checkbox">
+                    Bei jeder neuen Wertung eine E-Mail erhalten
+                </label>
+                <label>
+                    <input name="notifyOnComment" type="checkbox">
+                    Bei jedem neuen Kommentar eine E-Mail erhalten
+                </label>
+            </fieldset>
+        </section>
+
+        <div class="actions">
+            <button type="submit">Weiter zum 2. Schritt</button>
+        </div>
+    </form>
+</main>
+</body>
+</html>

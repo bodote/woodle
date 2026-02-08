@@ -1,0 +1,255 @@
+# Deploy Woodle on AWS (Cost-Minimized at Idle)
+
+## Goal
+Deploy Woodle so that cost is as low as possible when no one is using the app, while keeping the setup simple and production-safe.
+
+## Planned AWS Design
+
+### Core Architecture
+1. Frontend static site in Amazon S3 (`woodle-web-<env>` bucket).
+2. Amazon CloudFront distribution in front of the frontend bucket.
+3. API: Amazon API Gateway **HTTP API**.
+4. Backend: AWS Lambda (Java/Spring) integrated with API Gateway.
+5. Poll persistence: dedicated S3 bucket (`woodle-polls-<env>`), one object per poll.
+6. IAM roles with least-privilege access.
+7. CloudWatch Logs for API and Lambda.
+
+### Why this minimizes idle cost
+- No EC2/ECS/RDS always-on compute.
+- Lambda billed per request and execution duration.
+- S3 billed mostly for storage and request volume.
+- HTTP API is typically lower-cost than API Gateway REST API.
+- No NAT Gateway (Lambda should run outside VPC unless strictly needed).
+
+## Data Model and S3 Key Schema
+
+### Buckets
+- `woodle-web-<env>`: static frontend (HTML/CSS/JS/assets)
+- `woodle-polls-<env>`: poll JSON documents
+
+### Poll object key schema
+Use one object per poll:
+
+- `polls/{pollId}.json`
+
+Where:
+- `{pollId}`: URL-safe unique id, e.g. `01JY8T8KPF2VQ7D11W3S0G8N5B` (ULID)
+
+### Optional secondary keys (only if needed later)
+- `users/{ownerId}/polls/{pollId}` (index pointer object)
+- `meta/recent/{yyyy}/{mm}/{dd}/{pollId}` (lightweight listing aid)
+
+Start simple with only `polls/{pollId}.json`; add secondary keys only when query/listing needs become real.
+
+## Poll JSON Shape (S3 object content)
+
+```json
+{
+  "id": "01JY8T8KPF2VQ7D11W3S0G8N5B",
+  "question": "Where should we have lunch?",
+  "options": [
+    {"id": "a", "text": "Italian"},
+    {"id": "b", "text": "Sushi"}
+  ],
+  "settings": {
+    "allowMultiple": false,
+    "allowAddOption": false
+  },
+  "status": "OPEN",
+  "createdAt": "2026-02-08T12:00:00Z",
+  "updatedAt": "2026-02-08T12:00:00Z",
+  "expiresAt": null,
+  "version": 1
+}
+```
+
+Notes:
+- Keep payload compact; <1 KB is realistic for many polls.
+- Store object as UTF-8 JSON (`Content-Type: application/json`).
+
+## API Endpoints (HTTP API)
+
+Base URL example:
+- `https://api.<domain>/v1`
+
+### Global API contract rules
+- Content type: `application/json; charset=utf-8`
+- Time format: RFC3339 UTC (example `2026-02-08T12:00:00Z`)
+- Poll id format: ULID string
+- `ETag` response header is returned for resources that can be updated
+- `If-Match` request header is required for mutable admin operations
+
+### Create poll
+- `POST /v1/polls`
+
+Request:
+```json
+{
+  "authorName": "Alice",
+  "authorEmail": "alice@example.com",
+  "title": "Team lunch",
+  "description": "Pick a date",
+  "eventType": "ALL_DAY",
+  "durationMinutes": null,
+  "dates": ["2026-02-10", "2026-02-11"],
+  "startTimes": [],
+  "expiresAtOverride": null
+}
+```
+
+Response `201 Created`:
+```json
+{
+  "id": "01JY8T8KPF2VQ7D11W3S0G8N5B",
+  "adminUrl": "/poll/01JY8T8KPF2VQ7D11W3S0G8N5B/admin",
+  "voteUrl": "/poll/01JY8T8KPF2VQ7D11W3S0G8N5B",
+  "etag": "\"3b6f...\""
+}
+```
+
+Validation failures:
+- `400 Bad Request` when required fields are missing or invalid
+
+### Get poll
+- `GET /v1/polls/{pollId}`
+
+Response `200 OK`:
+- Poll JSON body (id, title, description, eventType, durationMinutes, options, expiresAt)
+- `ETag` response header present
+
+Not found:
+- `404 Not Found` if `pollId` does not exist
+
+### Update poll metadata/settings
+- `PUT /v1/polls/{pollId}`
+- Require `If-Match: <etag>` header to prevent lost updates.
+
+Request:
+```json
+{
+  "title": "Team lunch next week",
+  "description": "Updated description",
+  "expiresAt": "2026-03-10"
+}
+```
+
+Response:
+- `200 OK` with updated poll + new `ETag`
+- `428 Precondition Required` when `If-Match` is missing
+- `412 Precondition Failed` on stale ETag
+- `404 Not Found` if `pollId` does not exist
+
+### Delete poll (optional)
+- `DELETE /v1/polls/{pollId}`
+- Require admin authorization strategy.
+
+Response:
+- `204 No Content`
+
+### Cast vote
+- `POST /v1/polls/{pollId}/votes`
+
+Request:
+```json
+{
+  "participantName": "Alice",
+  "votes": [
+    {"optionId": "4cb46dca-f86d-4ce9-a3ec-daf2560f8bea", "value": "YES"}
+  ],
+  "comment": null
+}
+```
+
+Response:
+- `200 OK` with updated aggregated poll result
+- `400 Bad Request` for invalid option ids or invalid vote payload
+- `404 Not Found` if `pollId` does not exist
+
+## Error Model (Phase 1 Contract)
+
+All non-2xx responses return a structured error body:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "question must not be blank",
+    "requestId": "5c1fd1f3-8a38-4d84-9b5d-d85c2b7a8c9a"
+  }
+}
+```
+
+Error code mapping:
+- `400`: `VALIDATION_ERROR`
+- `404`: `POLL_NOT_FOUND`
+- `409` or `412`: `CONFLICT` / `PRECONDITION_FAILED`
+- `428`: `PRECONDITION_REQUIRED`
+- `500`: `INTERNAL_ERROR`
+
+## Concurrency and Consistency
+
+For S3-backed writes:
+1. Read poll object and ETag.
+2. Apply mutation in Lambda.
+3. Client must send `If-Match` from last `GET` response.
+4. Write with conditional semantics so write succeeds only if ETag/version is unchanged.
+5. Return `428` when `If-Match` is missing.
+6. Return `412` when state changed; client retries after fresh `GET`.
+
+This avoids silent overwrite on concurrent admin edits.
+
+## CORS Policy (CloudFront Frontend -> API)
+
+Allow only known frontend origins:
+- `https://woodle.example.com`
+- `https://<cloudfront-distribution-domain>` (for rollout/testing)
+
+Allowed methods:
+- `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`
+
+Allowed request headers:
+- `Content-Type`, `If-Match`, `Authorization`, `X-Requested-With`
+
+Exposed response headers:
+- `ETag`, `Location`, `x-amzn-RequestId`
+
+CORS operational notes:
+- Do not use wildcard origin in production.
+- Keep `Access-Control-Max-Age` moderate (for example 300-600s) during rollout.
+
+## Security
+
+1. Keep poll bucket private (no public read).
+2. Lambda execution role permissions restricted to:
+   - `s3:GetObject`, `s3:PutObject`, optional `s3:DeleteObject`
+   - resource scope: `arn:aws:s3:::woodle-polls-<env>/polls/*`
+3. Enable server-side encryption (SSE-S3 or SSE-KMS).
+4. Enable API throttling and request size limits in API Gateway.
+5. Add CORS rules only for required frontend origins.
+
+## Cost Guardrails
+
+1. Create AWS Budget with alert thresholds (for example 50%, 80%, 100%).
+2. Enable Cost Anomaly Detection.
+3. Set CloudWatch log retention (for example 7-14 days for non-prod).
+4. Use S3 Lifecycle only if you want automatic poll expiration/cleanup.
+
+## Deployment Steps (High-Level)
+
+1. Create `woodle-web-<env>` and `woodle-polls-<env>` buckets.
+2. Deploy frontend assets to `woodle-web-<env>`.
+3. Create Lambda function and API Gateway HTTP API routes.
+4. Grant Lambda least-privilege IAM access to poll bucket prefix.
+5. Configure CloudFront + custom domain (Route53 + ACM) if needed.
+6. Add budget/anomaly alerts.
+7. Smoke test:
+   - create poll
+   - read poll
+   - update with valid and stale ETag
+   - cast vote
+
+## Future Evolution (only if needed)
+
+- Add lightweight index objects for list/recent queries.
+- Add signed admin tokens and stricter auth model.
+- If query patterns become complex, evaluate DynamoDB later.
