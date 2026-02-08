@@ -252,6 +252,37 @@ CORS operational notes:
    - update with valid and stale ETag
    - cast vote
 
+## Pre-Deploy Validation
+
+What can be validated locally (high confidence):
+1. Unit tests for domain and services.
+2. API controller tests via MockMvc (`@WebMvcTest`).
+3. S3 integration tests with LocalStack (`S3PollRepositoryIT`).
+4. Frontend functional behavior via HtmlUnit + Playwright E2E.
+5. End-to-end local stack: static frontend + local API + LocalStack S3.
+
+What must be validated in AWS (cannot be fully proven locally):
+1. IAM permissions and bucket policies.
+2. API Gateway/Lambda integration behavior and timeout settings.
+3. CloudFront caching/CORS/custom-domain TLS.
+4. Real cold-start and latency behavior.
+5. Cost/budget/anomaly alerts in actual billing pipeline.
+
+## Definition of Done (Per Environment)
+1. All tests pass (`test`, targeted `*IT`, key E2E).
+2. Poll create/read/update/vote works via CloudFront frontend in AWS.
+3. S3 objects stored under expected key schema.
+4. Concurrency conflict returns expected status (`409`/`412`).
+5. Budget alerts configured and verified.
+6. No always-on compute resources in architecture.
+
+## Suggested Execution Order
+1. API contract and API controllers first.
+2. S3 repository hardening next (concurrency and error semantics).
+3. Frontend decoupling after API stability.
+4. Lambda runtime integration and infrastructure deployment.
+5. Progressive cutover and legacy path removal after validation.
+
 ## Future Evolution (only if needed)
 
 - Add lightweight index objects for list/recent queries.
