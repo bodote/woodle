@@ -212,7 +212,7 @@ Allowed methods:
 - `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`
 
 Allowed request headers:
-- `Content-Type`, `If-Match`, `Authorization`, `X-Requested-With`
+- `Content-Type`, `If-Match`, `Authorization`, `X-Requested-With`, `HX-Request`, `HX-Current-URL`, `HX-Target`, `HX-Trigger`, `HX-Trigger-Name`
 
 Exposed response headers:
 - `ETag`, `Location`, `x-amzn-RequestId`

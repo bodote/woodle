@@ -47,4 +47,21 @@ class StaticPollStep1PageIT {
             org.junit.jupiter.api.Assertions.assertTrue(page.asNormalizedText().contains("Weiter zum 2. Schritt"));
         }
     }
+
+    @Test
+    @DisplayName("contains runtime backend config wiring for form post and HTMX email validation")
+    void containsRuntimeBackendConfigWiring() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
+
+            org.junit.jupiter.api.Assertions.assertFalse(
+                    page.getByXPath("//script[@src='/runtime-config.js']").isEmpty(),
+                    "Expected runtime config script include for backend base URL"
+            );
+            org.junit.jupiter.api.Assertions.assertNotNull(
+                    page.getElementById("step1-form"),
+                    "Expected form id for runtime backend action wiring"
+            );
+        }
+    }
 }

@@ -12,8 +12,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(io.github.bodote.woodle.adapter.in.web.PollNewPageController.class)
 @DisplayName("poll wizard flow")
@@ -29,14 +30,14 @@ class PollWizardFlowTest {
     void step1StoresBasicsInSession() throws Exception {
         MockHttpSession session = new MockHttpSession();
 
-        mockMvc.perform(post("/poll/step-2")
+                mockMvc.perform(post("/poll/step-2")
                         .session(session)
                         .param("authorName", TestFixtures.AUTHOR_NAME)
                         .param("authorEmail", VALID_EMAIL)
                         .param("pollTitle", "Test")
                         .param("description", TestFixtures.DESCRIPTION))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/poll/step-2"));
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Umfragedaten (2 von 3)")));
 
         WizardState state = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
         assertNotNull(state);

@@ -130,6 +130,11 @@ Resources:
           - If-Match
           - Authorization
           - X-Requested-With
+          - HX-Request
+          - HX-Current-URL
+          - HX-Target
+          - HX-Trigger
+          - HX-Trigger-Name
         AllowMethods:
           - GET
           - POST

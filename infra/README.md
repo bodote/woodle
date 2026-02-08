@@ -12,15 +12,14 @@ This folder contains a baseline serverless deployment for:
 2. SAM CLI installed.
 3. ECR repository for the Lambda image.
 4. Docker available for image build/push.
+5. Local deploy IAM identity configured (see `infra/iam-deploy-identity-policies.md`).
 
 ## Build and push Lambda image
 
 ```bash
 aws ecr create-repository --repository-name woodle-lambda --region eu-central-1
 aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.eu-central-1.amazonaws.com
-docker build -f Dockerfile.lambda -t woodle-lambda:latest .
-docker tag woodle-lambda:latest <account-id>.dkr.ecr.eu-central-1.amazonaws.com/woodle-lambda:latest
-docker push <account-id>.dkr.ecr.eu-central-1.amazonaws.com/woodle-lambda:latest
+docker buildx build --platform linux/arm64 --provenance=false --sbom=false -f Dockerfile.lambda -t <account-id>.dkr.ecr.eu-central-1.amazonaws.com/woodle-lambda:latest --push .
 ```
 
 ## Deploy stack
@@ -34,6 +33,21 @@ sam deploy \
   --parameter-overrides \
     EnvironmentName=dev \
     LambdaImageUri=<account-id>.dkr.ecr.eu-central-1.amazonaws.com/woodle-lambda:latest
+```
+
+## One-command local deploy
+
+From repository root:
+
+```bash
+./aws-deploy.sh
+```
+
+Optional overrides:
+
+```bash
+AWS_REGION=eu-central-1 ENV_NAME=dev STACK_NAME=woodle-dev ./aws-deploy.sh
+APP_DOMAIN_NAME=woodle.click ACM_CERTIFICATE_ARN=<acm-arn-in-us-east-1> ./aws-deploy.sh
 ```
 
 ## Post-deploy smoke checks

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Umfrage erstellen (Schritt 1 von 3) - woodle</title>
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="/runtime-config.js"></script>
     <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
 </header>
 
 <main>
-    <form action="/poll/step-2" method="post">
+    <form id="step1-form" action="/poll/step-2" method="post">
         <div class="form-row">
             <label for="author-name">Ihr Name</label>
             <input id="author-name" name="authorName" type="text" required>
@@ -24,11 +24,7 @@
             <input id="author-email"
                    name="authorEmail"
                    type="email"
-                   required
-                   hx-get="/poll/step-1/email-check"
-                   hx-trigger="blur changed"
-                   hx-target="#author-email-field"
-                   hx-swap="outerHTML">
+                   required>
             <p class="form-help">E-Mail wird nur für Admin-Link genutzt.</p>
         </div>
 
@@ -62,5 +58,20 @@
         </div>
     </form>
 </main>
+<script>
+    (function () {
+        const configuredBase = window.WOODLE_BACKEND_BASE_URL;
+        if (!configuredBase) {
+            return;
+        }
+
+        const base = configuredBase.replace(/\/+$/, "");
+        const step1Form = document.getElementById("step1-form");
+        if (step1Form) {
+            step1Form.action = base + "/poll/step-2";
+        }
+
+    })();
+</script>
 </body>
 </html>

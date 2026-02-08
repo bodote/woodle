@@ -1,0 +1,1 @@
+window.WOODLE_BACKEND_BASE_URL = "";

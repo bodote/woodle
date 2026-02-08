@@ -69,7 +69,9 @@ public class PollNewPageController {
         state.setTitle(pollTitle);
         state.setDescription(description);
         session.setAttribute(WizardState.SESSION_KEY, state);
-        return "redirect:/poll/step-2";
+        model.addAttribute("dateCount", getOrInitDateCount(session));
+        model.addAttribute("eventType", state.eventType());
+        return "poll/new-step2";
     }
 
     @GetMapping("/poll/step-2/options/add")
