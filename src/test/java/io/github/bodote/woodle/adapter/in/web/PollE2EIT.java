@@ -111,6 +111,37 @@ class PollE2EIT {
         }
     }
 
+    @Test
+    @DisplayName("/poll/new redirect entrypoint continues to backend step-2")
+    void pollNewRedirectEntrypointContinuesToStep2() {
+        String baseUrl = "http://localhost:" + port;
+
+        try (Playwright playwright = Playwright.create()) {
+            Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+            Page page = browser.newPage();
+
+            page.navigate(baseUrl + "/poll/new");
+            assertTrue(page.url().contains("/poll/new-step1.html"));
+
+            APIResponse response = page.request().post(
+                    baseUrl + "/poll/step-2",
+                    RequestOptions.create().setForm(FormData.create()
+                            .set("authorName", "Max")
+                            .set("authorEmail", "max@example.com")
+                            .set("pollTitle", "Redirect Entry Poll")
+                            .set("description", "From redirect entry"))
+            );
+
+            assertTrue(response.status() == 200);
+            assertTrue(response.url().contains("/poll/step-2"));
+
+            page.navigate(baseUrl + "/poll/step-2");
+            assertTrue(page.url().contains("/poll/step-2"));
+            assertTrue(page.content().contains("Mindestens zwei alternative Zeitpunkte"));
+            browser.close();
+        }
+    }
+
     private String toParticipantUrl(String adminUrl) {
         int index = adminUrl.indexOf("/poll/");
         String path = adminUrl.substring(index + "/poll/".length());

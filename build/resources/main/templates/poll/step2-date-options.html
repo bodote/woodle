@@ -1,9 +1,0 @@
-<div id="date-options" th:fragment="dateOptions">
-    <div th:each="i : ${#numbers.sequence(1, dateCount)}">
-        <label th:for="${'date-option-' + i}" th:text="'Tag ' + i">Tag</label>
-        <input th:id="${'date-option-' + i}"
-               th:name="${'dateOption' + i}"
-               type="date"
-               placeholder="yyyy-mm-dd">
-    </div>
-</div>
