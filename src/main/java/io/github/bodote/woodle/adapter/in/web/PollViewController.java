@@ -6,6 +6,7 @@ import io.github.bodote.woodle.domain.model.PollOption;
 import io.github.bodote.woodle.domain.model.PollResponse;
 import io.github.bodote.woodle.domain.model.PollVote;
 import io.github.bodote.woodle.domain.model.PollVoteValue;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,9 +32,12 @@ import java.util.stream.Collectors;
 public class PollViewController {
 
     private final ReadPollUseCase readPollUseCase;
+    private final String publicBaseUrl;
 
-    public PollViewController(ReadPollUseCase readPollUseCase) {
+    public PollViewController(ReadPollUseCase readPollUseCase,
+                              @Value("${woodle.public-base-url:}") String publicBaseUrl) {
         this.readPollUseCase = readPollUseCase;
+        this.publicBaseUrl = publicBaseUrl == null ? "" : publicBaseUrl.trim();
     }
 
     @GetMapping("/poll/{pollId:[0-9a-fA-F\\-]{36}}")
@@ -191,6 +195,10 @@ public class PollViewController {
     }
 
     private String resolveOrigin(HttpServletRequest request) {
+        if (!publicBaseUrl.isBlank()) {
+            return publicBaseUrl.endsWith("/") ? publicBaseUrl.substring(0, publicBaseUrl.length() - 1) : publicBaseUrl;
+        }
+
         String forwarded = firstHeaderValue(request, "Forwarded");
 
         String forwardedHost = forwardedFieldValue(forwarded, "host");

@@ -189,6 +189,10 @@ Resources:
         - arm64
       Environment:
         Variables:
+          WOODLE_PUBLIC_BASE_URL: !If
+            - HasCustomDomain
+            - !Sub "https://${AppDomainName}"
+            - ""
           WOODLE_S3_ENABLED: "true"
           WOODLE_S3_REGION: !Ref AWS::Region
           WOODLE_S3_BUCKET: !Ref PollsBucket
