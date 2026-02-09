@@ -17,6 +17,7 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -190,26 +191,54 @@ public class PollViewController {
     }
 
     private String resolveOrigin(HttpServletRequest request) {
-        String scheme = firstHeaderValue(request, "X-Forwarded-Proto");
+        String forwarded = firstHeaderValue(request, "Forwarded");
+
+        String forwardedHost = forwardedFieldValue(forwarded, "host");
+        String scheme = forwardedFieldValue(forwarded, "proto");
+        if (scheme == null || scheme.isBlank()) {
+            scheme = firstHeaderValue(request, "X-Forwarded-Proto");
+        }
         if (scheme == null || scheme.isBlank()) {
             scheme = request.getScheme();
         }
+        if (scheme == null || scheme.isBlank()) {
+            scheme = "https";
+        }
 
-        String host = firstHeaderValue(request, "X-Forwarded-Host");
+        String xForwardedHost = firstHeaderValue(request, "X-Forwarded-Host");
+        String host = forwardedHost;
+        if (host == null || host.isBlank()) {
+            host = xForwardedHost;
+        }
         if (host == null || host.isBlank()) {
             host = request.getHeader("Host");
         }
         if (host == null || host.isBlank()) {
             host = request.getServerName();
         }
-        host = host.trim();
+        if (host == null || host.isBlank()) {
+            String requestUrl = request.getRequestURL().toString();
+            if (!requestUrl.isBlank()) {
+                URI uri = URI.create(requestUrl);
+                host = uri.getHost();
+                if (scheme == null || scheme.isBlank()) {
+                    scheme = uri.getScheme();
+                }
+            }
+        }
+        host = host == null ? "" : host.trim();
 
         if (host.contains(":")) {
             return scheme + "://" + host;
         }
 
         String forwardedPort = firstHeaderValue(request, "X-Forwarded-Port");
-        int port = request.getServerPort();
+        boolean hasProxyHost = (forwardedHost != null && !forwardedHost.isBlank())
+                || (xForwardedHost != null && !xForwardedHost.isBlank());
+        int port = hasProxyHost && "https".equalsIgnoreCase(scheme) ? 443 : request.getServerPort();
+        if (hasProxyHost && "http".equalsIgnoreCase(scheme)) {
+            port = 80;
+        }
         if (forwardedPort != null && !forwardedPort.isBlank()) {
             port = Integer.parseInt(forwardedPort.trim());
         }
@@ -229,6 +258,28 @@ public class PollViewController {
         }
         String[] parts = value.split(",", 2);
         return parts[0].trim();
+    }
+
+    private String forwardedFieldValue(String forwardedHeader, String key) {
+        if (forwardedHeader == null || forwardedHeader.isBlank()) {
+            return null;
+        }
+        String[] pairs = forwardedHeader.split(";");
+        for (String pair : pairs) {
+            String[] keyValue = pair.trim().split("=", 2);
+            if (keyValue.length != 2) {
+                continue;
+            }
+            if (!key.equalsIgnoreCase(keyValue[0].trim())) {
+                continue;
+            }
+            String value = keyValue[1].trim();
+            if (value.startsWith("\"") && value.endsWith("\"") && value.length() >= 2) {
+                return value.substring(1, value.length() - 1).trim();
+            }
+            return value;
+        }
+        return null;
     }
 
     record MonthGroup(String label, int startIndex, int span) {

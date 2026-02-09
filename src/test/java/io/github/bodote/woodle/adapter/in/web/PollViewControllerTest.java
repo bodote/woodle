@@ -143,6 +143,35 @@ class PollViewControllerTest {
     }
 
     @Test
+    @DisplayName("renders absolute share links for RFC forwarded header host")
+    void rendersAbsoluteShareLinksForRfcForwardedHeaderHost() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000016");
+        String adminSecret = "AdminSecret99";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .header("Forwarded", "for=203.0.113.10;proto=https;host=woodle.click")
+                        .with(request -> {
+                            request.setScheme("http");
+                            request.setServerName("internal-host");
+                            request.setServerPort(8080);
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
     @DisplayName("renders admin sections with options editor before share links")
     void rendersAdminSectionsOrder() throws Exception {
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000013");
