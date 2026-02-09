@@ -74,8 +74,8 @@ Rules:
 ## URL Patterns
 
 *   Create poll: `/poll/new`
-*   Participant link: `/poll/<UUID>`
-*   Admin link: `/poll/<UUID>-<admin-secret>`
+*   Participant link: absolute URL based on current origin, e.g. `https://woodle.click/poll/<UUID>` or `http://localhost:8088/poll/<UUID>`
+*   Admin link: absolute URL based on current origin, e.g. `https://woodle.click/poll/<UUID>-<admin-secret>` or `http://localhost:8088/poll/<UUID>-<admin-secret>`
 
 ## Persistence & Data Lifecycle
 

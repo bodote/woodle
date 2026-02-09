@@ -84,6 +84,65 @@ class PollViewControllerTest {
     }
 
     @Test
+    @DisplayName("renders absolute share links for local host and port")
+    void rendersAbsoluteShareLinksForLocalHostAndPort() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000014");
+        String adminSecret = "AdminSecret78";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .with(request -> {
+                            request.setScheme("http");
+                            request.setServerName("localhost");
+                            request.setServerPort(8088);
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("http://localhost:8088/poll/" + pollId)))
+                .andExpect(content().string(containsString("http://localhost:8088/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("renders absolute share links for forwarded https host")
+    void rendersAbsoluteShareLinksForForwardedHttpsHost() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000015");
+        String adminSecret = "AdminSecret90";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .header("X-Forwarded-Proto", "https")
+                        .header("X-Forwarded-Host", "woodle.click")
+                        .header("X-Forwarded-Port", "443")
+                        .with(request -> {
+                            request.setScheme("http");
+                            request.setServerName("internal-host");
+                            request.setServerPort(8080);
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
     @DisplayName("renders admin sections with options editor before share links")
     void rendersAdminSectionsOrder() throws Exception {
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000013");

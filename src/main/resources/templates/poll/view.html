@@ -122,14 +122,14 @@
         <div class="form-row">
             <label>Link für Teilnehmende</label>
             <div class="actions">
-                <code id="participant-link" th:text="@{/poll/{pollId}(pollId=${pollId})}">/poll/...</code>
+                <code id="participant-link" th:text="${participantShareUrl}">https://example/poll/...</code>
                 <button type="button" data-copy-target="participant-link">Kopiere Link</button>
             </div>
         </div>
         <div class="form-row">
             <label>Admin-Link</label>
             <div class="actions">
-                <code id="admin-link" th:text="@{/poll/{pollId}-{adminSecret}(pollId=${pollId},adminSecret=${adminSecret})}">/poll/...</code>
+                <code id="admin-link" th:text="${adminShareUrl}">https://example/poll/...-...</code>
                 <button type="button" data-copy-target="admin-link">Kopiere Link</button>
             </div>
         </div>

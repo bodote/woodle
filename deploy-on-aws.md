@@ -22,6 +22,10 @@ Deploy Woodle so that cost is as low as possible when no one is using the app, w
 - Users must remain on `https://woodle.click/...` for the complete poll-creation flow (steps 1-3) and voting pages.
 - No browser-visible redirect to `https://*.execute-api.*.amazonaws.com/...` is allowed during normal user navigation.
 - CloudFront must front both static assets and dynamic poll routes so app paths stay on the frontend domain.
+- In admin view section **"Links zum Teilen"**, participant/admin links must be absolute URLs including protocol + host.
+- URL generation must use the current request origin:
+  - AWS production example: `https://woodle.click/poll/<pollId>`
+  - local example: `http://localhost:<port>/poll/<pollId>` (port must match the actual local server port, e.g. `8088`)
 
 ### Why this minimizes idle cost
 - No EC2/ECS/RDS always-on compute.
@@ -291,7 +295,7 @@ Run this in a browser against production:
 3. Fill step 2 and submit to step 3.
    - Expected URL: `https://woodle.click/poll/step-3`.
 4. Finish poll creation.
-   - Expected participant/admin links start with `https://woodle.click/poll/...`.
+   - Expected participant/admin links are absolute and start with `https://woodle.click/poll/...`.
 5. Open browser devtools (Network) and confirm:
    - No top-level navigation to `https://*.execute-api.*.amazonaws.com/...`.
    - No mixed-content warnings caused by `http://` backend links.

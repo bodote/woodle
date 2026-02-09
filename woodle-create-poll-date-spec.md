@@ -115,6 +115,13 @@ Schritt 3 zeigt eine Zusammenfassung der Auswahlmöglichkeiten, definiert das au
 - Direkt auf der Seite werden zwei kopierbare Links angezeigt:
   - Link für Teilnehmende (öffentlich).
   - Admin-Link für Änderungen.
+- Beide Links werden als **vollständige absolute URL** angezeigt (inkl. Protokoll und Host), nicht nur als Pfad.
+  - Beispiel AWS: `https://woodle.click/poll/<pollId>`
+  - Beispiel lokal: `http://localhost:<port>/poll/<pollId>`
+  - Für den Admin-Link entsprechend: `.../poll/<pollId>-<adminSecret>`
+- Die URL-Bildung ist request-basiert:
+  - lokal `http` + tatsächlicher lokaler Port (z. B. `8088`)
+  - deployed auf AWS `https`
 - Admin kann bestehende Termine direkt in der Liste per „Termin löschen“-Button entfernen.
   - Bei untertägigen Terminen erfolgt das Löschen **nach Datum + Uhrzeit**.
 - Die Links werden als nicht-editierbarer Text mit „Kopiere Link“ Buttons angezeigt.

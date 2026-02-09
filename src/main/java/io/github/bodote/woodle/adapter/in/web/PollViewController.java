@@ -10,6 +10,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -45,12 +46,18 @@ public class PollViewController {
     }
 
     @GetMapping("/poll/{pollId:[0-9a-fA-F\\-]{36}}-{adminSecret}")
-    public String viewPollAdmin(@PathVariable UUID pollId, @PathVariable String adminSecret, Model model) {
+    public String viewPollAdmin(@PathVariable UUID pollId,
+                                @PathVariable String adminSecret,
+                                Model model,
+                                HttpServletRequest request) {
         Poll poll = readPollUseCase.getAdmin(pollId, adminSecret);
         model.addAttribute("poll", poll);
         model.addAttribute("adminView", true);
         model.addAttribute("pollId", pollId);
         model.addAttribute("adminSecret", adminSecret);
+        String origin = resolveOrigin(request);
+        model.addAttribute("participantShareUrl", origin + "/poll/" + pollId);
+        model.addAttribute("adminShareUrl", origin + "/poll/" + pollId + "-" + adminSecret);
         return "poll/view";
     }
 
@@ -180,6 +187,48 @@ public class PollViewController {
             case IF_NEEDED -> "(✓)";
             case NO -> "✗";
         };
+    }
+
+    private String resolveOrigin(HttpServletRequest request) {
+        String scheme = firstHeaderValue(request, "X-Forwarded-Proto");
+        if (scheme == null || scheme.isBlank()) {
+            scheme = request.getScheme();
+        }
+
+        String host = firstHeaderValue(request, "X-Forwarded-Host");
+        if (host == null || host.isBlank()) {
+            host = request.getHeader("Host");
+        }
+        if (host == null || host.isBlank()) {
+            host = request.getServerName();
+        }
+        host = host.trim();
+
+        if (host.contains(":")) {
+            return scheme + "://" + host;
+        }
+
+        String forwardedPort = firstHeaderValue(request, "X-Forwarded-Port");
+        int port = request.getServerPort();
+        if (forwardedPort != null && !forwardedPort.isBlank()) {
+            port = Integer.parseInt(forwardedPort.trim());
+        }
+
+        boolean defaultHttp = "http".equalsIgnoreCase(scheme) && port == 80;
+        boolean defaultHttps = "https".equalsIgnoreCase(scheme) && port == 443;
+        if (defaultHttp || defaultHttps) {
+            return scheme + "://" + host;
+        }
+        return scheme + "://" + host + ":" + port;
+    }
+
+    private String firstHeaderValue(HttpServletRequest request, String headerName) {
+        String value = request.getHeader(headerName);
+        if (value == null) {
+            return null;
+        }
+        String[] parts = value.split(",", 2);
+        return parts[0].trim();
     }
 
     record MonthGroup(String label, int startIndex, int span) {
