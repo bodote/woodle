@@ -214,3 +214,13 @@ Die Benutzersicht zeigt eine tabellenbasierte Übersicht aller Teilnehmenden und
 - Stattdessen erfolgt eine Weiterleitung auf die Startseite zum Erstellen einer neuen Umfrage:
   - Ziel: `/poll/new`
 - Dies gilt für alle HTTP-Methoden (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`).
+
+# Domain- und URL-Anforderung (neu)
+- Die Benutzerführung bleibt durchgehend auf der Frontend-Domain:
+  - `https://woodle.click/...`
+- Das gilt mindestens für:
+  - Schritt 1: `/poll/new` bzw. `/poll/new-step1.html`
+  - Schritt 2: `/poll/step-2`
+  - Schritt 3: `/poll/step-3`
+  - Abstimmung/Teilnahme: `/poll/{pollId}` und Admin-Ansicht
+- Während normaler Nutzung dürfen keine sichtbaren Weiterleitungen auf technische Backend-Domains (z. B. `*.execute-api.*.amazonaws.com`) stattfinden.

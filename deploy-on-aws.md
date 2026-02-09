@@ -18,6 +18,11 @@ Deploy Woodle so that cost is as low as possible when no one is using the app, w
 - Frontend domain: `https://woodle.click`
 - API domain: `https://api.woodle.click/v1`
 
+### Single-Domain UX Requirement
+- Users must remain on `https://woodle.click/...` for the complete poll-creation flow (steps 1-3) and voting pages.
+- No browser-visible redirect to `https://*.execute-api.*.amazonaws.com/...` is allowed during normal user navigation.
+- CloudFront must front both static assets and dynamic poll routes so app paths stay on the frontend domain.
+
 ### Why this minimizes idle cost
 - No EC2/ECS/RDS always-on compute.
 - Lambda billed per request and execution duration.
@@ -251,6 +256,45 @@ CORS operational notes:
    - read poll
    - update with valid and stale ETag
    - cast vote
+
+### Backend Base URL for Frontend Runtime Config (Single Domain)
+
+`aws-deploy.sh` writes `runtime-config.js` with `window.WOODLE_BACKEND_BASE_URL`.
+
+- Default: empty value (`""`) so frontend posts to same origin (`https://woodle.click/...`).
+- Optional override: set `WOODLE_BACKEND_BASE_URL` before running deploy (for split-domain setups).
+- Safety: when override is set, deploy script normalizes it to `https://...` before upload.
+
+For production single-domain UX, keep `WOODLE_BACKEND_BASE_URL` empty so forms use relative `/poll/...` paths via CloudFront.
+
+Single-domain default example:
+
+```bash
+AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
+```
+
+Optional split-domain override example:
+
+```bash
+WOODLE_BACKEND_BASE_URL=https://api.woodle.click \
+AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
+```
+
+### Post-Deploy Smoke Checklist (Single-Domain UX)
+
+Run this in a browser against production:
+
+1. Open `https://woodle.click/poll/new`.
+   - Expected URL stays `https://woodle.click/...`.
+2. Fill step 1 and submit to step 2.
+   - Expected URL: `https://woodle.click/poll/step-2`.
+3. Fill step 2 and submit to step 3.
+   - Expected URL: `https://woodle.click/poll/step-3`.
+4. Finish poll creation.
+   - Expected participant/admin links start with `https://woodle.click/poll/...`.
+5. Open browser devtools (Network) and confirm:
+   - No top-level navigation to `https://*.execute-api.*.amazonaws.com/...`.
+   - No mixed-content warnings caused by `http://` backend links.
 
 ## Pre-Deploy Validation
 

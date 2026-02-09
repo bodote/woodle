@@ -48,7 +48,11 @@ Optional overrides:
 ```bash
 AWS_REGION=eu-central-1 ENV_NAME=dev STACK_NAME=woodle-dev ./aws-deploy.sh
 APP_DOMAIN_NAME=woodle.click ACM_CERTIFICATE_ARN=<acm-arn-in-us-east-1> ./aws-deploy.sh
+WOODLE_BACKEND_BASE_URL=https://api.woodle.click ./aws-deploy.sh
 ```
+
+`WOODLE_BACKEND_BASE_URL` is optional. By default, deploy writes an empty backend base URL so frontend forms use
+same-origin paths (single-domain UX via CloudFront).
 
 ## Post-deploy smoke checks
 

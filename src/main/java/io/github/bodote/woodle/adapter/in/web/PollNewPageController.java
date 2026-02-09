@@ -109,6 +109,29 @@ public class PollNewPageController {
     @GetMapping("/poll/step-3")
     public String renderStep3(Model model, HttpSession session) {
         WizardState state = getOrInitWizard(session);
+        populateStep3Model(model, state);
+        return "poll/new-step3";
+    }
+
+    @PostMapping("/poll/step-3")
+    public String handleStep2(
+            @RequestParam(value = "eventType", defaultValue = "ALL_DAY") io.github.bodote.woodle.domain.model.EventType eventType,
+            @RequestParam(value = "durationMinutes", required = false) Integer durationMinutes,
+            HttpSession session,
+            Model model,
+            jakarta.servlet.http.HttpServletRequest request
+    ) {
+        WizardState state = getOrInitWizard(session);
+        state.setEventType(eventType);
+        state.setDurationMinutes(durationMinutes);
+        state.setDates(extractDates(request.getParameterMap()));
+        state.setStartTimes(extractStartTimes(request.getParameterMap(), eventType));
+        session.setAttribute(WizardState.SESSION_KEY, state);
+        populateStep3Model(model, state);
+        return "poll/new-step3";
+    }
+
+    private void populateStep3Model(Model model, WizardState state) {
         model.addAttribute("dates", state.dates());
         model.addAttribute("eventType", state.eventType());
         if (state.eventType() == io.github.bodote.woodle.domain.model.EventType.INTRADAY) {
@@ -120,23 +143,6 @@ public class PollNewPageController {
                 model.addAttribute("expiresAt", lastDate.plusWeeks(4));
             }
         }
-        return "poll/new-step3";
-    }
-
-    @PostMapping("/poll/step-3")
-    public String handleStep2(
-            @RequestParam(value = "eventType", defaultValue = "ALL_DAY") io.github.bodote.woodle.domain.model.EventType eventType,
-            @RequestParam(value = "durationMinutes", required = false) Integer durationMinutes,
-            HttpSession session,
-            jakarta.servlet.http.HttpServletRequest request
-    ) {
-        WizardState state = getOrInitWizard(session);
-        state.setEventType(eventType);
-        state.setDurationMinutes(durationMinutes);
-        state.setDates(extractDates(request.getParameterMap()));
-        state.setStartTimes(extractStartTimes(request.getParameterMap(), eventType));
-        session.setAttribute(WizardState.SESSION_KEY, state);
-        return "redirect:/poll/step-3";
     }
 
     private WizardState getOrInitWizard(HttpSession session) {

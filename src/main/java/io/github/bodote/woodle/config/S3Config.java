@@ -7,7 +7,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -30,7 +32,7 @@ public class S3Config {
     ) {
         S3ClientBuilder builder = S3Client.builder()
                 .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey)))
+                .credentialsProvider(resolveCredentialsProvider(accessKey, secretKey))
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(pathStyle).build());
 
         if (endpoint != null && !endpoint.isBlank()) {
@@ -38,6 +40,17 @@ public class S3Config {
         }
 
         return builder.build();
+    }
+
+    private AwsCredentialsProvider resolveCredentialsProvider(String accessKey, String secretKey) {
+        if (isBlankOrDummy(accessKey) || isBlankOrDummy(secretKey)) {
+            return DefaultCredentialsProvider.create();
+        }
+        return StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey));
+    }
+
+    private boolean isBlankOrDummy(String value) {
+        return value == null || value.isBlank() || "dummy".equals(value);
     }
 
     @Bean

@@ -77,6 +77,11 @@ Resources:
             DomainName: !GetAtt WebBucket.RegionalDomainName
             S3OriginConfig: {}
             OriginAccessControlId: !Ref WebBucketOriginAccessControl
+          - Id: api-origin
+            DomainName: !Sub ${Api}.execute-api.${AWS::Region}.amazonaws.com
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              HTTPSPort: 443
         DefaultCacheBehavior:
           TargetOriginId: web-bucket-origin
           ViewerProtocolPolicy: redirect-to-https
@@ -85,6 +90,31 @@ Resources:
           CachedMethods: [GET, HEAD, OPTIONS]
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
           OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+        CacheBehaviors:
+          - PathPattern: /poll/new
+            TargetOriginId: web-bucket-origin
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+          - PathPattern: /poll/new-step1.html
+            TargetOriginId: web-bucket-origin
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+          - PathPattern: /poll*
+            TargetOriginId: api-origin
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
         CustomErrorResponses:
           - ErrorCode: 404
             ResponseCode: 200
@@ -124,7 +154,10 @@ Resources:
       StageName: "$default"
       CorsConfiguration:
         AllowOrigins:
-          - !Sub https://${WebDistribution.DomainName}
+          - !If
+            - HasCustomDomain
+            - !Sub "https://${AppDomainName}"
+            - "*"
         AllowHeaders:
           - Content-Type
           - If-Match

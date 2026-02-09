@@ -20,6 +20,7 @@ APP_DOMAIN_NAME="${APP_DOMAIN_NAME:-}"
 ACM_CERTIFICATE_ARN="${ACM_CERTIFICATE_ARN:-}"
 DISABLE_CLOUDFRONT_INVALIDATION="${DISABLE_CLOUDFRONT_INVALIDATION:-false}"
 CLOUDFRONT_INVALIDATION_PATHS="${CLOUDFRONT_INVALIDATION_PATHS:-/*}"
+WOODLE_BACKEND_BASE_URL="${WOODLE_BACKEND_BASE_URL:-}"
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -134,11 +135,6 @@ if [[ -d "${STATIC_DIR}" ]]; then
     --region "${AWS_REGION}" \
     --query "Stacks[0].Outputs[?OutputKey=='WebBucketName'].OutputValue | [0]" \
     --output text)"
-  API_BASE_URL="$(aws cloudformation describe-stacks \
-    --stack-name "${STACK_NAME}" \
-    --region "${AWS_REGION}" \
-    --query "Stacks[0].Outputs[?OutputKey=='ApiBaseUrl'].OutputValue | [0]" \
-    --output text)"
   FRONTEND_CLOUDFRONT_URL="$(aws cloudformation describe-stacks \
     --stack-name "${STACK_NAME}" \
     --region "${AWS_REGION}" \
@@ -150,16 +146,29 @@ if [[ -d "${STATIC_DIR}" ]]; then
     exit 1
   fi
 
-  if [[ -z "${API_BASE_URL}" || "${API_BASE_URL}" == "None" ]]; then
-    echo "Could not resolve ApiBaseUrl from stack outputs." >&2
-    exit 1
-  fi
-
   TMP_STATIC_DIR="$(mktemp -d)"
   trap 'rm -rf "${TMP_STATIC_DIR}"' EXIT
 
   rsync -a "${STATIC_DIR}/" "${TMP_STATIC_DIR}/"
-  printf 'window.WOODLE_BACKEND_BASE_URL = "%s";\n' "${API_BASE_URL%/}" > "${TMP_STATIC_DIR}/runtime-config.js"
+
+  RUNTIME_BACKEND_BASE_URL=""
+  if [[ -n "${WOODLE_BACKEND_BASE_URL}" ]]; then
+    RUNTIME_BACKEND_BASE_URL="${WOODLE_BACKEND_BASE_URL%/}"
+  fi
+
+  if [[ -n "${RUNTIME_BACKEND_BASE_URL}" ]]; then
+    if [[ "${RUNTIME_BACKEND_BASE_URL}" =~ ^http:// ]]; then
+      RUNTIME_BACKEND_BASE_URL="https://${RUNTIME_BACKEND_BASE_URL#http://}"
+      echo "Normalized backend base URL to HTTPS: ${RUNTIME_BACKEND_BASE_URL}"
+    elif [[ ! "${RUNTIME_BACKEND_BASE_URL}" =~ ^https:// ]]; then
+      RUNTIME_BACKEND_BASE_URL="https://${RUNTIME_BACKEND_BASE_URL}"
+      echo "Prefixed backend base URL with HTTPS: ${RUNTIME_BACKEND_BASE_URL}"
+    fi
+  else
+    echo "Using same-origin backend base URL for runtime config."
+  fi
+
+  printf 'window.WOODLE_BACKEND_BASE_URL = "%s";\n' "${RUNTIME_BACKEND_BASE_URL}" > "${TMP_STATIC_DIR}/runtime-config.js"
 
   echo "Syncing static assets from ${STATIC_DIR} to s3://${WEB_BUCKET_NAME}/ ..."
   aws s3 sync "${TMP_STATIC_DIR}/" "s3://${WEB_BUCKET_NAME}/" --delete --region "${AWS_REGION}"

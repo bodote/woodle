@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(io.github.bodote.woodle.adapter.in.web.PollNewPageController.class)
@@ -48,6 +47,24 @@ class PollWizardFlowTest {
     }
 
     @Test
+    @DisplayName("step-2 submit renders step-3 directly")
+    void step2SubmitRendersStep3Directly() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        WizardState state = TestFixtures.wizardStateBasics();
+        state.setAuthorEmail(VALID_EMAIL);
+        state.setTitle("Test");
+        session.setAttribute(WizardState.SESSION_KEY, state);
+
+        mockMvc.perform(post("/poll/step-3")
+                        .session(session)
+                        .param("eventType", "ALL_DAY")
+                        .param("dateOption1", "2026-02-10")
+                        .param("dateOption2", "2026-02-11"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abstimmungszeitraum und Bestätigung (3 von 3)")));
+    }
+
+    @Test
     @DisplayName("step-2 submits and stores dates in session")
     void step2StoresDatesInSession() throws Exception {
         MockHttpSession session = new MockHttpSession();
@@ -61,8 +78,8 @@ class PollWizardFlowTest {
                         .param("eventType", "ALL_DAY")
                         .param("dateOption1", "2026-02-10")
                         .param("dateOption2", "2026-02-11"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/poll/step-3"));
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abstimmungszeitraum und Bestätigung (3 von 3)")));
 
         WizardState updated = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
         assertNotNull(updated);
