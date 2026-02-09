@@ -315,6 +315,23 @@ Run this in a browser against production:
    - No top-level navigation to `https://*.execute-api.*.amazonaws.com/...`.
    - No mixed-content warnings caused by `http://` backend links.
 
+### Native Runtime Hardening Checklist (GraalVM on Lambda)
+
+Use this checklist whenever `DEPLOY_RUNTIME=native` is enabled:
+
+1. Dockerfile consistency:
+   - builder stage and final runtime stage must be libc-compatible.
+   - prefer Amazon Linux (glibc) in both stages.
+2. Builder dependencies:
+   - ensure `findutils` is installed (`xargs` must exist).
+3. Cold start budget:
+   - Lambda timeout must tolerate native + Spring startup during cold starts.
+   - validate with CloudWatch `INIT_REPORT` after deployment.
+4. CloudFront + domain safety:
+   - if CloudFormation update fails with CNAME-already-associated errors, resolve DNS/CloudFront ownership before retrying.
+5. Functional regression smoke:
+   - verify participant row lifecycle end-to-end: create vote -> `Speichern` -> `Bearbeiten` -> change -> `Speichern`.
+
 ## Pre-Deploy Validation
 
 What can be validated locally (high confidence):

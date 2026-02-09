@@ -63,4 +63,24 @@ class NativeLambdaDeploymentModeTest {
                 Files.exists(Path.of("Dockerfile.lambda.native")),
                 "Expected Dockerfile.lambda.native for GraalVM/native Lambda deployment");
     }
+
+    @Test
+    @DisplayName("installs xargs dependency in native build container")
+    void installsXargsDependencyInNativeBuildContainer() throws IOException {
+        String dockerfile = Files.readString(Path.of("Dockerfile.lambda.native"));
+
+        assertTrue(
+                dockerfile.contains("microdnf install -y findutils"),
+                "Expected native Dockerfile to install findutils/xargs before running Gradle");
+    }
+
+    @Test
+    @DisplayName("uses glibc-based runtime image for native lambda binary")
+    void usesGlibcBasedRuntimeImageForNativeBinary() throws IOException {
+        String dockerfile = Files.readString(Path.of("Dockerfile.lambda.native"));
+
+        assertTrue(
+                dockerfile.contains("FROM public.ecr.aws/amazonlinux/amazonlinux:2023"),
+                "Expected native runtime stage to use a glibc-based amazonlinux image");
+    }
 }

@@ -2,6 +2,9 @@ FROM --platform=$BUILDPLATFORM ghcr.io/graalvm/native-image-community:21 AS nati
 
 WORKDIR /workspace
 
+RUN microdnf install -y findutils \
+    && microdnf clean all
+
 COPY gradlew /workspace/gradlew
 COPY gradle /workspace/gradle
 COPY settings.gradle /workspace/settings.gradle
@@ -11,7 +14,7 @@ COPY src /workspace/src
 RUN chmod +x /workspace/gradlew \
     && /workspace/gradlew --no-daemon nativeCompile
 
-FROM public.ecr.aws/docker/library/alpine:3.20
+FROM public.ecr.aws/amazonlinux/amazonlinux:2023
 
 # AWS Lambda Web Adapter extension for container images
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter

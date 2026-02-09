@@ -156,6 +156,26 @@ Dry-run example (validate config/preflight only, no AWS or Docker changes):
 DRY_RUN=true DEPLOY_RUNTIME=native AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
 ```
 
+### Native AWS Guardrails (GraalVM)
+
+For `DEPLOY_RUNTIME=native`, keep these rules to avoid runtime failures on Lambda:
+
+1. Build and runtime image must use compatible libc.
+   - Do not mix a glibc-built binary with a musl runtime image (for example Alpine).
+   - Current safe baseline: build in Amazon Linux and run in Amazon Linux.
+2. Keep required build tools in the native build image.
+   - `xargs` is required by the native build pipeline (`findutils` package).
+3. Expect first cold start to be slower than warm invocations.
+   - CloudWatch may show a long `INIT_REPORT` while Spring Boot + adapter initialize.
+4. After each native deploy, run an AWS smoke test on the public URL:
+   - create poll (step 1 -> step 3)
+   - publish poll
+   - participant vote `Speichern`
+   - reopen row via `Bearbeiten`
+   - edit and `Speichern` again
+5. If full `sam deploy` is blocked by CloudFront custom-domain conflicts, fix the domain mapping first.
+   - Temporary Lambda-only image update can validate backend behavior, but does not replace a clean stack deploy.
+
 ## Local E2E (Playwright + LocalStack)
 
 Start LocalStack (S3):

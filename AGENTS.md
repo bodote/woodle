@@ -260,3 +260,23 @@ cross-module infrastructure coupling and clarifies the API boundary.
 ## Tooling Notes
 
 - If Playwright/Chrome hangs with the message “Wird in einer aktuellen Browsersitzung geöffnet”, fully quit Chrome and restart it. This usually unblocks the Playwright launch.
+
+## AWS Native Deployment Guardrails
+
+When changing AWS-native deployment (`DEPLOY_RUNTIME=native`, `Dockerfile.lambda.native`, Lambda runtime behavior), apply these rules:
+
+1. Keep native-image build and runtime libc-compatible.
+    - Do not run a glibc-built binary in Alpine/musl images.
+    - Prefer Amazon Linux based runtime images for Lambda native binaries in this project.
+2. Ensure native build prerequisites exist in the builder image.
+    - `xargs` is required (install via `findutils` when missing).
+3. Validate with TDD when changing deployment/runtime contracts.
+    - Add first failing infrastructure test (for example under `src/test/java/.../infra/*Test.java`), then implement.
+4. Treat CloudFront CNAME conflicts as deployment blockers.
+    - Do not assume backend issues if stack update fails at CloudFront custom-domain resources.
+5. Always run post-deploy AWS smoke checks (Playwright/manual) for poll edit lifecycle:
+    - create poll through step 3
+    - publish poll
+    - participant `Speichern`
+    - row `Bearbeiten`
+    - edit and `Speichern` again
