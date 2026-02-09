@@ -277,6 +277,21 @@ Single-domain default example:
 AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
 ```
 
+Native-image deployment example (GraalVM build in Docker):
+
+```bash
+DEPLOY_RUNTIME=native AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
+```
+
+For `DEPLOY_RUNTIME=native`, `aws-deploy.sh` runs a preflight check before deployment:
+- verifies that the native Dockerfile exists
+- verifies Docker buildx availability
+- verifies that the selected buildx builder reports `linux/arm64` support
+
+Optional dry run mode:
+- set `DRY_RUN=true` to print resolved deployment configuration and run validations only
+- script exits before any AWS (`aws`, `sam`) or Docker build/push actions
+
 Optional split-domain override example:
 
 ```bash

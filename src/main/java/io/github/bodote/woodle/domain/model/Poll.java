@@ -20,6 +20,18 @@ public record Poll(
         OffsetDateTime updatedAt,
         LocalDate expiresAt
 ) {
+    public String getTitle() {
+        return title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public List<PollOption> getOptions() {
+        return options;
+    }
+
     public Poll addResponse(PollResponse response) {
         List<PollResponse> updated = new java.util.ArrayList<>(responses);
         updated.add(response);

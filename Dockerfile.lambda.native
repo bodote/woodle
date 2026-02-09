@@ -1,0 +1,29 @@
+FROM --platform=$BUILDPLATFORM ghcr.io/graalvm/native-image-community:21 AS native-builder
+
+WORKDIR /workspace
+
+COPY gradlew /workspace/gradlew
+COPY gradle /workspace/gradle
+COPY settings.gradle /workspace/settings.gradle
+COPY build.gradle /workspace/build.gradle
+COPY src /workspace/src
+
+RUN chmod +x /workspace/gradlew \
+    && /workspace/gradlew --no-daemon nativeCompile
+
+FROM public.ecr.aws/docker/library/alpine:3.20
+
+# AWS Lambda Web Adapter extension for container images
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
+
+WORKDIR /app
+
+COPY --from=native-builder /workspace/build/native/nativeCompile/woodle /app/woodle
+RUN chmod +x /app/woodle
+
+ENV PORT=8080
+ENV SERVER_PORT=8080
+
+EXPOSE 8080
+
+CMD ["/app/woodle"]

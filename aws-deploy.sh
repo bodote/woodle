@@ -15,12 +15,48 @@ if [[ -z "${IMAGE_TAG:-}" ]]; then
   IMAGE_TAG="$(date +%Y%m%d%H%M%S)"
 fi
 TEMPLATE_FILE="${TEMPLATE_FILE:-infra/template.yaml}"
-LAMBDA_DOCKERFILE="${LAMBDA_DOCKERFILE:-Dockerfile.lambda}"
+DEPLOY_RUNTIME="${DEPLOY_RUNTIME:-jvm}"
+LAMBDA_DOCKERFILE_JVM="${LAMBDA_DOCKERFILE_JVM:-Dockerfile.lambda}"
+LAMBDA_DOCKERFILE_NATIVE="${LAMBDA_DOCKERFILE_NATIVE:-Dockerfile.lambda.native}"
+LAMBDA_DOCKERFILE="${LAMBDA_DOCKERFILE:-}"
 APP_DOMAIN_NAME="${APP_DOMAIN_NAME:-}"
 ACM_CERTIFICATE_ARN="${ACM_CERTIFICATE_ARN:-}"
 DISABLE_CLOUDFRONT_INVALIDATION="${DISABLE_CLOUDFRONT_INVALIDATION:-false}"
 CLOUDFRONT_INVALIDATION_PATHS="${CLOUDFRONT_INVALIDATION_PATHS:-/*}"
 WOODLE_BACKEND_BASE_URL="${WOODLE_BACKEND_BASE_URL:-}"
+DRY_RUN="${DRY_RUN:-false}"
+
+if [[ -z "${LAMBDA_DOCKERFILE}" ]]; then
+  if [[ "${DEPLOY_RUNTIME}" == "native" ]]; then
+    LAMBDA_DOCKERFILE="${LAMBDA_DOCKERFILE_NATIVE}"
+  elif [[ "${DEPLOY_RUNTIME}" == "jvm" ]]; then
+    LAMBDA_DOCKERFILE="${LAMBDA_DOCKERFILE_JVM}"
+  else
+    echo "Unsupported DEPLOY_RUNTIME: ${DEPLOY_RUNTIME}. Use 'jvm' or 'native'." >&2
+    exit 1
+  fi
+fi
+
+if [[ "${DEPLOY_RUNTIME}" == "native" ]]; then
+  echo "Running native deployment preflight checks..."
+
+  if [[ ! -f "${LAMBDA_DOCKERFILE}" ]]; then
+    echo "Native Dockerfile not found: ${LAMBDA_DOCKERFILE}" >&2
+    exit 1
+  fi
+
+  if ! docker buildx version >/dev/null 2>&1; then
+    echo "Docker buildx is required for native lambda image publishing." >&2
+    exit 1
+  fi
+
+  BUILDX_PLATFORMS="$(docker buildx inspect 2>/dev/null | grep -E '^Platforms:' || true)"
+  if [[ -z "${BUILDX_PLATFORMS}" || "${BUILDX_PLATFORMS}" != *"linux/arm64"* ]]; then
+    echo "Docker buildx builder does not report linux/arm64 support." >&2
+    echo "Create/select a builder with arm64 support, then re-run deployment." >&2
+    exit 1
+  fi
+fi
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -50,12 +86,24 @@ echo "  Account:       ${ACCOUNT_ID}"
 echo "  Region:        ${AWS_REGION}"
 echo "  Stack:         ${STACK_NAME}"
 echo "  Environment:   ${ENV_NAME}"
+echo "  Runtime mode:  ${DEPLOY_RUNTIME}"
+echo "  Dry run:       ${DRY_RUN}"
 echo "  ECR repo:      ${ECR_REPO_NAME}"
 echo "  Image URI:     ${IMAGE_URI}"
 echo "  Template file: ${TEMPLATE_FILE}"
+echo "  Dockerfile:    ${LAMBDA_DOCKERFILE}"
 
-echo "Building application jar..."
-./gradlew bootJar
+if [[ "${DEPLOY_RUNTIME}" == "jvm" ]]; then
+  echo "Building application jar for JVM deployment..."
+  ./gradlew bootJar
+else
+  echo "Skipping local jar build: native image is built inside Docker."
+fi
+
+if [[ "${DRY_RUN}" == "true" ]]; then
+  echo "Dry-run enabled. Stopping before AWS and Docker operations."
+  exit 0
+fi
 
 echo "Ensuring ECR repository exists: ${ECR_REPO_NAME}"
 if ! aws ecr describe-repositories --repository-names "${ECR_REPO_NAME}" --region "${AWS_REGION}" >/dev/null 2>&1; then

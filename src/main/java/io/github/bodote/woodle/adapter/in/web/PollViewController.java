@@ -232,20 +232,78 @@ public class PollViewController {
     }
 
     record MonthGroup(String label, int startIndex, int span) {
+        public String getLabel() {
+            return label;
+        }
+
+        public int getSpan() {
+            return span;
+        }
     }
 
     record OptionHeader(PollOption option, String label) {
+        public PollOption getOption() {
+            return option;
+        }
+
+        public String getLabel() {
+            return label;
+        }
     }
 
     record ParticipantRow(UUID responseId, String name, List<VoteCell> cells) {
+        public UUID getResponseId() {
+            return responseId;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public List<VoteCell> getCells() {
+            return cells;
+        }
     }
 
     record EditableRow(UUID responseId, String name, List<VoteCell> cells) {
+        public UUID getResponseId() {
+            return responseId;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public List<VoteCell> getCells() {
+            return cells;
+        }
     }
 
     record VoteCell(UUID optionId, PollVoteValue value, String symbol) {
+        public UUID getOptionId() {
+            return optionId;
+        }
+
+        public PollVoteValue getValue() {
+            return value;
+        }
+
+        public String getSymbol() {
+            return symbol;
+        }
     }
 
     record SummaryCell(UUID optionId, int count, boolean best) {
+        public UUID getOptionId() {
+            return optionId;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public boolean isBest() {
+            return best;
+        }
     }
 }

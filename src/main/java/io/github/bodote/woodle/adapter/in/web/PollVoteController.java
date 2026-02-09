@@ -111,8 +111,30 @@ public class PollVoteController {
     }
 
     record ParticipantRow(UUID responseId, String name, List<VoteCell> cells) {
+        public UUID getResponseId() {
+            return responseId;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public List<VoteCell> getCells() {
+            return cells;
+        }
     }
 
     record VoteCell(UUID optionId, PollVoteValue value, String symbol) {
+        public UUID getOptionId() {
+            return optionId;
+        }
+
+        public PollVoteValue getValue() {
+            return value;
+        }
+
+        public String getSymbol() {
+            return symbol;
+        }
     }
 }

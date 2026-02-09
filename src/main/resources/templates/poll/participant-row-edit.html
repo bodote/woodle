@@ -19,9 +19,9 @@
     <td th:each="cell : ${editRow.cells}" class="votes-table__cell">
         <select th:name="${'vote_edit_' + cell.optionId}"
                 th:attr="form=${'edit-form-' + editRow.responseId}">
-            <option value="YES" th:selected="${cell.value == T(io.github.bodote.woodle.domain.model.PollVoteValue).YES}">Ja</option>
-            <option value="IF_NEEDED" th:selected="${cell.value == T(io.github.bodote.woodle.domain.model.PollVoteValue).IF_NEEDED}">Wenn nötig</option>
-            <option value="NO" th:selected="${cell.value == T(io.github.bodote.woodle.domain.model.PollVoteValue).NO}">Nein</option>
+            <option value="YES" th:selected="${cell.value != null and cell.value.name() == 'YES'}">Ja</option>
+            <option value="IF_NEEDED" th:selected="${cell.value != null and cell.value.name() == 'IF_NEEDED'}">Wenn nötig</option>
+            <option value="NO" th:selected="${cell.value != null and cell.value.name() == 'NO'}">Nein</option>
         </select>
     </td>
     <td class="votes-table__edit">

@@ -125,6 +125,37 @@ Full strategy:
 ./gradlew pitest
 ```
 
+## Run and Deploy Modes
+
+For fast local feedback during feature work, run the classic JVM mode:
+
+```bash
+./gradlew bootRun
+```
+
+The AWS deployment script supports two runtime modes:
+
+- `DEPLOY_RUNTIME=jvm` (default): builds `bootJar` and deploys `Dockerfile.lambda`
+- `DEPLOY_RUNTIME=native`: builds a GraalVM native image inside Docker and deploys `Dockerfile.lambda.native`
+
+JVM deployment example:
+
+```bash
+AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
+```
+
+Native deployment example:
+
+```bash
+DEPLOY_RUNTIME=native AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
+```
+
+Dry-run example (validate config/preflight only, no AWS or Docker changes):
+
+```bash
+DRY_RUN=true DEPLOY_RUNTIME=native AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
+```
+
 ## Local E2E (Playwright + LocalStack)
 
 Start LocalStack (S3):
