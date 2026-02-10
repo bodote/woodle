@@ -38,3 +38,33 @@ Fehler (CloudFormation/CloudFront):
 - `sam deploy` ohne Rollback durchläuft.
 - CloudFront-Routing für Poll-Seiten stabil funktioniert.
 - Share-Links auf AWS korrekt mit Protokoll + Hostname erscheinen.
+
+---
+
+# TODO: Test-Coverage verbessern (gemäß test-strategie.md)
+
+## Ziel
+
+- Test-Coverage gezielt erhöhen und dabei die Vorgaben aus `test-strategie.md` strikt einhalten.
+
+## Leitplanken aus test-strategie.md (verbindlich)
+
+- API-first testen: bevorzugt `@WebMvcTest` auf öffentlichen Endpunkten.
+- Interne Implementierungsdetails nicht direkt testen, sofern API-Tests die Abdeckung erreichen.
+- Externe Abhängigkeiten mocken, nicht interne Kollaboration übermocken.
+- HTML funktional testen (Elemente/Verhalten), keine visuellen Layout-Assertions.
+- Namenskonvention einhalten: schnelle Unit-Tests als `*Test.java`, langsame Integrationstests als `*IT.java`.
+- Coverage-Ziele einhalten: 95% Instruction, 90% Branch.
+
+## Nächste Schritte
+
+1. Aktuellen Coverage-Stand ermitteln (`./gradlew test jacocoTestReport`).
+2. Klassen/Branches mit niedriger Abdeckung identifizieren.
+3. Fehlende API-Tests priorisiert ergänzen (`@WebMvcTest`), nur wo nötig interne Tests ergänzen.
+4. Für jede Klasse mit Verhalten sicherstellen, dass eine dedizierte Testabdeckung vorhanden ist.
+5. Abschließend Schwellen validieren (`./gradlew check`).
+
+## Erledigt, wenn
+
+- JaCoCo-Schwellen im Build erfüllt sind (Instruction >= 95%, Branch >= 90%).
+- Neue Tests folgen der Struktur und den Regeln aus `test-strategie.md`.
