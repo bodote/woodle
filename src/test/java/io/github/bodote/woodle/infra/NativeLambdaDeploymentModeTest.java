@@ -57,6 +57,70 @@ class NativeLambdaDeploymentModeTest {
     }
 
     @Test
+    @DisplayName("defaults to qs stage domain and supports -prod switch for production domain")
+    void defaultsToQsDomainAndSupportsProdSwitch() throws IOException {
+        String deployScript = Files.readString(Path.of("aws-deploy.sh"));
+
+        assertTrue(
+                deployScript.contains("DEPLOY_STAGE=\"qs\""),
+                "Expected deployment script to default to qs stage");
+        assertTrue(
+                deployScript.contains("if [[ \"${1:-}\" == \"-prod\" ]]; then"),
+                "Expected deployment script to support -prod argument");
+        assertTrue(
+                deployScript.contains("APP_DOMAIN_NAME=\"${APP_DOMAIN_NAME:-${DEFAULT_FRONTEND_DOMAIN}}\""),
+                "Expected deployment script to default APP_DOMAIN_NAME based on selected stage");
+    }
+
+    @Test
+    @DisplayName("fails fast when custom CloudFront alias is already bound to another distribution")
+    void failsFastWhenCustomAliasIsAlreadyBoundElsewhere() throws IOException {
+        String deployScript = Files.readString(Path.of("aws-deploy.sh"));
+
+        assertTrue(
+                deployScript.contains("Validating CloudFront custom domain alias ownership..."),
+                "Expected deployment script to validate alias ownership before stack deploy");
+        assertTrue(
+                deployScript.contains("ALIAS_OWNER_DISTRIBUTION_ID"),
+                "Expected deployment script to resolve the owning CloudFront distribution id for alias");
+        assertTrue(
+                deployScript.contains("is already associated with distribution"),
+                "Expected deployment script to fail with a clear alias-collision message");
+    }
+
+    @Test
+    @DisplayName("waits for ACM DNS validation record availability in domain wiring script")
+    void waitsForAcmDnsValidationRecordAvailability() throws IOException {
+        String wiringScript = Files.readString(Path.of("wire-domains.sh"));
+
+        assertTrue(
+                wiringScript.contains("Waiting for ACM DNS validation record to become available"),
+                "Expected domain wiring script to wait for ACM validation record propagation");
+        assertTrue(
+                wiringScript.contains("for attempt in {1..20}; do"),
+                "Expected domain wiring script to retry ACM validation record lookup");
+    }
+
+    @Test
+    @DisplayName("defaults domain wiring to qs stage and supports -prod switch")
+    void defaultsDomainWiringToQsStageAndSupportsProdSwitch() throws IOException {
+        String wiringScript = Files.readString(Path.of("wire-domains.sh"));
+
+        assertTrue(
+                wiringScript.contains("DEPLOY_STAGE=\"qs\""),
+                "Expected domain wiring script to default to qs stage");
+        assertTrue(
+                wiringScript.contains("if [[ \"${1:-}\" == \"-prod\" ]]; then"),
+                "Expected domain wiring script to support -prod argument");
+        assertTrue(
+                wiringScript.contains("ROOT_DOMAIN=\"${ROOT_DOMAIN:-${DEFAULT_FRONTEND_DOMAIN}}\""),
+                "Expected domain wiring script to default ROOT_DOMAIN based on selected stage");
+        assertTrue(
+                wiringScript.contains("./aws-deploy.sh -prod"),
+                "Expected production wiring flow to call aws-deploy.sh with -prod");
+    }
+
+    @Test
     @DisplayName("provides dedicated dockerfile for native lambda image")
     void providesNativeLambdaDockerfile() {
         assertTrue(

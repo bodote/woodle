@@ -27,11 +27,11 @@ docker buildx build --platform linux/arm64 --provenance=false --sbom=false -f Do
 ```bash
 sam deploy \
   --template-file infra/template.yaml \
-  --stack-name woodle-dev \
+  --stack-name woodle-qs \
   --capabilities CAPABILITY_IAM \
   --region eu-central-1 \
   --parameter-overrides \
-    EnvironmentName=dev \
+    EnvironmentName=qs \
     LambdaImageUri=<account-id>.dkr.ecr.eu-central-1.amazonaws.com/woodle-lambda:latest
 ```
 
@@ -40,15 +40,16 @@ sam deploy \
 From repository root:
 
 ```bash
-./aws-deploy.sh
+./aws-deploy.sh        # default QS stage (qs.woodle.click)
+./aws-deploy.sh -prod  # production stage (woodle.click)
 ```
 
 Optional overrides:
 
 ```bash
-AWS_REGION=eu-central-1 ENV_NAME=dev STACK_NAME=woodle-dev ./aws-deploy.sh
-APP_DOMAIN_NAME=woodle.click ACM_CERTIFICATE_ARN=<acm-arn-in-us-east-1> ./aws-deploy.sh
-WOODLE_BACKEND_BASE_URL=https://api.woodle.click ./aws-deploy.sh
+AWS_REGION=eu-central-1 ENV_NAME=qs STACK_NAME=woodle-qs ./aws-deploy.sh
+APP_DOMAIN_NAME=qs.woodle.click ACM_CERTIFICATE_ARN=<acm-arn-in-us-east-1> ./aws-deploy.sh
+WOODLE_BACKEND_BASE_URL=https://api.qs.woodle.click ./aws-deploy.sh
 ```
 
 `WOODLE_BACKEND_BASE_URL` is optional. By default, deploy writes an empty backend base URL so frontend forms use

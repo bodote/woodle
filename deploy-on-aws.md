@@ -14,17 +14,22 @@ Deploy Woodle so that cost is as low as possible when no one is using the app, w
 6. IAM roles with least-privilege access.
 7. CloudWatch Logs for API and Lambda.
 
-### Domain targets
-- Frontend domain: `https://woodle.click`
-- API domain: `https://api.woodle.click/v1`
+### Domain targets (separate stacks per stage)
+- QS stage frontend domain: `https://qs.woodle.click`
+- QS stage API domain: `https://api.qs.woodle.click/v1`
+- Production frontend domain: `https://woodle.click`
+- Production API domain: `https://api.woodle.click/v1`
 
 ### Single-Domain UX Requirement
-- Users must remain on `https://woodle.click/...` for the complete poll-creation flow (steps 1-3) and voting pages.
+- Users must remain on the stage frontend host for the complete poll-creation flow (steps 1-3) and voting pages.
+- QS example: `https://qs.woodle.click/...`
+- Production example: `https://woodle.click/...`
 - No browser-visible redirect to `https://*.execute-api.*.amazonaws.com/...` is allowed during normal user navigation.
 - CloudFront must front both static assets and dynamic poll routes so app paths stay on the frontend domain.
 - In admin view section **"Links zum Teilen"**, participant/admin links must be absolute URLs including protocol + host.
 - URL generation must use the current request origin:
   - AWS production example: `https://woodle.click/poll/<pollId>`
+  - AWS QS example: `https://qs.woodle.click/poll/<pollId>`
   - local example: `http://localhost:<port>/poll/<pollId>` (port must match the actual local server port, e.g. `8088`)
 
 ### Why this minimizes idle cost
@@ -83,7 +88,8 @@ Notes:
 ## API Endpoints (HTTP API)
 
 Base URL example:
-- `https://api.woodle.click/v1`
+- QS: `https://api.qs.woodle.click/v1`
+- Production: `https://api.woodle.click/v1`
 
 ### Global API contract rules
 - Content type: `application/json; charset=utf-8`
@@ -214,6 +220,7 @@ This avoids silent overwrite on concurrent admin edits.
 ## CORS Policy (CloudFront Frontend -> API)
 
 Allow only known frontend origins:
+- `https://qs.woodle.click`
 - `https://woodle.click`
 - `https://<cloudfront-distribution-domain>` (for rollout/testing)
 
@@ -253,7 +260,7 @@ CORS operational notes:
 2. Deploy frontend assets to `woodle-web-<env>`.
 3. Create Lambda function and API Gateway HTTP API routes.
 4. Grant Lambda least-privilege IAM access to poll bucket prefix.
-5. Configure CloudFront + custom domain (`woodle.click`) and API custom domain (`api.woodle.click`) with Route53 + ACM.
+5. Configure CloudFront + custom domain per stage (`qs.woodle.click` for QS, `woodle.click` for prod) and API custom domain per stage (`api.qs.woodle.click`, `api.woodle.click`) with Route53 + ACM.
 6. Add budget/anomaly alerts.
 7. Smoke test:
    - create poll
@@ -264,23 +271,32 @@ CORS operational notes:
 ### Backend Base URL for Frontend Runtime Config (Single Domain)
 
 `aws-deploy.sh` writes `runtime-config.js` with `window.WOODLE_BACKEND_BASE_URL`.
+It now selects the deployment stage by CLI argument:
+- default (no argument): QS stage (`qs.woodle.click`)
+- `-prod`: production stage (`woodle.click`)
 
-- Default: empty value (`""`) so frontend posts to same origin (`https://woodle.click/...`).
+- Default: empty value (`""`) so frontend posts to same origin (`https://<stage-domain>/...`).
 - Optional override: set `WOODLE_BACKEND_BASE_URL` before running deploy (for split-domain setups).
 - Safety: when override is set, deploy script normalizes it to `https://...` before upload.
 
 For production single-domain UX, keep `WOODLE_BACKEND_BASE_URL` empty so forms use relative `/poll/...` paths via CloudFront.
 
-Single-domain default example:
+QS default deploy example:
 
 ```bash
-AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
+./aws-deploy.sh
 ```
 
 Native-image deployment example (GraalVM build in Docker):
 
 ```bash
-DEPLOY_RUNTIME=native AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
+DEPLOY_RUNTIME=native ./aws-deploy.sh
+```
+
+Production deploy example:
+
+```bash
+./aws-deploy.sh -prod
 ```
 
 For `DEPLOY_RUNTIME=native`, `aws-deploy.sh` runs a preflight check before deployment:
@@ -296,21 +312,21 @@ Optional split-domain override example:
 
 ```bash
 WOODLE_BACKEND_BASE_URL=https://api.woodle.click \
-AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
+./aws-deploy.sh -prod
 ```
 
 ### Post-Deploy Smoke Checklist (Single-Domain UX)
 
-Run this in a browser against production:
+Run this in a browser against the target stage (replace host accordingly):
 
-1. Open `https://woodle.click/poll/new`.
-   - Expected URL stays `https://woodle.click/...`.
+1. Open `https://qs.woodle.click/poll/new` (or `https://woodle.click/poll/new` for prod).
+   - Expected URL stays on the same host.
 2. Fill step 1 and submit to step 2.
-   - Expected URL: `https://woodle.click/poll/step-2`.
+   - Expected URL: `https://<stage-domain>/poll/step-2`.
 3. Fill step 2 and submit to step 3.
-   - Expected URL: `https://woodle.click/poll/step-3`.
+   - Expected URL: `https://<stage-domain>/poll/step-3`.
 4. Finish poll creation.
-   - Expected participant/admin links are absolute and start with `https://woodle.click/poll/...`.
+   - Expected participant/admin links are absolute and start with `https://<stage-domain>/poll/...`.
 5. Open browser devtools (Network) and confirm:
    - No top-level navigation to `https://*.execute-api.*.amazonaws.com/...`.
    - No mixed-content warnings caused by `http://` backend links.
