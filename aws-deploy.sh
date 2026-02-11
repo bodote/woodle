@@ -105,6 +105,27 @@ if [[ "${DRY_RUN}" == "true" ]]; then
   exit 0
 fi
 
+if [[ -n "${APP_DOMAIN_NAME}" ]]; then
+  echo "Validating CloudFront custom domain alias ownership..."
+  ALIAS_OWNER_DISTRIBUTION_ID="$(aws cloudfront list-distributions \
+    --query "DistributionList.Items[?Aliases.Quantity > \`0\` && contains(Aliases.Items, '${APP_DOMAIN_NAME}')].Id | [0]" \
+    --output text)"
+
+  STACK_DISTRIBUTION_ID="$(aws cloudformation describe-stack-resources \
+    --stack-name "${STACK_NAME}" \
+    --region "${AWS_REGION}" \
+    --logical-resource-id "WebDistribution" \
+    --query "StackResources[0].PhysicalResourceId" \
+    --output text 2>/dev/null || true)"
+
+  if [[ "${ALIAS_OWNER_DISTRIBUTION_ID}" != "None" && -n "${ALIAS_OWNER_DISTRIBUTION_ID}" \
+    && "${ALIAS_OWNER_DISTRIBUTION_ID}" != "${STACK_DISTRIBUTION_ID}" ]]; then
+    echo "CloudFront alias '${APP_DOMAIN_NAME}' is already associated with distribution ${ALIAS_OWNER_DISTRIBUTION_ID}." >&2
+    echo "Remove the alias from the old distribution or deploy with a different APP_DOMAIN_NAME." >&2
+    exit 1
+  fi
+fi
+
 echo "Ensuring ECR repository exists: ${ECR_REPO_NAME}"
 if ! aws ecr describe-repositories --repository-names "${ECR_REPO_NAME}" --region "${AWS_REGION}" >/dev/null 2>&1; then
   aws ecr create-repository --repository-name "${ECR_REPO_NAME}" --region "${AWS_REGION}" >/dev/null

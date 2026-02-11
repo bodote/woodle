@@ -57,6 +57,22 @@ class NativeLambdaDeploymentModeTest {
     }
 
     @Test
+    @DisplayName("fails fast when custom CloudFront alias is already bound to another distribution")
+    void failsFastWhenCustomAliasIsAlreadyBoundElsewhere() throws IOException {
+        String deployScript = Files.readString(Path.of("aws-deploy.sh"));
+
+        assertTrue(
+                deployScript.contains("Validating CloudFront custom domain alias ownership..."),
+                "Expected deployment script to validate alias ownership before stack deploy");
+        assertTrue(
+                deployScript.contains("ALIAS_OWNER_DISTRIBUTION_ID"),
+                "Expected deployment script to resolve the owning CloudFront distribution id for alias");
+        assertTrue(
+                deployScript.contains("is already associated with distribution"),
+                "Expected deployment script to fail with a clear alias-collision message");
+    }
+
+    @Test
     @DisplayName("provides dedicated dockerfile for native lambda image")
     void providesNativeLambdaDockerfile() {
         assertTrue(
