@@ -5,10 +5,28 @@ set -euo pipefail
 # Defaults can be overridden via environment variables.
 #
 # Example:
-#   AWS_REGION=eu-central-1 ENV_NAME=dev STACK_NAME=woodle-dev ./aws-deploy.sh
+#   ./aws-deploy.sh              # qs stage -> qs.woodle.click
+#   ./aws-deploy.sh -prod        # prod stage -> woodle.click
+
+DEPLOY_STAGE="qs"
+if [[ "${1:-}" == "-prod" ]]; then
+  DEPLOY_STAGE="prod"
+  shift
+fi
+
+if [[ $# -gt 0 ]]; then
+  echo "Usage: ./aws-deploy.sh [-prod]" >&2
+  exit 1
+fi
+
+DEFAULT_ENV_NAME="${DEPLOY_STAGE}"
+DEFAULT_FRONTEND_DOMAIN="qs.woodle.click"
+if [[ "${DEPLOY_STAGE}" == "prod" ]]; then
+  DEFAULT_FRONTEND_DOMAIN="woodle.click"
+fi
 
 AWS_REGION="${AWS_REGION:-eu-central-1}"
-ENV_NAME="${ENV_NAME:-dev}"
+ENV_NAME="${ENV_NAME:-${DEFAULT_ENV_NAME}}"
 STACK_NAME="${STACK_NAME:-woodle-${ENV_NAME}}"
 ECR_REPO_NAME="${ECR_REPO_NAME:-woodle-lambda}"
 if [[ -z "${IMAGE_TAG:-}" ]]; then
@@ -19,7 +37,7 @@ DEPLOY_RUNTIME="${DEPLOY_RUNTIME:-jvm}"
 LAMBDA_DOCKERFILE_JVM="${LAMBDA_DOCKERFILE_JVM:-Dockerfile.lambda}"
 LAMBDA_DOCKERFILE_NATIVE="${LAMBDA_DOCKERFILE_NATIVE:-Dockerfile.lambda.native}"
 LAMBDA_DOCKERFILE="${LAMBDA_DOCKERFILE:-}"
-APP_DOMAIN_NAME="${APP_DOMAIN_NAME:-}"
+APP_DOMAIN_NAME="${APP_DOMAIN_NAME:-${DEFAULT_FRONTEND_DOMAIN}}"
 ACM_CERTIFICATE_ARN="${ACM_CERTIFICATE_ARN:-}"
 DISABLE_CLOUDFRONT_INVALIDATION="${DISABLE_CLOUDFRONT_INVALIDATION:-false}"
 CLOUDFRONT_INVALIDATION_PATHS="${CLOUDFRONT_INVALIDATION_PATHS:-/*}"
@@ -84,6 +102,7 @@ IMAGE_URI="${ECR_REGISTRY}/${ECR_REPO_NAME}:${IMAGE_TAG}"
 echo "Deploy configuration:"
 echo "  Account:       ${ACCOUNT_ID}"
 echo "  Region:        ${AWS_REGION}"
+echo "  Stage:         ${DEPLOY_STAGE}"
 echo "  Stack:         ${STACK_NAME}"
 echo "  Environment:   ${ENV_NAME}"
 echo "  Runtime mode:  ${DEPLOY_RUNTIME}"
@@ -92,6 +111,22 @@ echo "  ECR repo:      ${ECR_REPO_NAME}"
 echo "  Image URI:     ${IMAGE_URI}"
 echo "  Template file: ${TEMPLATE_FILE}"
 echo "  Dockerfile:    ${LAMBDA_DOCKERFILE}"
+echo "  Domain:        ${APP_DOMAIN_NAME}"
+
+if [[ -n "${APP_DOMAIN_NAME}" && -z "${ACM_CERTIFICATE_ARN}" ]]; then
+  echo "Resolving ACM certificate for ${APP_DOMAIN_NAME} in us-east-1..."
+  ACM_CERTIFICATE_ARN="$(aws acm list-certificates \
+    --region us-east-1 \
+    --certificate-statuses ISSUED \
+    --query "CertificateSummaryList[?DomainName=='${APP_DOMAIN_NAME}'] | [0].CertificateArn" \
+    --output text)"
+
+  if [[ -z "${ACM_CERTIFICATE_ARN}" || "${ACM_CERTIFICATE_ARN}" == "None" ]]; then
+    echo "No ISSUED ACM certificate found for ${APP_DOMAIN_NAME} in us-east-1." >&2
+    echo "Set ACM_CERTIFICATE_ARN explicitly or provision certificate first." >&2
+    exit 1
+  fi
+fi
 
 if [[ "${DEPLOY_RUNTIME}" == "jvm" ]]; then
   echo "Building application jar for JVM deployment..."

@@ -23,7 +23,7 @@ The app uses these AWS resources in production:
 4.  Amazon API Gateway HTTP API (public API entry point)
 5.  AWS Lambda (Spring backend runtime)
 6.  Amazon CloudWatch Logs (Lambda + API logs)
-7.  AWS Route 53 (DNS for `woodle.click` and `api.woodle.click`)
+7.  AWS Route 53 (DNS for `qs.woodle.click`/`api.qs.woodle.click` and `woodle.click`/`api.woodle.click`)
 8.  AWS Certificate Manager (TLS certificates for domains)
 9.  AWS Budgets + Cost Anomaly Detection (cost monitoring)
 
@@ -74,8 +74,8 @@ Rules:
 ## URL Patterns
 
 *   Create poll: `/poll/new`
-*   Participant link: absolute URL based on current origin, e.g. `https://woodle.click/poll/<UUID>` or `http://localhost:8088/poll/<UUID>`
-*   Admin link: absolute URL based on current origin, e.g. `https://woodle.click/poll/<UUID>-<admin-secret>` or `http://localhost:8088/poll/<UUID>-<admin-secret>`
+*   Participant link: absolute URL based on current origin, e.g. `https://qs.woodle.click/poll/<UUID>`, `https://woodle.click/poll/<UUID>`, or `http://localhost:8088/poll/<UUID>`
+*   Admin link: absolute URL based on current origin, e.g. `https://qs.woodle.click/poll/<UUID>-<admin-secret>`, `https://woodle.click/poll/<UUID>-<admin-secret>`, or `http://localhost:8088/poll/<UUID>-<admin-secret>`
 
 ## Persistence & Data Lifecycle
 
@@ -141,19 +141,25 @@ The AWS deployment script supports two runtime modes:
 JVM deployment example:
 
 ```bash
-AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
+./aws-deploy.sh
 ```
 
 Native deployment example:
 
 ```bash
-DEPLOY_RUNTIME=native AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
+DEPLOY_RUNTIME=native ./aws-deploy.sh
+```
+
+Production deployment example:
+
+```bash
+./aws-deploy.sh -prod
 ```
 
 Dry-run example (validate config/preflight only, no AWS or Docker changes):
 
 ```bash
-DRY_RUN=true DEPLOY_RUNTIME=native AWS_REGION=eu-central-1 ENV_NAME=prod STACK_NAME=woodle-prod ./aws-deploy.sh
+DRY_RUN=true DEPLOY_RUNTIME=native ./aws-deploy.sh
 ```
 
 ### Native AWS Guardrails (GraalVM)

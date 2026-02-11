@@ -1,19 +1,42 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+DEPLOY_STAGE="qs"
+if [[ "${1:-}" == "-prod" ]]; then
+  DEPLOY_STAGE="prod"
+  shift
+fi
+
+if [[ $# -gt 0 ]]; then
+  echo "Usage: ./wire-domains.sh [-prod]" >&2
+  exit 1
+fi
+
+DEFAULT_STACK_NAME="woodle-qs"
+DEFAULT_FRONTEND_DOMAIN="qs.woodle.click"
+DEFAULT_API_DOMAIN="api.qs.woodle.click"
+DEFAULT_HOSTED_ZONE_DOMAIN="woodle.click"
+if [[ "${DEPLOY_STAGE}" == "prod" ]]; then
+  DEFAULT_STACK_NAME="woodle-prod"
+  DEFAULT_FRONTEND_DOMAIN="woodle.click"
+  DEFAULT_API_DOMAIN="api.woodle.click"
+fi
+
 # Wires:
-# - woodle.click      -> CloudFront distribution (from stack output)
-# - api.woodle.click  -> API Gateway HTTP API custom domain
+# - stage frontend domain -> CloudFront distribution (from stack output)
+# - stage API domain      -> API Gateway HTTP API custom domain
 #
 # Defaults can be overridden:
-#   AWS_REGION=eu-central-1 STACK_NAME=woodle-dev ROOT_DOMAIN=woodle.click API_DOMAIN=api.woodle.click ./wire-domains.sh
+#   ./wire-domains.sh        # qs stage
+#   ./wire-domains.sh -prod  # production stage
 # Optional:
 #   HOSTED_ZONE_ID=<route53-zone-id> ./wire-domains.sh
 
 AWS_REGION="${AWS_REGION:-eu-central-1}"
-STACK_NAME="${STACK_NAME:-woodle-dev}"
-ROOT_DOMAIN="${ROOT_DOMAIN:-woodle.click}"
-API_DOMAIN="${API_DOMAIN:-api.${ROOT_DOMAIN}}"
+STACK_NAME="${STACK_NAME:-${DEFAULT_STACK_NAME}}"
+ROOT_DOMAIN="${ROOT_DOMAIN:-${DEFAULT_FRONTEND_DOMAIN}}"
+API_DOMAIN="${API_DOMAIN:-${DEFAULT_API_DOMAIN}}"
+HOSTED_ZONE_DOMAIN="${HOSTED_ZONE_DOMAIN:-${DEFAULT_HOSTED_ZONE_DOMAIN}}"
 HOSTED_ZONE_ID="${HOSTED_ZONE_ID:-}"
 CF_HOSTED_ZONE_ID="Z2FDTNDATAQYW2" # CloudFront alias hosted zone id (global constant)
 
@@ -52,12 +75,12 @@ resolve_hosted_zone_id() {
 
   local zone_id
   zone_id="$(aws route53 list-hosted-zones-by-name \
-    --dns-name "${ROOT_DOMAIN}" \
-    --query "HostedZones[?Name=='${ROOT_DOMAIN}.'] | [0].Id" \
+    --dns-name "${HOSTED_ZONE_DOMAIN}" \
+    --query "HostedZones[?Name=='${HOSTED_ZONE_DOMAIN}.'] | [0].Id" \
     --output text)"
 
   if [[ -z "${zone_id}" || "${zone_id}" == "None" ]]; then
-    echo "Could not resolve hosted zone for ${ROOT_DOMAIN}. Set HOSTED_ZONE_ID explicitly." >&2
+    echo "Could not resolve hosted zone for ${HOSTED_ZONE_DOMAIN}. Set HOSTED_ZONE_ID explicitly." >&2
     exit 1
   fi
 
@@ -157,17 +180,28 @@ upsert_validation_record_for_cert() {
   local cert_arn="$2"
   local domain="$3"
 
-  local rr_json
-  rr_json="$(aws acm describe-certificate \
-    --region "${region}" \
-    --certificate-arn "${cert_arn}" \
-    --query "Certificate.DomainValidationOptions[?DomainName=='${domain}'] | [0].ResourceRecord" \
-    --output json)"
+  local rr_json=""
+  local rr_name=""
+  local rr_value=""
+  local rr_type=""
+  for attempt in {1..20}; do
+    rr_json="$(aws acm describe-certificate \
+      --region "${region}" \
+      --certificate-arn "${cert_arn}" \
+      --query "Certificate.DomainValidationOptions[?DomainName=='${domain}'] | [0].ResourceRecord" \
+      --output json)"
 
-  local rr_name rr_value rr_type
-  rr_name="$(echo "${rr_json}" | jq -r '.Name // empty')"
-  rr_value="$(echo "${rr_json}" | jq -r '.Value // empty')"
-  rr_type="$(echo "${rr_json}" | jq -r '.Type // empty')"
+    rr_name="$(echo "${rr_json}" | jq -r '.Name // empty')"
+    rr_value="$(echo "${rr_json}" | jq -r '.Value // empty')"
+    rr_type="$(echo "${rr_json}" | jq -r '.Type // empty')"
+
+    if [[ -n "${rr_name}" && -n "${rr_value}" && "${rr_type}" == "CNAME" ]]; then
+      break
+    fi
+
+    echo "Waiting for ACM DNS validation record to become available (${attempt}/20) for ${domain}..."
+    sleep 3
+  done
 
   if [[ -z "${rr_name}" || -z "${rr_value}" || "${rr_type}" != "CNAME" ]]; then
     echo "Could not resolve DNS validation CNAME for ${domain} (${cert_arn})." >&2
@@ -277,7 +311,11 @@ if [[ ! -x "./aws-deploy.sh" ]]; then
 fi
 
 echo "Step 2/6: Redeploy stack with CloudFront custom domain ${ROOT_DOMAIN}"
-APP_DOMAIN_NAME="${ROOT_DOMAIN}" ACM_CERTIFICATE_ARN="${CF_CERT_ARN}" ./aws-deploy.sh
+if [[ "${DEPLOY_STAGE}" == "prod" ]]; then
+  APP_DOMAIN_NAME="${ROOT_DOMAIN}" ACM_CERTIFICATE_ARN="${CF_CERT_ARN}" ./aws-deploy.sh -prod
+else
+  APP_DOMAIN_NAME="${ROOT_DOMAIN}" ACM_CERTIFICATE_ARN="${CF_CERT_ARN}" ./aws-deploy.sh
+fi
 
 echo "Step 3/6: Alias ${ROOT_DOMAIN} -> ${CF_DOMAIN}"
 upsert_alias_a "${ROOT_DOMAIN}" "${CF_DOMAIN}" "${CF_HOSTED_ZONE_ID}"
