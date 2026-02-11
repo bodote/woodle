@@ -7,6 +7,9 @@ import io.github.bodote.woodle.application.port.in.ReadPollUseCase;
 import io.github.bodote.woodle.domain.model.EventType;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.domain.model.PollOption;
+import io.github.bodote.woodle.domain.model.PollResponse;
+import io.github.bodote.woodle.domain.model.PollVote;
+import io.github.bodote.woodle.domain.model.PollVoteValue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -169,6 +172,111 @@ class PollViewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
                 .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("renders share links for quoted Forwarded host and proto values")
+    void rendersShareLinksForQuotedForwardedHostAndProtoValues() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000018");
+        String adminSecret = "AdminSecretQuoted";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .header("Forwarded", "for=203.0.113.10;proto=\"https\";host=\"quoted.woodle.click\""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("https://quoted.woodle.click/poll/" + pollId)))
+                .andExpect(content().string(containsString("https://quoted.woodle.click/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("renders share links for forwarded host with explicit port in host value")
+    void rendersShareLinksForForwardedHostWithExplicitPort() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000019");
+        String adminSecret = "AdminSecretPort";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .header("Forwarded", "for=203.0.113.10;proto=https;host=woodle.click:8443"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("https://woodle.click:8443/poll/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click:8443/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("renders share links for proxy http host without forwarded port")
+    void rendersShareLinksForProxyHttpHostWithoutForwardedPort() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000020");
+        String adminSecret = "AdminSecretHttp";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .header("X-Forwarded-Proto", "http")
+                        .header("X-Forwarded-Host", "proxy.woodle.click")
+                        .with(request -> {
+                            request.setScheme("https");
+                            request.setServerName("internal-host");
+                            request.setServerPort(8443);
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("http://proxy.woodle.click/poll/" + pollId)))
+                .andExpect(content().string(containsString("http://proxy.woodle.click/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("renders participant grid for intraday option labels and missing votes")
+    void rendersParticipantGridForIntradayOptionLabelsAndMissingVotes() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000021");
+        UUID optionOne = UUID.fromString("00000000-0000-0000-0000-000000000301");
+        UUID optionTwo = UUID.fromString("00000000-0000-0000-0000-000000000302");
+        PollResponse response = TestFixtures.response(
+                UUID.fromString("00000000-0000-0000-0000-000000000401"),
+                "Max",
+                List.of(new PollVote(optionOne, PollVoteValue.YES))
+        );
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(
+                        TestFixtures.option(optionOne, LocalDate.of(2026, 2, 10), LocalTime.of(9, 0), LocalTime.of(10, 30)),
+                        TestFixtures.option(optionTwo, LocalDate.of(2026, 2, 11))
+                ),
+                List.of(response)
+        );
+
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Di., 10.02. 09:00")))
+                .andExpect(content().string(containsString("Di., 10.02.")))
+                .andExpect(content().string(containsString("✓")));
     }
 
     @Test

@@ -20,6 +20,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @DisplayName("SubmitVoteService")
 class SubmitVoteServiceTest {
@@ -92,6 +94,68 @@ class SubmitVoteServiceTest {
         assertEquals(responseId, repo.saved.responses().get(0).responseId());
     }
 
+    @Test
+    @DisplayName("adds response with provided responseId when it is not found in poll")
+    void addsResponseWithProvidedResponseIdWhenItIsNotFoundInPoll() {
+        UUID pollId = UUID.randomUUID();
+        UUID missingResponseId = UUID.randomUUID();
+        PollOption option = TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10));
+        PollResponse differentExistingResponse = TestFixtures.response(
+                UUID.randomUUID(),
+                "Bob",
+                List.of(new PollVote(option.optionId(), PollVoteValue.NO))
+        );
+        Poll poll = TestFixtures.poll(
+                pollId,
+                "secret",
+                EventType.ALL_DAY,
+                null,
+                List.of(option),
+                List.of(differentExistingResponse)
+        );
+
+        CapturingRepo repo = new CapturingRepo(poll);
+        SubmitVoteService service = new SubmitVoteService(repo);
+
+        SubmitVoteCommand command = new SubmitVoteCommand(
+                pollId,
+                "Alice",
+                List.of(new PollVote(option.optionId(), PollVoteValue.IF_NEEDED)),
+                "comment",
+                missingResponseId
+        );
+
+        service.submit(command);
+
+        assertEquals(2, repo.saved.responses().size());
+        PollResponse added = repo.saved.responses().stream()
+                .filter(response -> response.responseId().equals(missingResponseId))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(PollVoteValue.IF_NEEDED, added.votes().getFirst().value());
+        assertNotNull(added.createdAt());
+    }
+
+    @Test
+    @DisplayName("throws when poll does not exist")
+    void throwsWhenPollDoesNotExist() {
+        UUID pollId = UUID.randomUUID();
+        CapturingRepo repo = new CapturingRepo(null);
+        SubmitVoteService service = new SubmitVoteService(repo);
+
+        SubmitVoteCommand command = new SubmitVoteCommand(
+                pollId,
+                "Alice",
+                List.of(),
+                null,
+                null
+        );
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> service.submit(command));
+
+        assertEquals("Poll not found", exception.getMessage());
+    }
+
     private static final class CapturingRepo implements PollRepository {
         private Poll saved;
         private final Poll existing;
@@ -107,7 +171,7 @@ class SubmitVoteServiceTest {
 
         @Override
         public Optional<Poll> findById(UUID pollId) {
-            return Optional.of(existing);
+            return Optional.ofNullable(existing);
         }
     }
 }
