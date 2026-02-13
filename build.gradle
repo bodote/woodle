@@ -37,8 +37,27 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+tasks.register('integrationTest', Test) {
+    useJUnitPlatform()
+    include '**/*IT.class'
+    shouldRunAfter test
+}
+
 jacocoTestReport {
-    dependsOn test
+    dependsOn test, integrationTest
+    executionData fileTree(layout.buildDirectory.dir('jacoco')) {
+        include '*.exec'
+    }
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+tasks.register('coverageAll') {
+    group = 'verification'
+    description = 'Runs all tests (including *IT) and generates JaCoCo coverage reports.'
+    dependsOn test, integrationTest, jacocoTestReport
 }
 
 graalvmNative {

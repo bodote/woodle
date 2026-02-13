@@ -70,4 +70,28 @@ class PollNewPageTest {
             org.junit.jupiter.api.Assertions.assertTrue(page.asNormalizedText().contains("Bitte eine gültige E-Mail-Adresse eingeben"));
         }
     }
+
+    @Test
+    @DisplayName("keeps email field valid on blur for a valid address")
+    void keepsEmailFieldValidOnBlurForValidAddress() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/step-1/email-check?authorEmail=max@example.com");
+
+            HtmlInput emailInput = page.getFirstByXPath("//input[@name='authorEmail' and not(contains(@class,'input-error'))]");
+            org.junit.jupiter.api.Assertions.assertNotNull(emailInput);
+            org.junit.jupiter.api.Assertions.assertFalse(page.asNormalizedText().contains("Bitte eine gültige E-Mail-Adresse eingeben"));
+        }
+    }
+
+    @Test
+    @DisplayName("treats blank email on blur as invalid")
+    void treatsBlankEmailOnBlurAsInvalid() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/step-1/email-check?authorEmail=");
+
+            HtmlInput emailInput = page.getFirstByXPath("//input[@name='authorEmail' and contains(@class,'input-error')]");
+            org.junit.jupiter.api.Assertions.assertNotNull(emailInput);
+            org.junit.jupiter.api.Assertions.assertTrue(page.asNormalizedText().contains("Bitte eine gültige E-Mail-Adresse eingeben"));
+        }
+    }
 }

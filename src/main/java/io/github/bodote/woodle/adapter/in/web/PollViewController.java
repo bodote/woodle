@@ -18,7 +18,6 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -202,38 +201,22 @@ public class PollViewController {
         String forwarded = firstHeaderValue(request, "Forwarded");
 
         String forwardedHost = forwardedFieldValue(forwarded, "host");
-        String scheme = forwardedFieldValue(forwarded, "proto");
-        if (scheme == null || scheme.isBlank()) {
-            scheme = firstHeaderValue(request, "X-Forwarded-Proto");
-        }
-        if (scheme == null || scheme.isBlank()) {
-            scheme = request.getScheme();
-        }
-        if (scheme == null || scheme.isBlank()) {
+        String xForwardedHost = firstHeaderValue(request, "X-Forwarded-Host");
+        String scheme = firstNonBlank(
+                forwardedFieldValue(forwarded, "proto"),
+                firstHeaderValue(request, "X-Forwarded-Proto"),
+                request.getScheme()
+        );
+        if (!hasText(scheme)) {
             scheme = "https";
         }
 
-        String xForwardedHost = firstHeaderValue(request, "X-Forwarded-Host");
-        String host = forwardedHost;
-        if (host == null || host.isBlank()) {
-            host = xForwardedHost;
-        }
-        if (host == null || host.isBlank()) {
-            host = request.getHeader("Host");
-        }
-        if (host == null || host.isBlank()) {
-            host = request.getServerName();
-        }
-        if (host == null || host.isBlank()) {
-            String requestUrl = request.getRequestURL().toString();
-            if (!requestUrl.isBlank()) {
-                URI uri = URI.create(requestUrl);
-                host = uri.getHost();
-                if (scheme == null || scheme.isBlank()) {
-                    scheme = uri.getScheme();
-                }
-            }
-        }
+        String host = firstNonBlank(
+                forwardedHost,
+                xForwardedHost,
+                request.getHeader("Host"),
+                request.getServerName()
+        );
         host = host == null ? "" : host.trim();
 
         if (host.contains(":")) {
@@ -241,13 +224,12 @@ public class PollViewController {
         }
 
         String forwardedPort = firstHeaderValue(request, "X-Forwarded-Port");
-        boolean hasProxyHost = (forwardedHost != null && !forwardedHost.isBlank())
-                || (xForwardedHost != null && !xForwardedHost.isBlank());
+        boolean hasProxyHost = hasText(forwardedHost) || hasText(xForwardedHost);
         int port = hasProxyHost && "https".equalsIgnoreCase(scheme) ? 443 : request.getServerPort();
         if (hasProxyHost && "http".equalsIgnoreCase(scheme)) {
             port = 80;
         }
-        if (forwardedPort != null && !forwardedPort.isBlank()) {
+        if (hasText(forwardedPort)) {
             port = Integer.parseInt(forwardedPort.trim());
         }
 
@@ -257,6 +239,19 @@ public class PollViewController {
             return scheme + "://" + host;
         }
         return scheme + "://" + host + ":" + port;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (hasText(value)) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 
     private String firstHeaderValue(HttpServletRequest request, String headerName) {

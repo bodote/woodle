@@ -16,6 +16,7 @@ import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.hamcrest.Matchers.containsString;
 
@@ -56,5 +57,16 @@ class PollStep3PageTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("2026-02-10 09:00")))
                 .andExpect(content().string(containsString("2026-02-11 13:30")));
+    }
+
+    @Test
+    @DisplayName("renders step-3 without expiresAt when no dates are selected")
+    void rendersStep3WithoutExpiresAtWhenNoDatesAreSelected() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(WizardState.SESSION_KEY, TestFixtures.wizardStateBasics());
+
+        mockMvc.perform(get("/poll/step-3").session(session))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeDoesNotExist("expiresAt"));
     }
 }
