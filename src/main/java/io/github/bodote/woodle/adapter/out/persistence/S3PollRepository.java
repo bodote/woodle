@@ -68,6 +68,8 @@ public class S3PollRepository implements PollRepository {
             throw new IllegalStateException("Failed to fetch poll from S3", e);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to deserialize poll", e);
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("Failed to deserialize poll", e);
         }
     }
 

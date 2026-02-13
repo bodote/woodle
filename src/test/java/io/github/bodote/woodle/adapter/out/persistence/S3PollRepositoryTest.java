@@ -127,7 +127,9 @@ class S3PollRepositoryTest {
         S3Exception s3Exception = (S3Exception) S3Exception.builder().statusCode(500).message("boom").build();
         when(s3Client.getObject(any(GetObjectRequest.class))).thenThrow(s3Exception);
 
-        S3PollRepository repository = new S3PollRepository(s3Client, new ObjectMapper(), "woodle");
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000001")));
@@ -146,7 +148,9 @@ class S3PollRepositoryTest {
         );
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
 
-        S3PollRepository repository = new S3PollRepository(s3Client, new ObjectMapper(), "woodle");
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000001")));
@@ -240,12 +244,15 @@ class S3PollRepositoryTest {
         );
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
 
-        S3PollRepository repository = new S3PollRepository(s3Client, new ObjectMapper(), "woodle");
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
                 () -> repository.findById(pollId)
         );
-        assertTrue(exception.getMessage().contains("Failed to deserialize poll"));
+        assertEquals("Failed to deserialize poll", exception.getMessage());
+        assertTrue(exception.getCause() instanceof IllegalArgumentException);
     }
 }
