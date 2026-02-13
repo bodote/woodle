@@ -20,6 +20,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PollWizardFlowTest {
 
     private static final String VALID_EMAIL = "max@example.com";
+    private static final String DATE_OPTION_1 = "2026-02-10";
+    private static final String DATE_OPTION_2 = "2026-02-11";
+    private static final String START_TIME_1 = "09:00";
+    private static final String START_TIME_2 = "13:30";
 
     @org.springframework.beans.factory.annotation.Autowired
     private MockMvc mockMvc;
@@ -84,5 +88,129 @@ class PollWizardFlowTest {
         WizardState updated = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
         assertNotNull(updated);
         assertEquals(2, updated.dates().size());
+    }
+
+    @Test
+    @DisplayName("step-2 intraday submit stores start times in session")
+    void step2IntradaySubmitStoresStartTimesInSession() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        WizardState state = TestFixtures.wizardStateBasics();
+        state.setAuthorEmail(VALID_EMAIL);
+        state.setTitle("Test");
+        session.setAttribute(WizardState.SESSION_KEY, state);
+
+        mockMvc.perform(post("/poll/step-3")
+                        .session(session)
+                        .param("eventType", "INTRADAY")
+                        .param("durationMinutes", "90")
+                        .param("dateOption1", DATE_OPTION_1)
+                        .param("dateOption2", DATE_OPTION_2)
+                        .param("startTime1", START_TIME_1)
+                        .param("startTime2", START_TIME_2))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abstimmungszeitraum und Bestätigung (3 von 3)")));
+
+        WizardState updated = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
+        assertNotNull(updated);
+        assertEquals(2, updated.startTimes().size());
+    }
+
+    @Test
+    @DisplayName("step-2 all-day submit ignores blank date options")
+    void step2AllDaySubmitIgnoresBlankDateOptions() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        WizardState state = TestFixtures.wizardStateBasics();
+        state.setAuthorEmail(VALID_EMAIL);
+        state.setTitle("Test");
+        session.setAttribute(WizardState.SESSION_KEY, state);
+
+        mockMvc.perform(post("/poll/step-3")
+                        .session(session)
+                        .param("eventType", "ALL_DAY")
+                        .param("dateOption1", DATE_OPTION_1)
+                        .param("dateOption2", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abstimmungszeitraum und Bestätigung (3 von 3)")));
+
+        WizardState updated = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
+        assertNotNull(updated);
+        assertEquals(1, updated.dates().size());
+    }
+
+    @Test
+    @DisplayName("step-2 intraday summary falls back to date when a start time is missing")
+    void step2IntradaySummaryFallsBackToDateWhenStartTimeMissing() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        WizardState state = TestFixtures.wizardStateBasics();
+        state.setAuthorEmail(VALID_EMAIL);
+        state.setTitle("Test");
+        session.setAttribute(WizardState.SESSION_KEY, state);
+
+        mockMvc.perform(post("/poll/step-3")
+                        .session(session)
+                        .param("eventType", "INTRADAY")
+                        .param("durationMinutes", "90")
+                        .param("dateOption1", DATE_OPTION_1)
+                        .param("dateOption2", DATE_OPTION_2)
+                        .param("startTime1", START_TIME_1)
+                        .param("startTime2", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(DATE_OPTION_1 + " " + START_TIME_1)))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(DATE_OPTION_2)));
+
+        WizardState updated = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
+        assertNotNull(updated);
+        assertEquals(1, updated.startTimes().size());
+    }
+
+    @Test
+    @DisplayName("step-2 ignores date options with empty parameter arrays")
+    void step2IgnoresDateOptionsWithEmptyParameterArrays() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        WizardState state = TestFixtures.wizardStateBasics();
+        state.setAuthorEmail(VALID_EMAIL);
+        state.setTitle("Test");
+        session.setAttribute(WizardState.SESSION_KEY, state);
+
+        mockMvc.perform(post("/poll/step-3")
+                        .session(session)
+                        .param("eventType", "ALL_DAY")
+                        .param("dateOption1", DATE_OPTION_1)
+                        .with(request -> {
+                            request.addParameter("dateOption2", new String[]{});
+                            return request;
+                        }))
+                .andExpect(status().isOk());
+
+        WizardState updated = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
+        assertNotNull(updated);
+        assertEquals(1, updated.dates().size());
+    }
+
+    @Test
+    @DisplayName("step-2 intraday ignores start times with empty parameter arrays")
+    void step2IntradayIgnoresStartTimesWithEmptyParameterArrays() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        WizardState state = TestFixtures.wizardStateBasics();
+        state.setAuthorEmail(VALID_EMAIL);
+        state.setTitle("Test");
+        session.setAttribute(WizardState.SESSION_KEY, state);
+
+        mockMvc.perform(post("/poll/step-3")
+                        .session(session)
+                        .param("eventType", "INTRADAY")
+                        .param("durationMinutes", "90")
+                        .param("dateOption1", DATE_OPTION_1)
+                        .param("dateOption2", DATE_OPTION_2)
+                        .param("startTime1", START_TIME_1)
+                        .with(request -> {
+                            request.addParameter("startTime2", new String[]{});
+                            return request;
+                        }))
+                .andExpect(status().isOk());
+
+        WizardState updated = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
+        assertNotNull(updated);
+        assertEquals(1, updated.startTimes().size());
     }
 }
