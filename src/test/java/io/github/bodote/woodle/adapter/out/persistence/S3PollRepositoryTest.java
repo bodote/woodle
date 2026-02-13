@@ -20,6 +20,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.core.exception.SdkClientException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -135,6 +136,23 @@ class S3PollRepositoryTest {
                 () -> repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000001")));
         assertEquals("Failed to fetch poll from S3", exception.getMessage());
         assertSame(s3Exception, exception.getCause());
+    }
+
+    @Test
+    @DisplayName("throws fetch error when S3 client runtime failure occurs")
+    void throwsFetchErrorWhenS3ClientRuntimeFailureOccurs() {
+        S3Client s3Client = mock(S3Client.class);
+        SdkClientException sdkClientException = SdkClientException.builder().message("network down").build();
+        when(s3Client.getObject(any(GetObjectRequest.class))).thenThrow(sdkClientException);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000002")));
+        assertEquals("Failed to fetch poll from S3", exception.getMessage());
+        assertSame(sdkClientException, exception.getCause());
     }
 
     @Test

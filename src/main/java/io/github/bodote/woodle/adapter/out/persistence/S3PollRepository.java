@@ -23,6 +23,7 @@ import java.io.IOException;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import java.time.LocalTime;
+import software.amazon.awssdk.core.exception.SdkException;
 
 public class S3PollRepository implements PollRepository {
 
@@ -66,9 +67,11 @@ public class S3PollRepository implements PollRepository {
             return Optional.empty();
         } catch (S3Exception e) {
             throw new IllegalStateException("Failed to fetch poll from S3", e);
+        } catch (SdkException e) {
+            throw new IllegalStateException("Failed to fetch poll from S3", e);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to deserialize poll", e);
-        } catch (RuntimeException e) {
+        } catch (IllegalArgumentException e) {
             throw new IllegalStateException("Failed to deserialize poll", e);
         }
     }
