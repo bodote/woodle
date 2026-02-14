@@ -548,9 +548,22 @@ input[type="radio"] {
   gap: 0.8rem;
 }
 
+.error-card .section-heading {
+  text-align: center;
+}
+
+.error-header {
+  text-align: center;
+}
+
+.error-header .step-indicator {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .error-emoji {
   margin: 0;
-  font-size: clamp(2rem, 1.7rem + 1.6vw, 3rem);
+  font-size: clamp(6rem, 5.2rem + 5vw, 9rem);
   line-height: 1;
 }
 
