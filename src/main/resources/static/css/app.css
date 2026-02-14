@@ -542,3 +542,67 @@ input[type="radio"] {
     white-space: nowrap;
   }
 }
+
+.error-card {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.error-card .section-heading {
+  text-align: center;
+}
+
+.error-header {
+  text-align: center;
+}
+
+.error-header .step-indicator {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.error-emoji {
+  margin: 0;
+  font-size: clamp(6rem, 5.2rem + 5vw, 9rem);
+  line-height: 1;
+}
+
+.error-meta {
+  margin: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.error-meta div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.error-meta dt {
+  color: var(--ink-700);
+  font-weight: 700;
+}
+
+.error-meta dd {
+  margin: 0;
+  color: var(--ink-900);
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.92rem;
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  padding: 0.66rem 1.08rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--accent), #0f89de);
+  text-decoration: none;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+.button-link:hover {
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+}
