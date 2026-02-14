@@ -54,10 +54,39 @@ jacocoTestReport {
     }
 }
 
+tasks.named('jacocoTestCoverageVerification', JacocoCoverageVerification) {
+    dependsOn test, integrationTest
+    executionData fileTree(layout.buildDirectory.dir('jacoco')) {
+        include '*.exec'
+    }
+    sourceDirectories.setFrom(files(sourceSets.main.allSource.srcDirs))
+    classDirectories.setFrom(files(sourceSets.main.output))
+    violationRules {
+        rule {
+            limit {
+                counter = 'INSTRUCTION'
+                value = 'COVEREDRATIO'
+                minimum = 0.95
+            }
+        }
+        rule {
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.90
+            }
+        }
+    }
+}
+
 tasks.register('coverageAll') {
     group = 'verification'
     description = 'Runs all tests (including *IT) and generates JaCoCo coverage reports.'
     dependsOn test, integrationTest, jacocoTestReport
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('jacocoTestCoverageVerification')
 }
 
 graalvmNative {

@@ -15,6 +15,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -62,5 +63,37 @@ class PollAdminOptionsControllerTest {
                 .andExpect(content().string(containsString("Termin löschen")));
 
         verify(adminPollOptionsUseCase).addDate(any(UUID.class), any(String.class), any(LocalDate.class));
+    }
+
+    @Test
+    @DisplayName("removes option and returns fragment")
+    void removesOptionAndReturnsFragment() throws Exception {
+        Poll poll = TestFixtures.poll(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                EventType.INTRADAY,
+                60,
+                List.of(TestFixtures.option(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 2, 10),
+                        LocalTime.of(9, 0),
+                        LocalTime.of(10, 0))),
+                List.of()
+        );
+        when(readPollUseCase.getAdmin(UUID.fromString(POLL_ID), ADMIN_SECRET)).thenReturn(poll);
+
+        mockMvc.perform(post("/poll/" + POLL_ID + "-" + ADMIN_SECRET + "/options/remove")
+                        .param("date", "2026-02-10")
+                        .param("startTime", "09:00"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("2026-02-10")))
+                .andExpect(content().string(containsString("Termin löschen")));
+
+        verify(adminPollOptionsUseCase).removeOption(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                LocalDate.of(2026, 2, 10),
+                LocalTime.of(9, 0)
+        );
     }
 }
