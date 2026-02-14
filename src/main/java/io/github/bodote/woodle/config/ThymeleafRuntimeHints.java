@@ -29,6 +29,7 @@ public class ThymeleafRuntimeHints implements RuntimeHintsRegistrar {
         registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.PollDAO$OptionItem");
         registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.PollDAO$Response");
         registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.PollDAO$Vote");
+        registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.S3WizardStateRepository$WizardStateDocument");
     }
 
     private void registerType(RuntimeHints hints, String typeName) {

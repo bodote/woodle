@@ -25,5 +25,11 @@ class ThymeleafRuntimeHintsTest {
         assertNotNull(pollHint);
         assertTrue(pollHint.getMemberCategories().contains(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS));
         assertTrue(pollHint.getMemberCategories().contains(MemberCategory.DECLARED_FIELDS));
+
+        var wizardDraftHint = hints.reflection().getTypeHint(
+                TypeReference.of("io.github.bodote.woodle.adapter.out.persistence.S3WizardStateRepository$WizardStateDocument"));
+        assertNotNull(wizardDraftHint);
+        assertTrue(wizardDraftHint.getMemberCategories().contains(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS));
+        assertTrue(wizardDraftHint.getMemberCategories().contains(MemberCategory.DECLARED_FIELDS));
     }
 }
