@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${'Fehler ' + status + ' - woodle'}">Fehler - woodle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="page-shell">
+    <header>
+        <h1>Es ist ein Fehler aufgetreten</h1>
+        <p class="step-indicator">Entschuldigung für die Störung</p>
+    </header>
+
+    <main>
+        <section class="content-card error-card">
+            <p class="error-emoji" aria-hidden="true">🙇</p>
+            <div class="section-heading">
+                <h2 id="error-status" th:text="${'HTTP-Status: ' + status}">HTTP-Status: 500</h2>
+                <p>Die Anfrage konnte nicht erfolgreich verarbeitet werden.</p>
+            </div>
+
+            <dl class="error-meta">
+                <div>
+                    <dt>Zeitpunkt</dt>
+                    <dd id="error-timestamp" th:text="${timestamp}">2026-01-01T10:00:00.000+01:00</dd>
+                </div>
+                <div>
+                    <dt>Pfad</dt>
+                    <dd th:text="${path}">/poll/error</dd>
+                </div>
+            </dl>
+
+            <div class="actions">
+                <a class="button-link" href="/poll/new">Zur Startseite</a>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>
