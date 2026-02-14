@@ -41,7 +41,7 @@ class PollNewStep2PageTest {
             assertNotNull(dateOption2);
             org.junit.jupiter.api.Assertions.assertNull(durationMinutes);
             org.junit.jupiter.api.Assertions.assertNull(startTime1);
-            assertTrue(page.asNormalizedText().contains("Umfragedaten (2 von 3)"));
+            assertTrue(page.asNormalizedText().contains("Umfragedaten"));
             assertTrue(page.asNormalizedText().contains("Weiter"));
         }
     }

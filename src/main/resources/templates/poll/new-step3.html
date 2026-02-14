@@ -3,17 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <title>Abstimmungszeitraum und Bestätigung (3 von 3) - woodle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
-<header>
-    <h1>Abstimmungszeitraum und Bestätigung (3 von 3)</h1>
-    <p class="step-indicator">Schritt 3 von 3</p>
-</header>
+<div class="page-shell">
+    <header>
+        <h1>Abstimmungszeitraum und Bestätigung</h1>
+        <p class="step-indicator">Schritt 3 von 3</p>
+    </header>
 
-<main>
-    <form action="/poll/submit" method="post">
-        <section>
+    <main>
+        <form class="wizard-card" action="/poll/submit" method="post">
+            <div class="section-heading">
+                <h2>Prüfen und veröffentlichen</h2>
+                <p>Kontrollieren Sie die Terminliste und legen Sie die automatische Löschung fest.</p>
+            </div>
+        <section class="stack">
             <h2>Liste Ihrer Auswahlmöglichkeiten</h2>
             <ul class="summary-list"
                 th:if="${eventType == T(io.github.bodote.woodle.domain.model.EventType).ALL_DAY}">
@@ -36,6 +44,7 @@
             <button type="submit">Umfrage erstellen</button>
         </div>
     </form>
-</main>
+    </main>
+</div>
 </body>
 </html>

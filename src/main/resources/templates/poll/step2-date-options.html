@@ -1,5 +1,5 @@
-<div id="date-options" th:fragment="dateOptions">
-    <div th:each="i : ${#numbers.sequence(1, dateCount)}">
+<div id="date-options" th:fragment="dateOptions" class="option-grid">
+    <div th:each="i : ${#numbers.sequence(1, dateCount)}" class="option-item form-row">
         <label th:for="${'date-option-' + i}" th:text="'Tag ' + i">Tag</label>
         <input th:id="${'date-option-' + i}"
                th:name="${'dateOption' + i}"

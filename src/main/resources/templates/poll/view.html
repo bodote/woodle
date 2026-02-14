@@ -3,24 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <title th:text="${poll.title}">Umfrage</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
-<header>
-    <h1 th:text="${poll.title}">Umfrage</h1>
-    <p th:if="${adminView}">Admin</p>
-</header>
+<div class="page-shell">
+    <header>
+        <h1 th:text="${poll.title}">Umfrage</h1>
+        <p class="badge badge--admin" th:if="${adminView}">Admin</p>
+    </header>
 
-<main>
-    <section>
-        <h2>Beschreibung</h2>
-        <p th:text="${poll.description}">Beschreibung</p>
-    </section>
+    <main class="panel-grid">
+        <section class="content-card">
+            <h2>Beschreibung</h2>
+            <p th:text="${poll.description}">Beschreibung</p>
+        </section>
 
-    <section th:if="${!adminView}">
-        <h2>Stimmabgaben zur Umfrage</h2>
-        <table id="poll-votes-table" class="votes-table">
+        <section class="votes-panel" th:if="${!adminView}">
+            <div class="section-heading">
+                <h2>Stimmabgaben zur Umfrage</h2>
+                <p>Tragen Sie Ihre Verfügbarkeit ein oder bearbeiten Sie bestehende Einträge.</p>
+            </div>
+            <table id="poll-votes-table" class="votes-table">
             <thead>
             <tr>
                 <th scope="col" class="votes-table__name">Teilnehmende</th>
@@ -92,49 +99,52 @@
         </table>
 
         <form id="add-vote-form" th:action="@{/poll/{pollId}/vote(pollId=${pollId})}" method="post"></form>
-    </section>
+        </section>
 
-    <section th:if="${adminView}">
-        <h2>Optionen</h2>
-        <div th:replace="poll/options-list :: optionsList"></div>
-    </section>
-
-    <section th:if="${adminView}">
-        <h2>Optionen bearbeiten</h2>
-        <form th:action="@{/poll/{pollId}-{adminSecret}/options/add(pollId=${pollId},adminSecret=${adminSecret})}"
-              th:attr="hx-post=@{/poll/{pollId}-{adminSecret}/options/add(pollId=${pollId},adminSecret=${adminSecret})}"
-              method="post"
-              hx-target="#options-list"
-              hx-swap="outerHTML">
-            <div class="form-row">
-                <label for="new-date">Neues Datum</label>
-                <input id="new-date" name="date" type="date" required>
+        <section class="admin-layout" th:if="${adminView}">
+            <div class="admin-main">
+                <section class="admin-panel">
+                    <h2>Optionen</h2>
+                    <div th:replace="poll/options-list :: optionsList"></div>
+                </section>
+                <section class="admin-panel">
+                    <h2>Optionen bearbeiten</h2>
+                    <form th:action="@{/poll/{pollId}-{adminSecret}/options/add(pollId=${pollId},adminSecret=${adminSecret})}"
+                          th:attr="hx-post=@{/poll/{pollId}-{adminSecret}/options/add(pollId=${pollId},adminSecret=${adminSecret})}"
+                          method="post"
+                          hx-target="#options-list"
+                          hx-swap="outerHTML">
+                        <div class="form-row">
+                            <label for="new-date">Neues Datum</label>
+                            <input id="new-date" name="date" type="date" required>
+                        </div>
+                        <div class="actions">
+                            <button type="submit" hx-indicator=".htmx-indicator">Datum hinzufügen</button>
+                            <span class="htmx-indicator" aria-live="polite">Lade…</span>
+                        </div>
+                    </form>
+                </section>
             </div>
-            <div class="actions">
-                <button type="submit" hx-indicator=".htmx-indicator">Datum hinzufügen</button>
-                <span class="htmx-indicator" aria-live="polite">Lade…</span>
-            </div>
-        </form>
-    </section>
-
-    <section th:if="${adminView}">
-        <h2>Links zum Teilen</h2>
-        <div class="form-row">
-            <label>Link für Teilnehmende</label>
-            <div class="actions">
-                <code id="participant-link" th:text="${participantShareUrl}">https://example/poll/...</code>
-                <button type="button" data-copy-target="participant-link">Kopiere Link</button>
-            </div>
-        </div>
-        <div class="form-row">
-            <label>Admin-Link</label>
-            <div class="actions">
-                <code id="admin-link" th:text="${adminShareUrl}">https://example/poll/...-...</code>
-                <button type="button" data-copy-target="admin-link">Kopiere Link</button>
-            </div>
-        </div>
-    </section>
-</main>
+            <aside class="admin-side">
+                <section class="info-card">
+                    <h2>Links zum Teilen</h2>
+                    <div class="copy-field">
+                        <label>Link für Teilnehmende</label>
+                        <code id="participant-link" th:text="${participantShareUrl}">https://example/poll/...</code>
+                        <button type="button" data-copy-target="participant-link">Kopiere Link</button>
+                    </div>
+                </section>
+                <section class="info-card">
+                    <div class="copy-field">
+                        <label>Admin-Link</label>
+                        <code id="admin-link" th:text="${adminShareUrl}">https://example/poll/...-...</code>
+                        <button type="button" data-copy-target="admin-link">Kopiere Link</button>
+                    </div>
+                </section>
+            </aside>
+        </section>
+    </main>
+</div>
 <script>
     document.querySelectorAll("[data-copy-target]").forEach((button) => {
         button.addEventListener("click", async () => {

@@ -55,7 +55,7 @@ class PollNewPageTest {
             HtmlInput emailInput = page.getFirstByXPath("//input[@name='authorEmail' and contains(@class,'input-error')]");
             org.junit.jupiter.api.Assertions.assertNotNull(emailInput);
             org.junit.jupiter.api.Assertions.assertTrue(page.asNormalizedText().contains("Bitte eine gültige E-Mail-Adresse eingeben"));
-            org.junit.jupiter.api.Assertions.assertTrue(page.asNormalizedText().contains("Umfrage erstellen (Schritt 1 von 3)"));
+            org.junit.jupiter.api.Assertions.assertTrue(page.asNormalizedText().contains("Umfrage erstellen"));
         }
     }
 

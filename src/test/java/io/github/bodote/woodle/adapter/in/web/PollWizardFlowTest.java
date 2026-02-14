@@ -40,7 +40,7 @@ class PollWizardFlowTest {
                         .param("pollTitle", "Test")
                         .param("description", TestFixtures.DESCRIPTION))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Umfragedaten (2 von 3)")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Umfragedaten")));
 
         WizardState state = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
         assertNotNull(state);
@@ -65,7 +65,7 @@ class PollWizardFlowTest {
                         .param("dateOption1", "2026-02-10")
                         .param("dateOption2", "2026-02-11"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abstimmungszeitraum und Bestätigung (3 von 3)")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abstimmungszeitraum und Bestätigung")));
     }
 
     @Test
@@ -83,7 +83,7 @@ class PollWizardFlowTest {
                         .param("dateOption1", "2026-02-10")
                         .param("dateOption2", "2026-02-11"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abstimmungszeitraum und Bestätigung (3 von 3)")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abstimmungszeitraum und Bestätigung")));
 
         WizardState updated = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
         assertNotNull(updated);
@@ -108,7 +108,7 @@ class PollWizardFlowTest {
                         .param("startTime1", START_TIME_1)
                         .param("startTime2", START_TIME_2))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abstimmungszeitraum und Bestätigung (3 von 3)")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abstimmungszeitraum und Bestätigung")));
 
         WizardState updated = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
         assertNotNull(updated);
@@ -130,7 +130,7 @@ class PollWizardFlowTest {
                         .param("dateOption1", DATE_OPTION_1)
                         .param("dateOption2", ""))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abstimmungszeitraum und Bestätigung (3 von 3)")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abstimmungszeitraum und Bestätigung")));
 
         WizardState updated = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
         assertNotNull(updated);
