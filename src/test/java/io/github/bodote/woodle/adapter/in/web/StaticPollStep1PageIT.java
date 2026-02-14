@@ -39,11 +39,13 @@ class StaticPollStep1PageIT {
             HtmlInput emailInput = page.getFirstByXPath("//input[@name='authorEmail']");
             HtmlInput titleInput = page.getFirstByXPath("//input[@name='pollTitle']");
             HtmlTextArea descriptionInput = page.getFirstByXPath("//textarea[@name='description']");
+            org.htmlunit.html.HtmlElement identityRow = page.getFirstByXPath("//div[contains(@class,'dual-row')]");
 
             org.junit.jupiter.api.Assertions.assertNotNull(nameInput);
             org.junit.jupiter.api.Assertions.assertNotNull(emailInput);
             org.junit.jupiter.api.Assertions.assertNotNull(titleInput);
             org.junit.jupiter.api.Assertions.assertNotNull(descriptionInput);
+            org.junit.jupiter.api.Assertions.assertNotNull(identityRow);
             org.junit.jupiter.api.Assertions.assertTrue(page.asNormalizedText().contains("Weiter zum 2. Schritt"));
         }
     }

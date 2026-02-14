@@ -3,30 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <title>Umfrage erstellen (Schritt 1 von 3) - woodle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="/runtime-config.js"></script>
     <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
-<header>
-    <h1>Umfrage erstellen (Schritt 1 von 3)</h1>
-    <p class="step-indicator">Schritt 1 von 3</p>
-</header>
+<div class="page-shell">
+    <header>
+        <h1>Umfrage erstellen</h1>
+        <p class="step-indicator">Schritt 1 von 3</p>
+    </header>
 
-<main>
-    <form id="step1-form" action="/poll/step-2" method="post">
-        <div class="form-row">
-            <label for="author-name">Ihr Name</label>
-            <input id="author-name" name="authorName" type="text" required>
-        </div>
+    <main>
+        <form class="wizard-card" id="step1-form" action="/poll/step-2" method="post">
+            <div class="section-heading">
+                <h2>Grunddaten</h2>
+                <p>Definieren Sie den Rahmen der Umfrage. Diese Angaben erscheinen in der Übersicht.</p>
+            </div>
+            <div class="dual-row">
+                <div class="form-row">
+                    <label for="author-name">Ihr Name</label>
+                    <input id="author-name" name="authorName" type="text" required>
+                    <p class="form-help form-help--ghost" aria-hidden="true"></p>
+                </div>
 
-        <div id="author-email-field" class="form-row">
-            <label for="author-email">Ihre E-Mail-Adresse</label>
-            <input id="author-email"
-                   name="authorEmail"
-                   type="email"
-                   required>
-            <p class="form-help">E-Mail wird nur für Admin-Link genutzt.</p>
-        </div>
+                <div id="author-email-field" class="form-row">
+                    <label for="author-email">Ihre E-Mail-Adresse</label>
+                    <input id="author-email"
+                           name="authorEmail"
+                           type="email"
+                           required>
+                    <p class="form-help">E-Mail wird nur für Admin-Link genutzt.</p>
+                </div>
+            </div>
 
         <div class="form-row">
             <label for="poll-title">Titel der Umfrage</label>
@@ -38,17 +49,20 @@
             <textarea id="poll-description" name="description" rows="6"></textarea>
         </div>
 
-        <section>
-            <h2>Benachrichtigungen</h2>
-            <fieldset class="stack">
+        <section class="stack">
+            <div class="section-heading">
+                <h2>Benachrichtigungen</h2>
+                <p>Optional: automatische Hinweise bei neuen Aktivitäten.</p>
+            </div>
+            <fieldset class="choice-grid">
                 <legend>E-Mail-Benachrichtigungen</legend>
-                <label>
+                <label class="choice-card">
                     <input name="notifyOnVote" type="checkbox">
-                    Bei jeder neuen Wertung eine E-Mail erhalten
+                    <span class="choice-card__label">Bei jeder neuen Wertung eine E-Mail erhalten</span>
                 </label>
-                <label>
+                <label class="choice-card">
                     <input name="notifyOnComment" type="checkbox">
-                    Bei jedem neuen Kommentar eine E-Mail erhalten
+                    <span class="choice-card__label">Bei jedem neuen Kommentar eine E-Mail erhalten</span>
                 </label>
             </fieldset>
         </section>
@@ -57,7 +71,8 @@
             <button type="submit">Weiter zum 2. Schritt</button>
         </div>
     </form>
-</main>
+    </main>
+</div>
 <script>
     (function () {
         const configuredBase = window.WOODLE_BACKEND_BASE_URL;

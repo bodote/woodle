@@ -3,20 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <title>Umfragedaten (2 von 3) - woodle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
-<header>
-    <h1>Umfragedaten (2 von 3)</h1>
-    <p class="step-indicator">Schritt 2 von 3</p>
-</header>
+<div class="page-shell">
+    <header>
+        <h1>Umfragedaten</h1>
+        <p class="step-indicator">Schritt 2 von 3</p>
+    </header>
 
-<main>
-    <form action="/poll/step-3" method="post">
-        <fieldset>
+    <main>
+        <form class="wizard-card" action="/poll/step-3" method="post">
+            <div class="section-heading">
+                <h2>Event-Typ und Terminoptionen</h2>
+                <p>Wählen Sie das Format Ihrer Veranstaltung und ergänzen Sie passende Vorschläge.</p>
+            </div>
+        <fieldset class="choice-grid">
             <legend>Handelt es sich um ein ganz- bzw. mehrtägiges Event?</legend>
-            <label>
+            <label class="choice-card">
                 <input name="eventType"
                        type="radio"
                        value="ALL_DAY"
@@ -24,9 +32,9 @@
                        hx-get="/poll/step-2/event-type?eventType=ALL_DAY"
                        hx-target="#event-options"
                        hx-swap="outerHTML">
-                Ganz-/Mehrtägig
+                <span class="choice-card__label">Ganz-/Mehrtägig</span>
             </label>
-            <label>
+            <label class="choice-card">
                 <input name="eventType"
                        type="radio"
                        value="INTRADAY"
@@ -34,7 +42,7 @@
                        hx-get="/poll/step-2/event-type?eventType=INTRADAY"
                        hx-target="#event-options"
                        hx-swap="outerHTML">
-                Untertägig
+                <span class="choice-card__label">Untertägig</span>
             </label>
         </fieldset>
 
@@ -44,6 +52,7 @@
             <button type="submit">Weiter</button>
         </div>
     </form>
-</main>
+    </main>
+</div>
 </body>
 </html>
