@@ -94,19 +94,33 @@ class StaticPollStep1PageIT {
     }
 
     @Test
-    @DisplayName("contains frontend prewarm script for step-2 backend route")
-    void containsFrontendPrewarmScriptForStep2BackendRoute() throws Exception {
+    @DisplayName("contains frontend runtime script")
+    void containsFrontendRuntimeScript() throws Exception {
         try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
             HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
 
-            var prewarmScript = page.getElementById("step1-prewarm-script");
+            var runtimeScript = page.getElementById("step1-runtime-script");
             org.junit.jupiter.api.Assertions.assertNotNull(
-                    prewarmScript,
-                    "Expected prewarm script on static step-1 page"
+                    runtimeScript,
+                    "Expected runtime script on static step-1 page"
             );
-            org.junit.jupiter.api.Assertions.assertTrue(
-                    prewarmScript.getTextContent().contains("/poll/step-2"),
-                    "Expected prewarm script to target step-2 backend route"
+        }
+    }
+
+    @Test
+    @DisplayName("does not prewarm step-2 on page load")
+    void doesNotPrewarmStep2OnPageLoad() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
+            String content = page.getWebResponse().getContentAsString();
+
+            org.junit.jupiter.api.Assertions.assertFalse(
+                    content.contains("fetch(prewarmTarget"),
+                    "Did not expect step-2 prewarm fetch on page load"
+            );
+            org.junit.jupiter.api.Assertions.assertFalse(
+                    content.contains("const prewarmTarget"),
+                    "Did not expect prewarm target declaration in static script"
             );
         }
     }
@@ -135,7 +149,7 @@ class StaticPollStep1PageIT {
                     "Expected spinner fallback while count is loading"
             );
             org.junit.jupiter.api.Assertions.assertTrue(
-                    page.getElementById("step1-prewarm-script").getTextContent()
+                    page.getElementById("step1-runtime-script").getTextContent()
                             .contains("setAttribute(\"hx-get\", base + \"/poll/active-count\")"),
                     "Expected runtime backend base wiring for active poll count endpoint"
             );

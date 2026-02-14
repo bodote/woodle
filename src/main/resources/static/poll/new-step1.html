@@ -100,7 +100,7 @@
         </span>
     </small>
 </footer>
-<script id="step1-prewarm-script">
+<script id="step1-runtime-script">
     (function () {
         const configuredBase = window.WOODLE_BACKEND_BASE_URL;
         const base = configuredBase ? configuredBase.replace(/\/+$/, "") : "";
@@ -116,18 +116,6 @@
             }
         }
 
-        if (typeof window.fetch !== "function") {
-            return;
-        }
-
-        const prewarmTarget = (base || window.location.origin) + "/poll/step-2";
-        fetch(prewarmTarget, {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store"
-        }).catch(function () {
-            // Prewarm is best-effort; user flow must continue even if this request fails.
-        });
     })();
 </script>
 </body>
