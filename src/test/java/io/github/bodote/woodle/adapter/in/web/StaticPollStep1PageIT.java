@@ -66,4 +66,45 @@ class StaticPollStep1PageIT {
             );
         }
     }
+
+    @Test
+    @DisplayName("contains frontend prewarm script for step-2 backend route")
+    void containsFrontendPrewarmScriptForStep2BackendRoute() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
+
+            var prewarmScript = page.getElementById("step1-prewarm-script");
+            org.junit.jupiter.api.Assertions.assertNotNull(
+                    prewarmScript,
+                    "Expected prewarm script on static step-1 page"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    prewarmScript.getTextContent().contains("/poll/step-2"),
+                    "Expected prewarm script to target step-2 backend route"
+            );
+        }
+    }
+
+    @Test
+    @DisplayName("contains prewarm status indicator hooks for sent and success states")
+    void containsPrewarmStatusIndicatorHooksForSentAndSuccessStates() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
+
+            org.junit.jupiter.api.Assertions.assertNotNull(
+                    page.getElementById("prewarm-status-dot"),
+                    "Expected top-right prewarm status dot"
+            );
+
+            var prewarmScript = page.getElementById("step1-prewarm-script");
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    prewarmScript.getTextContent().contains("prewarm-status-sent"),
+                    "Expected script hook for sent prewarm state"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    prewarmScript.getTextContent().contains("prewarm-status-success"),
+                    "Expected script hook for successful prewarm state"
+            );
+        }
+    }
 }
