@@ -108,8 +108,15 @@
         const configuredBase = window.WOODLE_BACKEND_BASE_URL;
         const base = configuredBase ? configuredBase.replace(/\/+$/, "") : "";
         const step1Form = document.getElementById("step1-form");
+        const activePollCount = document.getElementById("active-poll-count");
         if (step1Form && base) {
             step1Form.action = base + "/poll/step-2";
+        }
+        if (activePollCount && base) {
+            activePollCount.setAttribute("hx-get", base + "/poll/active-count");
+            if (window.htmx && typeof window.htmx.process === "function") {
+                window.htmx.process(activePollCount);
+            }
         }
 
         if (typeof window.fetch !== "function") {

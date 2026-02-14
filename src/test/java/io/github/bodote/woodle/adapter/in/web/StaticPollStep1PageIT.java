@@ -108,6 +108,11 @@ class StaticPollStep1PageIT {
                     page.getWebResponse().getContentAsString().contains("poll-count-spinner"),
                     "Expected spinner fallback while count is loading"
             );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.getElementById("step1-prewarm-script").getTextContent()
+                            .contains("setAttribute(\"hx-get\", base + \"/poll/active-count\")"),
+                    "Expected runtime backend base wiring for active poll count endpoint"
+            );
         }
     }
 }

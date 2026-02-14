@@ -139,6 +139,12 @@ Response `200 OK`:
 Not found:
 - `404 Not Found` if `pollId` does not exist
 
+### Active poll count
+- `GET /v1/polls/active-count` (same-origin alias: `/poll/active-count`)
+
+Response `200 OK`:
+- plain text integer count of active poll objects (`polls/*.json`)
+
 ### Update poll metadata/settings
 - `PUT /v1/polls/{pollId}`
 - Require `If-Match: <etag>` header to prevent lost updates.
@@ -243,6 +249,7 @@ CORS operational notes:
 2. Lambda execution role permissions restricted to:
    - `s3:GetObject`, `s3:PutObject`, optional `s3:DeleteObject`
    - resource scope: `arn:aws:s3:::woodle-polls-<env>/polls/*`
+   - `s3:ListBucket` on bucket resource `arn:aws:s3:::woodle-polls-<env>` for active poll counting
 3. Enable server-side encryption (SSE-S3 or SSE-KMS).
 4. Enable API throttling and request size limits in API Gateway.
 5. Add CORS rules only for required frontend origins.
