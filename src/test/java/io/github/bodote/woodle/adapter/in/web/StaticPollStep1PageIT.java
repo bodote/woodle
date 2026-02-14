@@ -68,6 +68,32 @@ class StaticPollStep1PageIT {
     }
 
     @Test
+    @DisplayName("uses local HTMX script and does not include external font CDNs")
+    void usesLocalHtmxScriptAndNoExternalFontCdns() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
+            String content = page.getWebResponse().getContentAsString();
+
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    content.contains("<script src=\"/js/vendor/htmx.min.js\"></script>"),
+                    "Expected local HTMX script include"
+            );
+            org.junit.jupiter.api.Assertions.assertFalse(
+                    content.contains("https://unpkg.com/htmx.org"),
+                    "Did not expect external HTMX CDN include"
+            );
+            org.junit.jupiter.api.Assertions.assertFalse(
+                    content.contains("https://fonts.googleapis.com"),
+                    "Did not expect Google Fonts include"
+            );
+            org.junit.jupiter.api.Assertions.assertFalse(
+                    content.contains("https://fonts.gstatic.com"),
+                    "Did not expect Google Fonts static include"
+            );
+        }
+    }
+
+    @Test
     @DisplayName("contains frontend prewarm script for step-2 backend route")
     void containsFrontendPrewarmScriptForStep2BackendRoute() throws Exception {
         try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {

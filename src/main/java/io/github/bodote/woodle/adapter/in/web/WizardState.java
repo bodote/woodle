@@ -92,4 +92,18 @@ public class WizardState {
     public void setExpiresAtOverride(LocalDate expiresAtOverride) {
         this.expiresAtOverride = expiresAtOverride;
     }
+
+    public static WizardState copyOf(WizardState source) {
+        WizardState copy = new WizardState();
+        copy.setAuthorName(source.authorName());
+        copy.setAuthorEmail(source.authorEmail());
+        copy.setTitle(source.title());
+        copy.setDescription(source.description());
+        copy.setEventType(source.eventType());
+        copy.setDurationMinutes(source.durationMinutes());
+        copy.setDates(source.dates());
+        copy.setStartTimes(source.startTimes());
+        copy.setExpiresAtOverride(source.expiresAtOverride());
+        return copy;
+    }
 }

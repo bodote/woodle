@@ -22,5 +22,8 @@ class PollBucketListPermissionTest {
         assertTrue(
                 template.contains("Resource: !GetAtt PollsBucket.Arn"),
                 "Expected bucket-level ARN resource for s3:ListBucket permission");
+        assertTrue(
+                template.contains("${PollsBucket.Arn}/drafts/*"),
+                "Expected object-level access for persisted wizard drafts");
     }
 }

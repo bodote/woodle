@@ -1,5 +1,6 @@
 package io.github.bodote.woodle.adapter.in.web;
 
+import io.github.bodote.woodle.application.port.out.WizardStateRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Controller
 public class PollNewPageController {
@@ -22,6 +24,11 @@ public class PollNewPageController {
     private static final int STEP2_DEFAULT_DATES = 2;
     private static final int STEP2_MAX_DATES = 10;
     private static final String EMAIL_ERROR_MESSAGE = "Bitte eine gültige E-Mail-Adresse eingeben";
+    private final WizardStateRepository wizardStateRepository;
+
+    public PollNewPageController(WizardStateRepository wizardStateRepository) {
+        this.wizardStateRepository = wizardStateRepository;
+    }
 
     @GetMapping("/poll/new")
     public String renderStep1(HttpSession session) {
@@ -68,9 +75,11 @@ public class PollNewPageController {
         state.setAuthorEmail(authorEmail);
         state.setTitle(pollTitle);
         state.setDescription(description);
+        UUID draftId = wizardStateRepository.create(state);
         session.setAttribute(WizardState.SESSION_KEY, state);
         model.addAttribute("dateCount", getOrInitDateCount(session));
         model.addAttribute("eventType", state.eventType());
+        model.addAttribute("draftId", draftId);
         return "poll/new-step2";
     }
 
@@ -107,27 +116,41 @@ public class PollNewPageController {
     }
 
     @GetMapping("/poll/step-3")
-    public String renderStep3(Model model, HttpSession session) {
-        WizardState state = getOrInitWizard(session);
+    public String renderStep3(@RequestParam(value = "draftId", required = false) UUID draftId,
+                              Model model,
+                              HttpSession session) {
+        WizardState state = resolveWizardState(session, draftId);
+        if (state == null) {
+            return "redirect:/poll/new";
+        }
         populateStep3Model(model, state);
+        model.addAttribute("draftId", draftId);
         return "poll/new-step3";
     }
 
     @PostMapping("/poll/step-3")
     public String handleStep2(
+            @RequestParam(value = "draftId", required = false) UUID draftId,
             @RequestParam(value = "eventType", defaultValue = "ALL_DAY") io.github.bodote.woodle.domain.model.EventType eventType,
             @RequestParam(value = "durationMinutes", required = false) Integer durationMinutes,
             HttpSession session,
             Model model,
             jakarta.servlet.http.HttpServletRequest request
     ) {
-        WizardState state = getOrInitWizard(session);
+        WizardState state = resolveWizardState(session, draftId);
+        if (state == null) {
+            return "redirect:/poll/new";
+        }
         state.setEventType(eventType);
         state.setDurationMinutes(durationMinutes);
         state.setDates(extractDates(request.getParameterMap()));
         state.setStartTimes(extractStartTimes(request.getParameterMap(), eventType));
         session.setAttribute(WizardState.SESSION_KEY, state);
+        if (draftId != null) {
+            wizardStateRepository.save(draftId, state);
+        }
         populateStep3Model(model, state);
+        model.addAttribute("draftId", draftId);
         return "poll/new-step3";
     }
 
@@ -153,6 +176,22 @@ public class PollNewPageController {
         WizardState state = new WizardState();
         session.setAttribute(WizardState.SESSION_KEY, state);
         return state;
+    }
+
+    private WizardState resolveWizardState(HttpSession session, UUID draftId) {
+        Object value = session.getAttribute(WizardState.SESSION_KEY);
+        if (value instanceof WizardState state) {
+            return state;
+        }
+        if (draftId == null) {
+            return null;
+        }
+        return wizardStateRepository.findById(draftId)
+                .map(state -> {
+                    session.setAttribute(WizardState.SESSION_KEY, state);
+                    return state;
+                })
+                .orElse(null);
     }
 
     private List<LocalDate> extractDates(Map<String, String[]> parameterMap) {

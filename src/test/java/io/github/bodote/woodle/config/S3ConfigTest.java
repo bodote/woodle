@@ -36,4 +36,14 @@ class S3ConfigTest {
         }
     }
 
+    @Test
+    @DisplayName("does not set endpoint override when endpoint is null")
+    void doesNotSetEndpointOverrideWhenEndpointIsNull() {
+        S3Config config = new S3Config();
+
+        try (S3Client client = config.s3Client(null, "eu-central-1", "dummy", "dummy", true)) {
+            assertEquals(Region.EU_CENTRAL_1, client.serviceClientConfiguration().region());
+            assertEquals(Optional.empty(), client.serviceClientConfiguration().endpointOverride());
+        }
+    }
 }

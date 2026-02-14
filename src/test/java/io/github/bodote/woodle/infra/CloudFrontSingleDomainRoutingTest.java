@@ -31,5 +31,11 @@ class CloudFrontSingleDomainRoutingTest {
         assertTrue(
                 template.contains("TargetOriginId: web-bucket-origin"),
                 "Expected /poll/new-step1.html behavior to target web-bucket-origin");
+        assertTrue(
+                template.contains("NoReferrerResponseHeadersPolicy"),
+                "Expected CloudFront response headers policy for no-referrer");
+        assertTrue(
+                template.contains("ReferrerPolicy: no-referrer"),
+                "Expected CloudFront to enforce Referrer-Policy=no-referrer");
     }
 }

@@ -1,8 +1,11 @@
 package io.github.bodote.woodle.config;
 
 import io.github.bodote.woodle.adapter.out.persistence.InMemoryPollRepository;
+import io.github.bodote.woodle.adapter.out.persistence.InMemoryWizardStateRepository;
 import io.github.bodote.woodle.adapter.out.persistence.S3PollRepository;
+import io.github.bodote.woodle.adapter.out.persistence.S3WizardStateRepository;
 import io.github.bodote.woodle.application.port.out.PollRepository;
+import io.github.bodote.woodle.application.port.out.WizardStateRepository;
 import io.github.bodote.woodle.application.service.CreatePollService;
 import io.github.bodote.woodle.application.port.in.CreatePollUseCase;
 import io.github.bodote.woodle.application.port.in.ReadPollUseCase;
@@ -38,6 +41,24 @@ public class ApplicationConfig {
             return new S3PollRepository(s3Client, objectMapper, bucketName);
         }
         return new InMemoryPollRepository();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(WizardStateRepository.class)
+    public WizardStateRepository wizardStateRepository(
+            @Value("${woodle.s3.enabled:false}") boolean s3Enabled,
+            @Value("${woodle.s3.bucket:woodle}") String bucketName,
+            ObjectProvider<S3Client> s3ClientProvider,
+            ObjectMapper objectMapper
+    ) {
+        if (s3Enabled) {
+            S3Client s3Client = s3ClientProvider.getIfAvailable();
+            if (s3Client == null) {
+                throw new IllegalStateException("S3 is enabled but no S3 client bean is available");
+            }
+            return new S3WizardStateRepository(s3Client, objectMapper, bucketName);
+        }
+        return new InMemoryWizardStateRepository();
     }
 
     @Bean
