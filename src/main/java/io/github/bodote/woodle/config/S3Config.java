@@ -1,10 +1,6 @@
 package io.github.bodote.woodle.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.bodote.woodle.adapter.out.persistence.S3PollRepository;
-import io.github.bodote.woodle.application.port.out.PollRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -19,7 +15,6 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 import java.net.URI;
 
 @Configuration
-@ConditionalOnProperty(name = "woodle.s3.enabled", havingValue = "true")
 public class S3Config {
 
     @Bean
@@ -51,14 +46,5 @@ public class S3Config {
 
     private boolean isBlankOrDummy(String value) {
         return value == null || value.isBlank() || "dummy".equals(value);
-    }
-
-    @Bean
-    public PollRepository pollRepository(
-            S3Client s3Client,
-            ObjectMapper objectMapper,
-            @Value("${woodle.s3.bucket:woodle}") String bucketName
-    ) {
-        return new S3PollRepository(s3Client, objectMapper, bucketName);
     }
 }

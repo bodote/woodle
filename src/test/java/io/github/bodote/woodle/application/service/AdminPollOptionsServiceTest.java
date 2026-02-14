@@ -190,5 +190,10 @@ class AdminPollOptionsServiceTest {
         public Optional<Poll> findById(UUID pollId) {
             return Optional.ofNullable(existing);
         }
+
+        @Override
+        public long countActivePolls() {
+            return existing == null ? 0L : 1L;
+        }
     }
 }

@@ -16,10 +16,13 @@ import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.core.exception.SdkClientException;
 
 import java.io.ByteArrayInputStream;
@@ -272,5 +275,48 @@ class S3PollRepositoryTest {
         );
         assertEquals("Failed to deserialize poll", exception.getMessage());
         assertTrue(exception.getCause() instanceof IllegalArgumentException);
+    }
+
+    @Test
+    @DisplayName("counts active polls by listing json objects under polls prefix")
+    void countsActivePollsByListingJsonObjectsUnderPollsPrefix() {
+        S3Client s3Client = mock(S3Client.class);
+        ListObjectsV2Response firstPage = ListObjectsV2Response.builder()
+                .contents(
+                        S3Object.builder().key("polls/one.json").build(),
+                        S3Object.builder().key("polls/readme.txt").build()
+                )
+                .nextContinuationToken("next-page")
+                .build();
+        ListObjectsV2Response secondPage = ListObjectsV2Response.builder()
+                .contents(
+                        S3Object.builder().key("polls/two.json").build(),
+                        S3Object.builder().key("polls/three.json").build()
+                )
+                .build();
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
+                .thenReturn(firstPage, secondPage);
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        long count = repository.countActivePolls();
+
+        assertEquals(3L, count);
+    }
+
+    @Test
+    @DisplayName("throws count error when S3 list operation fails")
+    void throwsCountErrorWhenS3ListOperationFails() {
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
+                .thenThrow(S3Exception.builder().statusCode(500).message("boom").build());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class, repository::countActivePolls);
+
+        assertEquals("Failed to count polls from S3", exception.getMessage());
     }
 }

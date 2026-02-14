@@ -6,8 +6,27 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="/runtime-config.js"></script>
     <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .poll-count-spinner {
+            display: inline-block;
+            width: 0.9rem;
+            height: 0.9rem;
+            border: 2px solid #d8d2c8;
+            border-top-color: #5f5f5f;
+            border-radius: 50%;
+            animation: poll-count-spin 0.7s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes poll-count-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 </head>
 <body>
 <div class="page-shell">
@@ -39,53 +58,79 @@
                 </div>
             </div>
 
-        <div class="form-row">
-            <label for="poll-title">Titel der Umfrage</label>
-            <input id="poll-title" name="pollTitle" type="text" required>
-        </div>
-
-        <div class="form-row">
-            <label for="poll-description">Beschreibung</label>
-            <textarea id="poll-description" name="description" rows="6"></textarea>
-        </div>
-
-        <section class="stack">
-            <div class="section-heading">
-                <h2>Benachrichtigungen</h2>
-                <p>Optional: automatische Hinweise bei neuen Aktivitäten.</p>
+            <div class="form-row">
+                <label for="poll-title">Titel der Umfrage</label>
+                <input id="poll-title" name="pollTitle" type="text" required>
             </div>
-            <fieldset class="choice-grid">
-                <legend>E-Mail-Benachrichtigungen</legend>
-                <label class="choice-card">
-                    <input name="notifyOnVote" type="checkbox">
-                    <span class="choice-card__label">Bei jeder neuen Wertung eine E-Mail erhalten</span>
-                </label>
-                <label class="choice-card">
-                    <input name="notifyOnComment" type="checkbox">
-                    <span class="choice-card__label">Bei jedem neuen Kommentar eine E-Mail erhalten</span>
-                </label>
-            </fieldset>
-        </section>
 
-        <div class="actions">
-            <button type="submit">Weiter zum 2. Schritt</button>
-        </div>
-    </form>
+            <div class="form-row">
+                <label for="poll-description">Beschreibung</label>
+                <textarea id="poll-description" name="description" rows="6"></textarea>
+            </div>
+
+            <section class="stack">
+                <div class="section-heading">
+                    <h2>Benachrichtigungen</h2>
+                    <p>Optional: automatische Hinweise bei neuen Aktivitäten.</p>
+                </div>
+                <fieldset class="choice-grid">
+                    <legend>E-Mail-Benachrichtigungen</legend>
+                    <label class="choice-card">
+                        <input name="notifyOnVote" type="checkbox">
+                        <span class="choice-card__label">Bei jeder neuen Wertung eine E-Mail erhalten</span>
+                    </label>
+                    <label class="choice-card">
+                        <input name="notifyOnComment" type="checkbox">
+                        <span class="choice-card__label">Bei jedem neuen Kommentar eine E-Mail erhalten</span>
+                    </label>
+                </fieldset>
+            </section>
+
+            <div class="actions">
+                <button type="submit">Weiter zum 2. Schritt</button>
+            </div>
+        </form>
     </main>
 </div>
-<script>
+<footer style="padding: 0 1rem 1.5rem; color: #5f5f5f; text-align: center;">
+    <small>
+        Anzahl aktiver Umfragen:
+        <span id="active-poll-count"
+              hx-get="/poll/active-count"
+              hx-trigger="load"
+              hx-swap="innerHTML">
+            <span class="poll-count-spinner" aria-hidden="true"></span>
+        </span>
+    </small>
+</footer>
+<script id="step1-prewarm-script">
     (function () {
         const configuredBase = window.WOODLE_BACKEND_BASE_URL;
-        if (!configuredBase) {
+        const base = configuredBase ? configuredBase.replace(/\/+$/, "") : "";
+        const step1Form = document.getElementById("step1-form");
+        const activePollCount = document.getElementById("active-poll-count");
+        if (step1Form && base) {
+            step1Form.action = base + "/poll/step-2";
+        }
+        if (activePollCount && base) {
+            activePollCount.setAttribute("hx-get", base + "/poll/active-count");
+            if (window.htmx && typeof window.htmx.process === "function") {
+                window.htmx.process(activePollCount);
+            }
+        }
+
+        if (typeof window.fetch !== "function") {
             return;
         }
 
-        const base = configuredBase.replace(/\/+$/, "");
-        const step1Form = document.getElementById("step1-form");
-        if (step1Form) {
-            step1Form.action = base + "/poll/step-2";
-        }
-
+        const prewarmTarget = (base || window.location.origin) + "/poll/step-2";
+        fetch(prewarmTarget, {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store"
+        }).catch(function () {
+            // Prewarm is best-effort; user flow must continue even if this request fails.
+        });
     })();
 </script>
 </body>

@@ -66,4 +66,53 @@ class StaticPollStep1PageIT {
             );
         }
     }
+
+    @Test
+    @DisplayName("contains frontend prewarm script for step-2 backend route")
+    void containsFrontendPrewarmScriptForStep2BackendRoute() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
+
+            var prewarmScript = page.getElementById("step1-prewarm-script");
+            org.junit.jupiter.api.Assertions.assertNotNull(
+                    prewarmScript,
+                    "Expected prewarm script on static step-1 page"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    prewarmScript.getTextContent().contains("/poll/step-2"),
+                    "Expected prewarm script to target step-2 backend route"
+            );
+        }
+    }
+
+    @Test
+    @DisplayName("contains active poll count footer with HTMX load trigger and spinner fallback")
+    void containsActivePollCountFooterWithHtmxLoadTriggerAndSpinnerFallback() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
+
+            org.junit.jupiter.api.Assertions.assertNotNull(
+                    page.getElementById("active-poll-count"),
+                    "Expected active poll count target in footer"
+            );
+
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.asXml().contains("hx-get=\"/poll/active-count\""),
+                    "Expected HTMX endpoint for active poll count"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.asXml().contains("hx-trigger=\"load\""),
+                    "Expected HTMX load trigger for immediate count request"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.getWebResponse().getContentAsString().contains("poll-count-spinner"),
+                    "Expected spinner fallback while count is loading"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.getElementById("step1-prewarm-script").getTextContent()
+                            .contains("setAttribute(\"hx-get\", base + \"/poll/active-count\")"),
+                    "Expected runtime backend base wiring for active poll count endpoint"
+            );
+        }
+    }
 }

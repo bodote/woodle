@@ -4,9 +4,11 @@ import io.github.bodote.woodle.application.port.in.CreatePollResult;
 import io.github.bodote.woodle.application.port.in.CreatePollUseCase;
 import io.github.bodote.woodle.application.port.in.ReadPollUseCase;
 import io.github.bodote.woodle.application.port.in.command.CreatePollCommand;
+import io.github.bodote.woodle.application.port.out.PollRepository;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.domain.model.PollOption;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,10 +26,14 @@ public class PollApiController {
 
     private final CreatePollUseCase createPollUseCase;
     private final ReadPollUseCase readPollUseCase;
+    private final PollRepository pollRepository;
 
-    public PollApiController(CreatePollUseCase createPollUseCase, ReadPollUseCase readPollUseCase) {
+    public PollApiController(CreatePollUseCase createPollUseCase,
+                             ReadPollUseCase readPollUseCase,
+                             PollRepository pollRepository) {
         this.createPollUseCase = createPollUseCase;
         this.readPollUseCase = readPollUseCase;
+        this.pollRepository = pollRepository;
     }
 
     @PostMapping("/v1/polls")
@@ -76,6 +82,11 @@ public class PollApiController {
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Poll not found", ex);
         }
+    }
+
+    @GetMapping(value = {"/v1/polls/active-count", "/poll/active-count"}, produces = MediaType.TEXT_PLAIN_VALUE)
+    public String getActivePollCount() {
+        return Long.toString(pollRepository.countActivePolls());
     }
 
     private PollOptionResponseDTO toOptionResponse(PollOption option) {

@@ -13,8 +13,10 @@ import io.github.bodote.woodle.domain.model.PollVoteValue;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.ui.ExtendedModelMap;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -28,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @WebMvcTest(PollViewController.class)
@@ -328,5 +331,148 @@ class PollViewControllerTest {
                 .andExpect(content().string(containsString("name=\"startTime\"")))
                 .andExpect(content().string(containsString("value=\"09:00\"")))
                 .andExpect(content().string(not(containsString("Datum entfernen"))));
+    }
+
+    @Test
+    @DisplayName("falls back to https when request scheme is blank")
+    void fallsBackToHttpsWhenRequestSchemeIsBlank() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000022");
+        String adminSecret = "AdminSecretBlankScheme";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .with(request -> {
+                            request.setScheme("");
+                            request.setServerName("fallback.woodle.click");
+                            request.setServerPort(443);
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("https://fallback.woodle.click/poll/" + pollId)))
+                .andExpect(content().string(containsString("https://fallback.woodle.click/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("renders share links with empty host when no host information is available")
+    void rendersShareLinksWithEmptyHostWhenNoHostInformationIsAvailable() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000023");
+        String adminSecret = "AdminSecretEmptyHost";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .with(request -> {
+                            request.setScheme("https");
+                            request.setServerName("");
+                            request.setServerPort(443);
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("https:///poll/" + pollId)))
+                .andExpect(content().string(containsString("https:///poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("ignores malformed forwarded tokens without equals sign")
+    void ignoresMalformedForwardedTokensWithoutEqualsSign() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000024");
+        String adminSecret = "AdminSecretMalformedForwarded";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .header("Forwarded", "for;proto=https;host=forwarded.woodle.click")
+                        .with(request -> {
+                            request.setScheme("http");
+                            request.setServerName("internal-host");
+                            request.setServerPort(8080);
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("https://forwarded.woodle.click/poll/" + pollId)))
+                .andExpect(content().string(containsString("https://forwarded.woodle.click/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("treats null configured public base URL as empty")
+    void treatsNullConfiguredPublicBaseUrlAsEmpty() {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000025");
+        String adminSecret = "AdminSecretNullBase";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        PollViewController controller = new PollViewController(readPollUseCase, null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setScheme("https");
+        request.setServerName("null-base.woodle.click");
+        request.setServerPort(443);
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        String view = controller.viewPollAdmin(pollId, adminSecret, model, request);
+
+        assertEquals("poll/view", view);
+        assertEquals("https://null-base.woodle.click/poll/" + pollId, model.getAttribute("participantShareUrl"));
+        assertEquals("https://null-base.woodle.click/poll/" + pollId + "-" + adminSecret, model.getAttribute("adminShareUrl"));
+    }
+
+    @Test
+    @DisplayName("falls back to request origin when Forwarded header has no host or proto")
+    void fallsBackToRequestOriginWhenForwardedHeaderHasNoHostOrProto() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000026");
+        String adminSecret = "AdminSecretForwardedFallback";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .header("Forwarded", "for=203.0.113.10")
+                        .with(request -> {
+                            request.setScheme("http");
+                            request.setServerName("fallback-forwarded.woodle.click");
+                            request.setServerPort(8080);
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("http://fallback-forwarded.woodle.click:8080/poll/" + pollId)))
+                .andExpect(content().string(containsString("http://fallback-forwarded.woodle.click:8080/poll/" + pollId + "-" + adminSecret)));
     }
 }

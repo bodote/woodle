@@ -74,8 +74,14 @@ Rules:
 ## URL Patterns
 
 *   Create poll: `/poll/new`
+*   Active poll count (HTMX/footer): `/poll/active-count` (alias API: `/v1/polls/active-count`)
 *   Participant link: absolute URL based on current origin, e.g. `https://qs.woodle.click/poll/<UUID>`, `https://woodle.click/poll/<UUID>`, or `http://localhost:8088/poll/<UUID>`
 *   Admin link: absolute URL based on current origin, e.g. `https://qs.woodle.click/poll/<UUID>-<admin-secret>`, `https://woodle.click/poll/<UUID>-<admin-secret>`, or `http://localhost:8088/poll/<UUID>-<admin-secret>`
+
+## Step-1 UX Optimizations
+
+*   The static `/poll/new` page prewarms `/poll/step-2` in the background to reduce perceived Lambda cold-start delay before users continue to step 2.
+*   The footer shows **Anzahl aktiver Umfragen** and loads the value via HTMX from `/poll/active-count` with a spinner fallback while loading.
 
 ## Persistence & Data Lifecycle
 
@@ -120,6 +126,9 @@ Full strategy:
 
 # Coverage
 ./gradlew jacocoTestReport
+
+# Coverage gates (enforced)
+./gradlew check
 
 # Mutation testing
 ./gradlew pitest
