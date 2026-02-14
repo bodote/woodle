@@ -14,6 +14,9 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -73,6 +76,33 @@ public class S3PollRepository implements PollRepository {
             throw new IllegalStateException("Failed to deserialize poll", e);
         } catch (IllegalArgumentException e) {
             throw new IllegalStateException("Failed to deserialize poll", e);
+        }
+    }
+
+    @Override
+    public long countActivePolls() {
+        try {
+            String continuationToken = null;
+            long count = 0L;
+            do {
+                ListObjectsV2Request.Builder requestBuilder = ListObjectsV2Request.builder()
+                        .bucket(bucketName)
+                        .prefix("polls/");
+                if (continuationToken != null) {
+                    requestBuilder.continuationToken(continuationToken);
+                }
+                ListObjectsV2Response response = s3Client.listObjectsV2(requestBuilder.build());
+                count += response.contents().stream()
+                        .map(S3Object::key)
+                        .filter(key -> key != null && key.endsWith(".json"))
+                        .count();
+                continuationToken = response.nextContinuationToken();
+            } while (continuationToken != null);
+            return count;
+        } catch (S3Exception e) {
+            throw new IllegalStateException("Failed to count polls from S3", e);
+        } catch (SdkException e) {
+            throw new IllegalStateException("Failed to count polls from S3", e);
         }
     }
 

@@ -149,5 +149,10 @@ class CreatePollServiceTest {
         public java.util.Optional<Poll> findById(java.util.UUID pollId) {
             return java.util.Optional.empty();
         }
+
+        @Override
+        public long countActivePolls() {
+            return 0L;
+        }
     }
 }

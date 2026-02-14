@@ -86,24 +86,27 @@ class StaticPollStep1PageIT {
     }
 
     @Test
-    @DisplayName("contains prewarm status indicator hooks for sent and success states")
-    void containsPrewarmStatusIndicatorHooksForSentAndSuccessStates() throws Exception {
+    @DisplayName("contains active poll count footer with HTMX load trigger and spinner fallback")
+    void containsActivePollCountFooterWithHtmxLoadTriggerAndSpinnerFallback() throws Exception {
         try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
             HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
 
             org.junit.jupiter.api.Assertions.assertNotNull(
-                    page.getElementById("prewarm-status-dot"),
-                    "Expected top-right prewarm status dot"
+                    page.getElementById("active-poll-count"),
+                    "Expected active poll count target in footer"
             );
 
-            var prewarmScript = page.getElementById("step1-prewarm-script");
             org.junit.jupiter.api.Assertions.assertTrue(
-                    prewarmScript.getTextContent().contains("prewarm-status-sent"),
-                    "Expected script hook for sent prewarm state"
+                    page.asXml().contains("hx-get=\"/poll/active-count\""),
+                    "Expected HTMX endpoint for active poll count"
             );
             org.junit.jupiter.api.Assertions.assertTrue(
-                    prewarmScript.getTextContent().contains("prewarm-status-success"),
-                    "Expected script hook for successful prewarm state"
+                    page.asXml().contains("hx-trigger=\"load\""),
+                    "Expected HTMX load trigger for immediate count request"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.getWebResponse().getContentAsString().contains("poll-count-spinner"),
+                    "Expected spinner fallback while count is loading"
             );
         }
     }

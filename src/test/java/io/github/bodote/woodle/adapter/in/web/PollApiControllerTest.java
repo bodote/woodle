@@ -4,6 +4,7 @@ import io.github.bodote.woodle.application.port.in.CreatePollResult;
 import io.github.bodote.woodle.application.port.in.CreatePollUseCase;
 import io.github.bodote.woodle.application.port.in.ReadPollUseCase;
 import io.github.bodote.woodle.application.port.in.command.CreatePollCommand;
+import io.github.bodote.woodle.application.port.out.PollRepository;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.testfixtures.TestFixtures;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +25,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -42,6 +44,9 @@ class PollApiControllerTest {
 
     @MockitoBean
     private ReadPollUseCase readPollUseCase;
+
+    @MockitoBean
+    private PollRepository pollRepository;
 
     @Test
     @DisplayName("creates poll via POST /v1/polls")
@@ -121,5 +126,27 @@ class PollApiControllerTest {
                         .content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("gets active poll count via GET /v1/polls/active-count")
+    void getsActivePollCountViaGet() throws Exception {
+        when(pollRepository.countActivePolls()).thenReturn(7L);
+
+        mockMvc.perform(get("/v1/polls/active-count"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "text/plain;charset=UTF-8"))
+                .andExpect(content().string("7"));
+    }
+
+    @Test
+    @DisplayName("gets active poll count via GET /poll/active-count")
+    void getsActivePollCountViaPollPath() throws Exception {
+        when(pollRepository.countActivePolls()).thenReturn(9L);
+
+        mockMvc.perform(get("/poll/active-count"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "text/plain;charset=UTF-8"))
+                .andExpect(content().string("9"));
     }
 }

@@ -97,5 +97,10 @@ class ReadPollServiceTest {
         public Optional<Poll> findById(UUID id) {
             return Optional.ofNullable(poll);
         }
+
+        @Override
+        public long countActivePolls() {
+            return poll == null ? 0L : 1L;
+        }
     }
 }

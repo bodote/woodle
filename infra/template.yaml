@@ -207,6 +207,11 @@ Resources:
                 - s3:PutObject
                 - s3:DeleteObject
               Resource: !Sub ${PollsBucket.Arn}/polls/*
+            - Sid: PollBucketListAccess
+              Effect: Allow
+              Action:
+                - s3:ListBucket
+              Resource: !GetAtt PollsBucket.Arn
       Events:
         ProxyAny:
           Type: HttpApi

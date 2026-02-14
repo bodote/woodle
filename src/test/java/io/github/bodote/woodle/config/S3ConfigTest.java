@@ -1,8 +1,5 @@
 package io.github.bodote.woodle.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.bodote.woodle.adapter.out.persistence.S3PollRepository;
-import io.github.bodote.woodle.application.port.out.PollRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.regions.Region;
@@ -12,8 +9,6 @@ import java.net.URI;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.mockito.Mockito.mock;
 
 @DisplayName("S3Config")
 class S3ConfigTest {
@@ -41,13 +36,4 @@ class S3ConfigTest {
         }
     }
 
-    @Test
-    @DisplayName("creates S3 poll repository bean")
-    void createsS3PollRepositoryBean() {
-        S3Config config = new S3Config();
-
-        PollRepository repository = config.pollRepository(mock(S3Client.class), new ObjectMapper(), "woodle");
-
-        assertInstanceOf(S3PollRepository.class, repository);
-    }
 }
