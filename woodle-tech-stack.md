@@ -173,7 +173,9 @@ Ziel: genau **eine** JSON-Datei pro Umfrage. Der S3-Key ist die generierte UUID 
 - Danach vollständige Löschung aller `polls/{pollId}/**`-Objekte.
 
 ## Validierung
-- Keine E-Mail- oder Passwort-Validierung erforderlich (Zugriff über UUID und Admin-Secret).
+- Keine User-Account-Verwaltung mit Login/Passwort.
+- Zugriff erfolgt über UUID und Admin-Secret.
+- E-Mail-Adressen bleiben fachlich relevant (z. B. für spätere Benachrichtigungen) und dürfen validiert werden.
 
 ## Änderbarkeit der Optionen
 - `endTime` wird bei intraday explizit gespeichert und nicht nachträglich aus `startTime + durationMinutes` abgeleitet.

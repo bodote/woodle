@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.mockito.ArgumentCaptor;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,6 +34,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @WebMvcTest(PollVoteController.class)
 @DisplayName("/poll/{id}/vote")
@@ -135,5 +137,68 @@ class PollVoteControllerTest {
                 .andExpect(content().string(containsString("id=\"row-" + responseId + "\"")))
                 .andExpect(content().string(containsString("data-edit-row=\"Alice\"")))
                 .andExpect(content().string(containsString("✓")));
+    }
+
+    @Test
+    @DisplayName("renders symbols for IF_NEEDED and NO in htmx edit row")
+    void rendersSymbolsForIfNeededAndNoInHtmxEditRow() throws Exception {
+        UUID pollId = UUID.fromString(POLL_ID);
+        UUID optionOne = UUID.fromString("77777777-7777-7777-7777-777777777771");
+        UUID optionTwo = UUID.fromString("77777777-7777-7777-7777-777777777772");
+        UUID responseId = UUID.fromString("77777777-7777-7777-7777-777777777773");
+
+        Poll poll = TestFixtures.poll(
+                pollId,
+                "secret",
+                EventType.INTRADAY,
+                30,
+                List.of(
+                        TestFixtures.option(optionOne, LocalDate.of(2026, 2, 10), LocalTime.of(9, 0), LocalTime.of(9, 30)),
+                        TestFixtures.option(optionTwo, LocalDate.of(2026, 2, 10), LocalTime.of(9, 30), LocalTime.of(10, 0))
+                ),
+                List.of(TestFixtures.response(
+                        responseId,
+                        "Alice",
+                        List.of(
+                                new PollVote(optionOne, PollVoteValue.IF_NEEDED),
+                                new PollVote(optionTwo, PollVoteValue.NO)
+                        )
+                ))
+        );
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(post("/poll/" + POLL_ID + "/vote")
+                        .header("HX-Request", "true")
+                        .param("participantName", "Alice")
+                        .param("responseId", responseId.toString())
+                        .param("vote_edit_" + optionOne, "IF_NEEDED")
+                        .param("vote_edit_" + optionTwo, "NO"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("(✓)")))
+                .andExpect(content().string(containsString("✗")));
+    }
+
+    @Test
+    @DisplayName("returns server error when htmx edit references unknown response id")
+    void returnsValidationErrorWhenHtmxEditReferencesUnknownResponseId() throws Exception {
+        UUID pollId = UUID.fromString(POLL_ID);
+        UUID optionId = UUID.fromString("88888888-8888-8888-8888-888888888881");
+        UUID missingResponseId = UUID.fromString("88888888-8888-8888-8888-888888888882");
+
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(TestFixtures.option(optionId, LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+                mockMvc.perform(post("/poll/" + POLL_ID + "/vote")
+                        .header("HX-Request", "true")
+                        .param("participantName", "Alice")
+                        .param("responseId", missingResponseId.toString())
+                        .param("vote_edit_" + optionId, "YES"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.message").value("Response not found"));
     }
 }

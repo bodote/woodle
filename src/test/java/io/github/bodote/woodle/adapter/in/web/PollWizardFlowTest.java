@@ -7,10 +7,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -27,6 +29,26 @@ class PollWizardFlowTest {
 
     @org.springframework.beans.factory.annotation.Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private io.github.bodote.woodle.application.port.out.WizardStateRepository wizardStateRepository;
+
+    @Test
+    @DisplayName("step-1 submit includes draft id for persisted wizard state")
+    void step1SubmitIncludesDraftIdForPersistedWizardState() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        when(wizardStateRepository.create(org.mockito.ArgumentMatchers.any(WizardState.class)))
+                .thenReturn(java.util.UUID.fromString("00000000-0000-0000-0000-000000000700"));
+
+        mockMvc.perform(post("/poll/step-2")
+                        .session(session)
+                        .param("authorName", TestFixtures.AUTHOR_NAME)
+                        .param("authorEmail", VALID_EMAIL)
+                        .param("pollTitle", "Test")
+                        .param("description", TestFixtures.DESCRIPTION))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"draftId\"")));
+    }
 
     @Test
     @DisplayName("step-1 submits and stores basics in session")

@@ -8,17 +8,21 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @WebMvcTest(io.github.bodote.woodle.adapter.in.web.PollNewPageController.class)
 @DisplayName("/poll/step-3")
@@ -26,6 +30,9 @@ class PollStep3PageTest {
 
     @org.springframework.beans.factory.annotation.Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private io.github.bodote.woodle.application.port.out.WizardStateRepository wizardStateRepository;
 
     @Test
     @DisplayName("renders summary from session state")
@@ -68,5 +75,24 @@ class PollStep3PageTest {
         mockMvc.perform(get("/poll/step-3").session(session))
                 .andExpect(status().isOk())
                 .andExpect(model().attributeDoesNotExist("expiresAt"));
+    }
+
+    @Test
+    @DisplayName("renders step-3 from draft id without session state")
+    void rendersStep3FromDraftIdWithoutSessionState() throws Exception {
+        UUID draftId = UUID.fromString("00000000-0000-0000-0000-000000000799");
+        WizardState state = TestFixtures.wizardStateWithDates(
+                EventType.ALL_DAY,
+                List.of(LocalDate.of(2026, 2, 10), LocalDate.of(2026, 2, 11))
+        );
+        when(wizardStateRepository.findById(draftId)).thenReturn(java.util.Optional.of(state));
+
+        mockMvc.perform(get("/poll/step-3")
+                        .param("draftId", draftId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Liste Ihrer Auswahlmöglichkeiten")))
+                .andExpect(content().string(containsString("name=\"draftId\"")));
+
+        verify(wizardStateRepository).findById(draftId);
     }
 }

@@ -16,9 +16,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.mockito.ArgumentCaptor;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -148,5 +152,57 @@ class PollApiControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", "text/plain;charset=UTF-8"))
                 .andExpect(content().string("9"));
+    }
+
+    @Test
+    @DisplayName("defaults missing startTimes to empty list in create command")
+    void defaultsMissingStartTimesToEmptyListInCreateCommand() throws Exception {
+        when(createPollUseCase.create(any(CreatePollCommand.class)))
+                .thenReturn(new CreatePollResult(POLL_ID, ADMIN_SECRET));
+
+        String request = """
+                {
+                  "authorName": "Alice",
+                  "authorEmail": "alice@example.com",
+                  "title": "Team lunch",
+                  "description": "Pick a date",
+                  "eventType": "ALL_DAY",
+                  "durationMinutes": null,
+                  "dates": ["2026-02-10"],
+                  "expiresAtOverride": null
+                }
+                """;
+
+        mockMvc.perform(post("/v1/polls")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<CreatePollCommand> captor = ArgumentCaptor.forClass(CreatePollCommand.class);
+        org.mockito.Mockito.verify(createPollUseCase).create(captor.capture());
+        assertEquals(List.of(), captor.getValue().startTimes());
+    }
+
+    @Test
+    @DisplayName("maps option start and end time strings when poll has timed options")
+    void mapsOptionStartAndEndTimeStringsWhenPollHasTimedOptions() throws Exception {
+        Poll poll = TestFixtures.poll(
+                POLL_ID,
+                "secret",
+                io.github.bodote.woodle.domain.model.EventType.INTRADAY,
+                30,
+                List.of(TestFixtures.option(
+                        UUID.fromString("00000000-0000-0000-0000-000000000209"),
+                        LocalDate.of(2026, 2, 12),
+                        LocalTime.of(10, 15),
+                        LocalTime.of(10, 45))),
+                List.of()
+        );
+        when(readPollUseCase.getPublic(POLL_ID)).thenReturn(poll);
+
+        mockMvc.perform(get("/v1/polls/" + POLL_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.options[0].startTime").value("10:15"))
+                .andExpect(jsonPath("$.options[0].endTime").value("10:45"));
     }
 }

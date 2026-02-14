@@ -3,9 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Abstimmungszeitraum und Bestätigung (3 von 3) - woodle</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
@@ -17,6 +14,7 @@
 
     <main>
         <form class="wizard-card" action="/poll/submit" method="post">
+            <input type="hidden" name="draftId" th:if="${draftId != null}" th:value="${draftId}">
             <div class="section-heading">
                 <h2>Prüfen und veröffentlichen</h2>
                 <p>Kontrollieren Sie die Terminliste und legen Sie die automatische Löschung fest.</p>

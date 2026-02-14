@@ -199,6 +199,7 @@ Die Benutzersicht zeigt eine tabellenbasierte Übersicht aller Teilnehmenden und
 
 # Fachliche Vorgaben (Persistenz & Identifikation)
 - Keine Userverwaltung.
+- Keine Account-/Passwort-Logins; E-Mail-Adressen bleiben fachlich relevant und dürfen validiert werden.
 - Jede neue Umfrage erzeugt eine UUID als Primärschlüssel.
 - Unter dieser UUID werden Stammdaten der Umfrage sowie später die Auswahl/Antworten der Teilnehmenden gespeichert.
 - Jede Umfrage ist ausschließlich über einen Link erreichbar, der die UUID enthält.

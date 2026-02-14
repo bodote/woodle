@@ -1,70 +1,65 @@
-# TODO: CloudFront CNAME-Konflikt im AWS-Deploy beheben
+# TODO: Fix PR #4 Follow-Up Findings
 
-## Problem
+## Scope
 
-Beim `sam deploy` für den Stack `woodle-dev` schlägt das Update der Resource `WebDistribution` fehl.
+This plan addresses exactly two review findings:
 
-Fehler (CloudFormation/CloudFront):
+1. Session churn caused by automatic prewarm request on `/poll/new-step1.html`.
+2. Supply-chain/runtime risk from loading HTMX via third-party CDN without integrity/CSP hardening.
 
-- `Invalid request provided: One or more of the CNAMEs you provided are already associated with a different resource.`
-- Statuscode: `409`
-- Folge: Stack endet in `UPDATE_ROLLBACK_COMPLETE`.
+## Execution Plan
 
-## Auswirkungen
+### 1) Remove automatic prewarm side effect (P1)
 
-- Vollständige Deployments über `aws-deploy.sh` sind nicht stabil möglich.
-- Infrastruktur-Änderungen an CloudFront/Domain-Routing werden nicht übernommen.
-- Backend-Fixes mussten als Workaround direkt per `aws lambda update-function-code` ausgerollt werden.
+Goal: Avoid creating `HttpSession` state for anonymous page views before the user interacts with the wizard.
 
-## Vermutete Ursache
+Steps:
 
-- Mindestens ein verwendeter Custom-Domain-Name (CNAME/Alias) ist bereits bei einer anderen CloudFront-Distribution registriert.
+1. Add a failing test first:
+   - New API-level test in web layer that verifies loading step 1 does not trigger an automatic request that initializes wizard session state.
+   - Keep compile green and fail on assertion first (TDD gate).
+2. Remove the page-load prewarm fetch in `/src/main/resources/static/poll/new-step1.html`.
+   - Delete the unconditional `fetch(.../poll/step-2)` block.
+3. Keep the existing submit flow unchanged:
+   - Form still posts to `/poll/step-2`.
+   - `PollNewPageController#handleStep1` continues to initialize wizard state only after user submit.
+4. Optional hardening (if desired in same change):
+   - Add a dedicated lightweight health/preload endpoint that does not touch session state.
+   - Use that endpoint only if prewarm is still needed for latency goals.
+5. Re-run relevant tests and ensure no regression in wizard flow.
 
-## Nächste Schritte
+### 2) Eliminate untrusted runtime CDN dependency (P2)
 
-1. In AWS CloudFront alle Distributions prüfen und den kollidierenden CNAME identifizieren.
-2. CNAME aus der falschen/alten Distribution entfernen (oder Distribution stilllegen).
-3. DNS/Route53-Einträge gegen gewünschte Ziel-Distribution verifizieren.
-4. Danach `DEPLOY_RUNTIME=native ./aws-deploy.sh` erneut ausführen.
-5. Post-Deploy Smoke-Test durchführen:
-   - `/poll/new` bis Schritt 3
-   - Poll erstellen
-   - Admin-View öffnen
-   - "Link für Teilnehmende" und "Admin-Link" prüfen
-   - Vote bearbeiten/speichern prüfen
+Goal: Serve HTMX from trusted app-controlled assets.
 
-## Erledigt, wenn
+Steps:
 
-- `sam deploy` ohne Rollback durchläuft.
-- CloudFront-Routing für Poll-Seiten stabil funktioniert.
-- Share-Links auf AWS korrekt mit Protokoll + Hostname erscheinen.
+1. Add a failing test first:
+   - Extend static page test to assert no `https://unpkg.com/...` script is referenced.
+   - Assert HTMX is loaded from a local path (for example `/js/htmx.min.js`).
+2. Vendor HTMX into static assets:
+   - Add minified HTMX file under `/src/main/resources/static/js/`.
+   - Pin version in filename or via comment in file header.
+3. Update `/src/main/resources/static/poll/new-step1.html`:
+   - Replace CDN script tag with local script path.
+   - Keep existing runtime wiring for `hx-get` behavior.
+4. Optional defense-in-depth:
+   - Add/verify response CSP headers to restrict script sources to self.
+5. Re-run static page and controller tests.
 
----
+## Validation Checklist
 
-# TODO: Test-Coverage verbessern (gemäß test-strategie.md)
+Run with elevated permissions in this environment:
 
-## Ziel
+1. `./gradlew test --tests 'io.github.bodote.woodle.adapter.in.web.StaticPollStep1PageIT'`
+2. `./gradlew test --tests 'io.github.bodote.woodle.adapter.in.web.PollWizardFlowTest'`
+3. `./gradlew test --tests 'io.github.bodote.woodle.adapter.in.web.PollApiControllerTest'`
+4. `./gradlew test`
+5. Optional: `./gradlew check`
 
-- Test-Coverage gezielt erhöhen und dabei die Vorgaben aus `test-strategie.md` strikt einhalten.
+## Done Criteria
 
-## Leitplanken aus test-strategie.md (verbindlich)
-
-- API-first testen: bevorzugt `@WebMvcTest` auf öffentlichen Endpunkten.
-- Interne Implementierungsdetails nicht direkt testen, sofern API-Tests die Abdeckung erreichen.
-- Externe Abhängigkeiten mocken, nicht interne Kollaboration übermocken.
-- HTML funktional testen (Elemente/Verhalten), keine visuellen Layout-Assertions.
-- Namenskonvention einhalten: schnelle Unit-Tests als `*Test.java`, langsame Integrationstests als `*IT.java`.
-- Coverage-Ziele einhalten: 95% Instruction, 90% Branch.
-
-## Nächste Schritte
-
-1. Aktuellen Coverage-Stand ermitteln (`./gradlew test jacocoTestReport`).
-2. Klassen/Branches mit niedriger Abdeckung identifizieren.
-3. Fehlende API-Tests priorisiert ergänzen (`@WebMvcTest`), nur wo nötig interne Tests ergänzen.
-4. Für jede Klasse mit Verhalten sicherstellen, dass eine dedizierte Testabdeckung vorhanden ist.
-5. Abschließend Schwellen validieren (`./gradlew check`).
-
-## Erledigt, wenn
-
-- JaCoCo-Schwellen im Build erfüllt sind (Instruction >= 95%, Branch >= 90%).
-- Neue Tests folgen der Struktur und den Regeln aus `test-strategie.md`.
+- `new-step1.html` no longer performs automatic prewarm fetch to `/poll/step-2`.
+- Step 1 page no longer references HTMX from `unpkg.com`; it uses a local static asset.
+- Existing wizard and active count behavior still works.
+- Targeted tests and full unit test suite pass.

@@ -6,6 +6,7 @@ import org.htmlunit.html.HtmlPage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.htmlunit.MockMvcWebClientBuilder;
 
@@ -21,6 +22,9 @@ class PollNewStep2PageTest {
 
     @org.springframework.beans.factory.annotation.Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private io.github.bodote.woodle.application.port.out.WizardStateRepository wizardStateRepository;
 
     @Test
     @DisplayName("renders step-2 date selection page")
