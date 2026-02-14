@@ -16,6 +16,10 @@
     <main>
         <form class="wizard-card" action="/poll/step-3" method="post">
             <input type="hidden" name="draftId" th:if="${draftId != null}" th:value="${draftId}">
+            <input type="hidden" name="authorName" th:value="${authorName}">
+            <input type="hidden" name="authorEmail" th:value="${authorEmail}">
+            <input type="hidden" name="pollTitle" th:value="${pollTitle}">
+            <input type="hidden" name="description" th:value="${description}">
             <div class="section-heading">
                 <h2>Event-Typ und Terminoptionen</h2>
                 <p>Wählen Sie das Format Ihrer Veranstaltung und ergänzen Sie passende Vorschläge.</p>

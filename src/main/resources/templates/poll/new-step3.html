@@ -15,6 +15,20 @@
     <main>
         <form class="wizard-card" action="/poll/submit" method="post">
             <input type="hidden" name="draftId" th:if="${draftId != null}" th:value="${draftId}">
+            <input type="hidden" name="authorName" th:value="${authorName}">
+            <input type="hidden" name="authorEmail" th:value="${authorEmail}">
+            <input type="hidden" name="pollTitle" th:value="${pollTitle}">
+            <input type="hidden" name="description" th:value="${description}">
+            <input type="hidden" name="eventType" th:value="${eventType}">
+            <input type="hidden" name="durationMinutes" th:value="${durationMinutes}">
+            <input type="hidden"
+                   th:each="date, dateStat : ${dates}"
+                   th:name="${'dateOption' + (dateStat.index + 1)}"
+                   th:value="${date}">
+            <input type="hidden"
+                   th:each="startTime, timeStat : ${startTimes}"
+                   th:name="${'startTime' + (timeStat.index + 1)}"
+                   th:value="${startTime}">
             <div class="section-heading">
                 <h2>Prüfen und veröffentlichen</h2>
                 <p>Kontrollieren Sie die Terminliste und legen Sie die automatische Löschung fest.</p>

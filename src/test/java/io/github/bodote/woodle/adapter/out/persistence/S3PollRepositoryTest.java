@@ -2,6 +2,7 @@ package io.github.bodote.woodle.adapter.out.persistence;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.bodote.woodle.domain.model.EventType;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.domain.model.PollOption;
@@ -46,6 +47,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 import org.mockito.ArgumentCaptor;
 
 @DisplayName("S3PollRepository")
@@ -318,5 +320,151 @@ class S3PollRepositoryTest {
         IllegalStateException exception = assertThrows(IllegalStateException.class, repository::countActivePolls);
 
         assertEquals("Failed to count polls from S3", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("throws count error when SDK client fails during list")
+    void throwsCountErrorWhenSdkClientFailsDuringList() {
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
+                .thenThrow(SdkClientException.builder().message("network down").build());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class, repository::countActivePolls);
+
+        assertEquals("Failed to count polls from S3", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("count ignores objects with null keys")
+    void countIgnoresObjectsWithNullKeys() {
+        S3Client s3Client = mock(S3Client.class);
+        ListObjectsV2Response response = ListObjectsV2Response.builder()
+                .contents(
+                        S3Object.builder().key(null).build(),
+                        S3Object.builder().key("polls/one.json").build()
+                )
+                .build();
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        long count = repository.countActivePolls();
+
+        assertEquals(1L, count);
+    }
+
+    @Test
+    @DisplayName("save serializes null start and end times for all-day options")
+    void saveSerializesNullStartAndEndTimesForAllDayOptions() throws IOException {
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000120");
+        UUID optionId = UUID.fromString("00000000-0000-0000-0000-000000000121");
+        OffsetDateTime now = OffsetDateTime.of(2026, 2, 10, 10, 0, 0, 0, ZoneOffset.UTC);
+        Poll poll = new Poll(
+                pollId,
+                "AdminSecret12",
+                "All-day Poll",
+                "desc",
+                "Alice",
+                "alice@invalid",
+                EventType.ALL_DAY,
+                null,
+                List.of(new PollOption(optionId, LocalDate.of(2026, 2, 11), null, null)),
+                List.of(),
+                now,
+                now,
+                LocalDate.of(2026, 3, 11)
+        );
+
+        repository.save(poll);
+
+        ArgumentCaptor<RequestBody> bodyCaptor = ArgumentCaptor.forClass(RequestBody.class);
+        verify(s3Client).putObject(any(PutObjectRequest.class), bodyCaptor.capture());
+        String json = new String(bodyCaptor.getValue().contentStreamProvider().newStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertTrue(json.contains("\"startTime\":null"));
+        assertTrue(json.contains("\"endTime\":null"));
+    }
+
+    @Test
+    @DisplayName("reads poll and parses non blank start and end times")
+    void readsPollAndParsesNonBlankStartAndEndTimes() {
+        S3Client s3Client = mock(S3Client.class);
+        String json = """
+                {
+                  "pollId":"00000000-0000-0000-0000-000000000130",
+                  "type":"date",
+                  "title":"Title",
+                  "descriptionHtml":"Description",
+                  "language":"de",
+                  "createdAt":"2026-02-10T10:00:00Z",
+                  "updatedAt":"2026-02-10T10:00:00Z",
+                  "author":{"name":"Alice","email":"alice@invalid"},
+                  "access":{"customSlug":null,"passwordHash":null,"resultsPublic":true,"adminToken":"secret"},
+                  "permissions":{"voteChangePolicy":"ALL_CAN_EDIT"},
+                  "notifications":{"onVote":false,"onComment":false},
+                  "resultsVisibility":{"onlyAuthor":false},
+                  "status":"OPEN",
+                  "expiresAt":"2026-03-01",
+                  "options":{"eventType":"INTRADAY","durationMinutes":30,"items":[
+                    {"optionId":"00000000-0000-0000-0000-000000000131","date":"2026-02-10","startTime":"09:15","endTime":"10:00"}
+                  ]},
+                  "responses":[]
+                }
+                """;
+        GetObjectResponse response = GetObjectResponse.builder().build();
+        ResponseInputStream<GetObjectResponse> stream = new ResponseInputStream<>(
+                response,
+                AbortableInputStream.create(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)))
+        );
+        when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        Poll poll = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000130")).orElseThrow();
+
+        assertEquals(LocalTime.of(9, 15), poll.options().getFirst().startTime());
+        assertEquals(LocalTime.of(10, 0), poll.options().getFirst().endTime());
+    }
+
+    @Test
+    @DisplayName("save throws when poll serialization fails")
+    void saveThrowsWhenPollSerializationFails() throws JsonProcessingException {
+        S3Client s3Client = mock(S3Client.class);
+        ObjectMapper objectMapper = mock(ObjectMapper.class);
+        doThrow(new JsonProcessingException("boom") {}).when(objectMapper).writeValueAsString(any(PollDAO.class));
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000140");
+        OffsetDateTime now = OffsetDateTime.of(2026, 2, 10, 10, 0, 0, 0, ZoneOffset.UTC);
+        Poll poll = new Poll(
+                pollId,
+                "AdminSecret12",
+                "Title",
+                "desc",
+                "Alice",
+                "alice@invalid",
+                EventType.ALL_DAY,
+                null,
+                List.of(),
+                List.of(),
+                now,
+                now,
+                LocalDate.of(2026, 3, 11)
+        );
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> repository.save(poll));
+
+        assertEquals("Failed to serialize poll", exception.getMessage());
     }
 }

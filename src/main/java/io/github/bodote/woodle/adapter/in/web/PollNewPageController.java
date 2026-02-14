@@ -48,7 +48,7 @@ public class PollNewPageController {
         int count = getOrInitDateCount(session);
         model.addAttribute("dateCount", count);
         WizardState state = getOrInitWizard(session);
-        model.addAttribute("eventType", state.eventType());
+        applyStep2Model(model, state);
         return "poll/new-step2";
     }
 
@@ -78,7 +78,7 @@ public class PollNewPageController {
         UUID draftId = wizardStateRepository.create(state);
         session.setAttribute(WizardState.SESSION_KEY, state);
         model.addAttribute("dateCount", getOrInitDateCount(session));
-        model.addAttribute("eventType", state.eventType());
+        applyStep2Model(model, state);
         model.addAttribute("draftId", draftId);
         return "poll/new-step2";
     }
@@ -133,21 +133,30 @@ public class PollNewPageController {
             @RequestParam(value = "draftId", required = false) UUID draftId,
             @RequestParam(value = "eventType", defaultValue = "ALL_DAY") io.github.bodote.woodle.domain.model.EventType eventType,
             @RequestParam(value = "durationMinutes", required = false) Integer durationMinutes,
+            @RequestParam(value = "authorName", required = false) String authorName,
+            @RequestParam(value = "authorEmail", required = false) String authorEmail,
+            @RequestParam(value = "pollTitle", required = false) String pollTitle,
+            @RequestParam(value = "description", required = false) String description,
             HttpSession session,
             Model model,
             jakarta.servlet.http.HttpServletRequest request
     ) {
         WizardState state = resolveWizardState(session, draftId);
         if (state == null) {
-            return "redirect:/poll/new";
+            state = new WizardState();
         }
+        applyStep1Fallback(state, authorName, authorEmail, pollTitle, description);
         state.setEventType(eventType);
         state.setDurationMinutes(durationMinutes);
         state.setDates(extractDates(request.getParameterMap()));
         state.setStartTimes(extractStartTimes(request.getParameterMap(), eventType));
         session.setAttribute(WizardState.SESSION_KEY, state);
         if (draftId != null) {
-            wizardStateRepository.save(draftId, state);
+            try {
+                wizardStateRepository.save(draftId, state);
+            } catch (IllegalStateException ignored) {
+                // Keep the flow alive even if draft persistence is temporarily unavailable.
+            }
         }
         populateStep3Model(model, state);
         model.addAttribute("draftId", draftId);
@@ -155,8 +164,14 @@ public class PollNewPageController {
     }
 
     private void populateStep3Model(Model model, WizardState state) {
+        model.addAttribute("authorName", state.authorName());
+        model.addAttribute("authorEmail", state.authorEmail());
+        model.addAttribute("pollTitle", state.title());
+        model.addAttribute("description", state.description());
         model.addAttribute("dates", state.dates());
         model.addAttribute("eventType", state.eventType());
+        model.addAttribute("durationMinutes", state.durationMinutes());
+        model.addAttribute("startTimes", state.startTimes());
         if (state.eventType() == io.github.bodote.woodle.domain.model.EventType.INTRADAY) {
             model.addAttribute("dateSummaries", buildIntradaySummaries(state));
         }
@@ -186,12 +201,16 @@ public class PollNewPageController {
         if (draftId == null) {
             return null;
         }
-        return wizardStateRepository.findById(draftId)
-                .map(state -> {
-                    session.setAttribute(WizardState.SESSION_KEY, state);
-                    return state;
-                })
-                .orElse(null);
+        try {
+            return wizardStateRepository.findById(draftId)
+                    .map(state -> {
+                        session.setAttribute(WizardState.SESSION_KEY, state);
+                        return state;
+                    })
+                    .orElse(null);
+        } catch (IllegalStateException ignored) {
+            return null;
+        }
     }
 
     private List<LocalDate> extractDates(Map<String, String[]> parameterMap) {
@@ -262,6 +281,33 @@ public class PollNewPageController {
         model.addAttribute("emailError", emailError);
         if (emailError) {
             model.addAttribute("emailErrorMessage", EMAIL_ERROR_MESSAGE);
+        }
+    }
+
+    private void applyStep2Model(Model model, WizardState state) {
+        model.addAttribute("eventType", state.eventType());
+        model.addAttribute("authorName", state.authorName());
+        model.addAttribute("authorEmail", state.authorEmail());
+        model.addAttribute("pollTitle", state.title());
+        model.addAttribute("description", state.description());
+    }
+
+    private void applyStep1Fallback(WizardState state,
+                                    String authorName,
+                                    String authorEmail,
+                                    String pollTitle,
+                                    String description) {
+        if (authorName != null && !authorName.isBlank()) {
+            state.setAuthorName(authorName);
+        }
+        if (authorEmail != null && !authorEmail.isBlank()) {
+            state.setAuthorEmail(authorEmail);
+        }
+        if (pollTitle != null && !pollTitle.isBlank()) {
+            state.setTitle(pollTitle);
+        }
+        if (description != null) {
+            state.setDescription(description);
         }
     }
 

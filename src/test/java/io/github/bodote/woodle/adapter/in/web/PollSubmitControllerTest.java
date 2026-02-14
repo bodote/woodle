@@ -21,9 +21,11 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -105,5 +107,97 @@ class PollSubmitControllerTest {
 
         verify(createPollUseCase, never()).create(any(CreatePollCommand.class));
         verify(wizardStateRepository, never()).delete(draftId);
+    }
+
+    @Test
+    @DisplayName("submits with posted payload when draft lookup misses and session is empty")
+    void submitsWithPostedPayloadWhenDraftLookupMissesAndSessionIsEmpty() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000003");
+        UUID draftId = UUID.fromString("00000000-0000-0000-0000-000000000779");
+        String adminSecret = "FallbackSecret123";
+        when(wizardStateRepository.findById(draftId)).thenReturn(java.util.Optional.empty());
+        when(createPollUseCase.create(any(CreatePollCommand.class)))
+                .thenReturn(new CreatePollResult(pollId, adminSecret));
+
+        mockMvc.perform(post("/poll/submit")
+                        .param("draftId", draftId.toString())
+                        .param("authorName", "Fallback Author")
+                        .param("authorEmail", "fallback@example.com")
+                        .param("pollTitle", "Fallback title")
+                        .param("description", "Fallback description")
+                        .param("eventType", "ALL_DAY")
+                        .param("dateOption1", "2026-03-01")
+                        .param("dateOption2", "2026-03-02"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+
+        verify(createPollUseCase, times(1)).create(any(CreatePollCommand.class));
+        verify(wizardStateRepository, times(1)).delete(draftId);
+    }
+
+    @Test
+    @DisplayName("submits with posted payload when draft lookup throws")
+    void submitsWithPostedPayloadWhenDraftLookupThrows() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000004");
+        UUID draftId = UUID.fromString("00000000-0000-0000-0000-000000000780");
+        String adminSecret = "DraftLookupError";
+        when(wizardStateRepository.findById(draftId)).thenThrow(new IllegalStateException("s3 unavailable"));
+        when(createPollUseCase.create(any(CreatePollCommand.class)))
+                .thenReturn(new CreatePollResult(pollId, adminSecret));
+
+        mockMvc.perform(post("/poll/submit")
+                        .param("draftId", draftId.toString())
+                        .param("authorName", "Fallback Author")
+                        .param("authorEmail", "fallback@example.com")
+                        .param("pollTitle", "Fallback title")
+                        .param("description", "Fallback description")
+                        .param("eventType", "ALL_DAY")
+                        .param("dateOption1", "2026-03-01")
+                        .param("dateOption2", "2026-03-02"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+
+        verify(createPollUseCase, times(1)).create(any(CreatePollCommand.class));
+        verify(wizardStateRepository, times(1)).delete(draftId);
+    }
+
+    @Test
+    @DisplayName("parses intraday start times from posted payload when no state exists")
+    void parsesIntradayStartTimesFromPostedPayloadWhenNoStateExists() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000005");
+        String adminSecret = "IntradayFallback";
+        when(createPollUseCase.create(any(CreatePollCommand.class)))
+                .thenReturn(new CreatePollResult(pollId, adminSecret));
+
+        mockMvc.perform(post("/poll/submit")
+                        .param("authorName", "Fallback Author")
+                        .param("authorEmail", "fallback@example.com")
+                        .param("pollTitle", "Fallback title")
+                        .param("description", "Fallback description")
+                        .param("eventType", "INTRADAY")
+                        .param("durationMinutes", "90")
+                        .param("dateOption1", "2026-03-01")
+                        .param("dateOption2", "2026-03-02")
+                        .param("startTime1", "09:00")
+                        .param("startTime2", "14:30"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+
+        org.mockito.ArgumentCaptor<CreatePollCommand> captor =
+                org.mockito.ArgumentCaptor.forClass(CreatePollCommand.class);
+        verify(createPollUseCase).create(captor.capture());
+        CreatePollCommand command = captor.getValue();
+        assertEquals(io.github.bodote.woodle.domain.model.EventType.INTRADAY, command.eventType());
+        assertEquals(2, command.startTimes().size());
+    }
+
+    @Test
+    @DisplayName("redirects to first step when neither wizard state nor required fallback payload exists")
+    void redirectsWhenNoWizardStateAndFallbackPayloadMissing() throws Exception {
+        mockMvc.perform(post("/poll/submit"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/new"));
+
+        verify(createPollUseCase, never()).create(any(CreatePollCommand.class));
     }
 }
