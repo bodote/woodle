@@ -72,6 +72,9 @@ This file is a working checklist and decision guide for building highly usable, 
 - Keep server responses fast; show an indicator for slow actions.
 - Avoid unnecessary DOM updates; only swap what changed.
 - Cache where appropriate; avoid full page reloads for small changes.
+- For transient backend/edge startup spikes, handle `502/503/504` as retryable with a capped retry budget.
+- Prefer delayed indicators (~200ms) for submit actions to avoid flicker on very fast responses.
+- Keep retry logic bounded and explicit (no infinite retries); show clear user feedback while retries are running.
 
 ## Content & Microcopy
 - Use verbs for primary actions: "Create poll", "Add option".
@@ -99,4 +102,3 @@ This file is a working checklist and decision guide for building highly usable, 
 ## Reference Pointers (Local)
 - Align with test patterns in `src/test/java/...`.
 - See HTML structure conventions in existing page templates.
-

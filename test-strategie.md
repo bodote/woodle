@@ -27,6 +27,9 @@
   - ob die **erforderlichen HTML-Elemente** vorhanden sind,
   - ggf. deren **Reihenfolge** auf der Seite,
   - und deren **Funktion/Verhalten**.
+- **Ausnahme:** Bei **reinen Layout-/CSS-Änderungen** (z. B. Abstände, Ausrichtung, Farben, Typografie),
+  die **keine** Verhaltensänderung und **keine** Änderung der HTML-Struktur/DOM-Verträge verursachen,
+  sind ausnahmsweise **keine automatisierten Tests** erforderlich.
 
 ## Unit Tests (Ausnahme)
 - Nur wenn Coverage **nicht praktikabel** mit `@WebMvcTest` erreichbar ist.

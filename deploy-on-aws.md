@@ -412,6 +412,35 @@ What must be validated in AWS (cannot be fully proven locally):
 4. Real cold-start and latency behavior.
 5. Cost/budget/anomaly alerts in actual billing pipeline.
 
+## Transient 504 Runbook (CloudFront/API/Lambda)
+
+Observed pattern in production-like traffic:
+- A single `504 Gateway Timeout` can occur on step transition (`/poll/step-2`) during Lambda cold start.
+- Immediate retry often succeeds after the new Lambda container is initialized.
+
+Cost-aware mitigation used in this project:
+1. Do **not** keep Lambda warm with scheduled pings on critical paths (idle-cost first).
+2. Use client-side transient retries for `502/503/504`:
+   - step-1 submit (`/poll/step-2`): 10 retries, 1000ms interval
+   - active poll count (`/poll/active-count`): 10 retries, 1000ms interval
+3. Show delayed progress feedback (`Schritt 2 wird geladen...` + spinner) if response time exceeds ~200ms.
+
+Operational verification:
+1. Check CloudWatch logs around the event for `INIT_REPORT` timeout/restart patterns.
+2. Re-run the same user flow on the same stage (`qs` or `prod`) and confirm success on retry.
+3. Verify no persistent routing/domain issue (CloudFront alias, API mapping, cert).
+
+How to force realistic cold-start conditions for testing:
+1. Update Lambda configuration on target stage by changing a dummy env var.
+2. Example:
+   - Resolve function name from stack resources:
+     `aws cloudformation describe-stack-resources --stack-name woodle-qs --region eu-central-1 --logical-resource-id AppFunction`
+   - Read current env vars:
+     `aws lambda get-function-configuration --function-name <physical-function-name> --region eu-central-1`
+   - Update one dummy variable (keep existing vars unchanged):
+     `aws lambda update-function-configuration --function-name <physical-function-name> --region eu-central-1 --environment 'Variables={...,DUMMY_WARMUP_TEST=2026-02-15T11:00:00Z}'`
+3. Then run immediate UI smoke tests (step-1 submit and active-count load) and verify loading indicator + retry behavior.
+
 ## Definition of Done (Per Environment)
 1. All tests pass (`test`, targeted `*IT`, key E2E).
 2. Poll create/read/update/vote works via CloudFront frontend in AWS.
