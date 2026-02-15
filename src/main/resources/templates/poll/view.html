@@ -123,6 +123,9 @@
                 </section>
             </div>
             <aside class="admin-side">
+                <section class="info-card" th:if="${emailDisabled}">
+                    <p><strong>Emailversand ist deaktiviert.</strong></p>
+                </section>
                 <section class="info-card" th:if="${emailFailed}">
                     <p><strong>E-Mail konnte nicht gesendet werden.</strong></p>
                     <p>Bitte teilen Sie die Links unten manuell.</p>

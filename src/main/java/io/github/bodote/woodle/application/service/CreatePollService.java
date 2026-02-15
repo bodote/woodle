@@ -25,11 +25,13 @@ public class CreatePollService implements CreatePollUseCase {
 
     private final PollRepository pollRepository;
     private final PollEmailSender pollEmailSender;
+    private final boolean emailEnabled;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public CreatePollService(PollRepository pollRepository, PollEmailSender pollEmailSender) {
+    public CreatePollService(PollRepository pollRepository, PollEmailSender pollEmailSender, boolean emailEnabled) {
         this.pollRepository = pollRepository;
         this.pollEmailSender = pollEmailSender;
+        this.emailEnabled = emailEnabled;
     }
 
     @Override
@@ -57,6 +59,10 @@ public class CreatePollService implements CreatePollUseCase {
         );
 
         pollRepository.save(poll);
+        if (!emailEnabled) {
+            return new CreatePollResult(pollId, adminSecret, false, true);
+        }
+
         boolean notificationQueued = pollEmailSender.sendPollCreated(new PollCreatedEmail(
                 pollId,
                 adminSecret,
@@ -64,7 +70,7 @@ public class CreatePollService implements CreatePollUseCase {
                 command.authorEmail(),
                 command.title()
         ));
-        return new CreatePollResult(pollId, adminSecret, notificationQueued);
+        return new CreatePollResult(pollId, adminSecret, notificationQueued, false);
     }
 
     private List<PollOption> buildOptions(CreatePollCommand command) {

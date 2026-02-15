@@ -56,7 +56,7 @@ class PollApiControllerTest {
     @DisplayName("creates poll via POST /v1/polls")
     void createsPollViaPost() throws Exception {
         when(createPollUseCase.create(any(CreatePollCommand.class)))
-                .thenReturn(new CreatePollResult(POLL_ID, ADMIN_SECRET, true));
+                .thenReturn(new CreatePollResult(POLL_ID, ADMIN_SECRET, true, false));
 
         String request = """
                 {
@@ -159,7 +159,7 @@ class PollApiControllerTest {
     @DisplayName("defaults missing startTimes to empty list in create command")
     void defaultsMissingStartTimesToEmptyListInCreateCommand() throws Exception {
         when(createPollUseCase.create(any(CreatePollCommand.class)))
-                .thenReturn(new CreatePollResult(POLL_ID, ADMIN_SECRET, false));
+                .thenReturn(new CreatePollResult(POLL_ID, ADMIN_SECRET, false, false));
 
         String request = """
                 {

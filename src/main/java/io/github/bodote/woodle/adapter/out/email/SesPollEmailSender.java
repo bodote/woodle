@@ -38,8 +38,8 @@ public class SesPollEmailSender implements PollEmailSender {
         String voteUrl = absoluteUrl("/poll/" + pollId);
 
         String subject = subjectPrefix.isBlank()
-                ? "Woodle poll created: " + pollCreatedEmail.pollTitle()
-                : subjectPrefix + " Woodle poll created: " + pollCreatedEmail.pollTitle();
+                ? "Umfrage erstellt: " + pollCreatedEmail.pollTitle()
+                : subjectPrefix + " Umfrage erstellt: " + pollCreatedEmail.pollTitle();
         String body = "Hello " + pollCreatedEmail.authorName() + ",\n\n"
                 + "your poll \"" + pollCreatedEmail.pollTitle() + "\" has been created successfully.\n\n"
                 + "Admin URL:\n"

@@ -49,6 +49,7 @@ class SesPollEmailSenderTest {
         assertEquals("alice@example.com", request.destination().toAddresses().getFirst());
         String subject = request.content().simple().subject().data();
         String body = request.content().simple().body().text().data();
+        assertTrue(subject.contains("Umfrage erstellt"));
         assertTrue(subject.contains("Team lunch"));
         assertTrue(body.contains("https://woodle.click/poll/00000000-0000-0000-0000-000000000111"));
         assertTrue(body.contains("https://woodle.click/poll/00000000-0000-0000-0000-000000000111-Abc123XyZ789"));
@@ -75,5 +76,63 @@ class SesPollEmailSenderTest {
         ));
 
         assertFalse(queued);
+    }
+
+    @Test
+    @DisplayName("uses relative links and no prefix when base URL is blank and subject prefix is null")
+    void usesRelativeLinksAndNoPrefixWhenBaseUrlBlankAndSubjectPrefixNull() {
+        SesV2Client sesV2Client = mock(SesV2Client.class);
+        when(sesV2Client.sendEmail(any(SendEmailRequest.class))).thenReturn(SendEmailResponse.builder().build());
+        SesPollEmailSender sender = new SesPollEmailSender(
+                sesV2Client,
+                "noreply@woodle.click",
+                null,
+                ""
+        );
+
+        boolean queued = sender.sendPollCreated(new PollCreatedEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000113"),
+                "Secret113ABC",
+                "Carla",
+                "carla@example.com",
+                "Board meeting"
+        ));
+
+        assertTrue(queued);
+        ArgumentCaptor<SendEmailRequest> requestCaptor = ArgumentCaptor.forClass(SendEmailRequest.class);
+        verify(sesV2Client).sendEmail(requestCaptor.capture());
+        String subject = requestCaptor.getValue().content().simple().subject().data();
+        String body = requestCaptor.getValue().content().simple().body().text().data();
+        assertEquals("Umfrage erstellt: Board meeting", subject);
+        assertTrue(body.contains("/poll/00000000-0000-0000-0000-000000000113"));
+        assertTrue(body.contains("/poll/00000000-0000-0000-0000-000000000113-Secret113ABC"));
+    }
+
+    @Test
+    @DisplayName("normalizes trailing slash in configured base URL")
+    void normalizesTrailingSlashInConfiguredBaseUrl() {
+        SesV2Client sesV2Client = mock(SesV2Client.class);
+        when(sesV2Client.sendEmail(any(SendEmailRequest.class))).thenReturn(SendEmailResponse.builder().build());
+        SesPollEmailSender sender = new SesPollEmailSender(
+                sesV2Client,
+                "noreply@woodle.click",
+                "[Woodle]",
+                "https://woodle.click/"
+        );
+
+        boolean queued = sender.sendPollCreated(new PollCreatedEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000114"),
+                "Secret114ABC",
+                "Diana",
+                "diana@example.com",
+                "Lunch vote"
+        ));
+
+        assertTrue(queued);
+        ArgumentCaptor<SendEmailRequest> requestCaptor = ArgumentCaptor.forClass(SendEmailRequest.class);
+        verify(sesV2Client).sendEmail(requestCaptor.capture());
+        String body = requestCaptor.getValue().content().simple().body().text().data();
+        assertTrue(body.contains("https://woodle.click/poll/00000000-0000-0000-0000-000000000114"));
+        assertFalse(body.contains("https://woodle.click//poll/00000000-0000-0000-0000-000000000114"));
     }
 }

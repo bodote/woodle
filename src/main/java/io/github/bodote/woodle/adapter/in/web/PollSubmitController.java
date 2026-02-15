@@ -83,7 +83,9 @@ public class PollSubmitController {
         }
         session.removeAttribute(WizardState.SESSION_KEY);
         String target = "/poll/" + result.pollId() + "-" + result.adminSecret();
-        if (!result.notificationQueued()) {
+        if (result.notificationDisabled()) {
+            target = target + "?emailDisabled=true";
+        } else if (!result.notificationQueued()) {
             target = target + "?emailFailed=true";
         }
         return "redirect:" + target;

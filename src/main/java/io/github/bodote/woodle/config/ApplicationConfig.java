@@ -92,8 +92,12 @@ public class ApplicationConfig {
     }
 
     @Bean
-    public CreatePollUseCase createPollUseCase(PollRepository pollRepository, PollEmailSender pollEmailSender) {
-        return new CreatePollService(pollRepository, pollEmailSender);
+    public CreatePollUseCase createPollUseCase(
+            PollRepository pollRepository,
+            PollEmailSender pollEmailSender,
+            @Value("${woodle.email.enabled:false}") boolean emailEnabled
+    ) {
+        return new CreatePollService(pollRepository, pollEmailSender, emailEnabled);
     }
 
     @Bean

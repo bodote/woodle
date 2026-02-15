@@ -14,6 +14,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,7 +34,7 @@ class CreatePollServiceTest {
     void usesExpiresAtOverrideWhenProvided() {
         CapturingPollRepository repository = new CapturingPollRepository();
         CapturingPollEmailSender pollEmailSender = new CapturingPollEmailSender();
-        CreatePollService service = new CreatePollService(repository, pollEmailSender);
+        CreatePollService service = new CreatePollService(repository, pollEmailSender, true);
 
         LocalDate override = LocalDate.of(2026, 3, 1);
         CreatePollCommand command = new CreatePollCommand(
@@ -62,7 +63,7 @@ class CreatePollServiceTest {
     @DisplayName("derives expiresAt from latest option date when no override is provided")
     void derivesExpiresAtFromLatestOptionDateWhenNoOverrideIsProvided() {
         CapturingPollRepository repository = new CapturingPollRepository();
-        CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender());
+        CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender(), true);
 
         CreatePollCommand command = new CreatePollCommand(
                 AUTHOR_NAME,
@@ -87,7 +88,7 @@ class CreatePollServiceTest {
     @DisplayName("creates options with null start and end time when start time is missing")
     void createsOptionsWithNullStartAndEndTimeWhenStartTimeIsMissing() {
         CapturingPollRepository repository = new CapturingPollRepository();
-        CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender());
+        CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender(), true);
 
         CreatePollCommand command = new CreatePollCommand(
                 AUTHOR_NAME,
@@ -116,7 +117,7 @@ class CreatePollServiceTest {
     void doesNotCalculateEndTimeWhenDurationIsMissing() {
         CapturingPollRepository repository = new CapturingPollRepository();
         CapturingPollEmailSender pollEmailSender = new CapturingPollEmailSender();
-        CreatePollService service = new CreatePollService(repository, pollEmailSender);
+        CreatePollService service = new CreatePollService(repository, pollEmailSender, true);
 
         CreatePollCommand command = new CreatePollCommand(
                 AUTHOR_NAME,
@@ -141,9 +142,36 @@ class CreatePollServiceTest {
         assertEquals(LocalTime.of(14, 30), saved.options().getFirst().startTime());
         assertNull(saved.options().getFirst().endTime());
         assertTrue(result.notificationQueued());
+        assertFalse(result.notificationDisabled());
         assertNotNull(pollEmailSender.lastEmail);
         assertEquals(saved.pollId(), pollEmailSender.lastEmail.pollId());
         assertEquals(saved.adminSecret(), pollEmailSender.lastEmail.adminSecret());
+    }
+
+    @Test
+    @DisplayName("marks notification as disabled when email sending is disabled")
+    void marksNotificationAsDisabledWhenEmailSendingIsDisabled() {
+        CapturingPollRepository repository = new CapturingPollRepository();
+        CapturingPollEmailSender pollEmailSender = new CapturingPollEmailSender();
+        CreatePollService service = new CreatePollService(repository, pollEmailSender, false);
+
+        CreatePollCommand command = new CreatePollCommand(
+                AUTHOR_NAME,
+                AUTHOR_EMAIL,
+                TITLE,
+                DESCRIPTION,
+                EventType.ALL_DAY,
+                null,
+                List.of(DATE_ONE),
+                List.of(),
+                null
+        );
+
+        var result = service.create(command);
+
+        assertFalse(result.notificationQueued());
+        assertTrue(result.notificationDisabled());
+        assertNull(pollEmailSender.lastEmail);
     }
 
     private static final class CapturingPollRepository implements PollRepository {

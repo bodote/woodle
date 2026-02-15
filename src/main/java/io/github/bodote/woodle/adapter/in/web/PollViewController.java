@@ -54,6 +54,7 @@ public class PollViewController {
     public String viewPollAdmin(@PathVariable UUID pollId,
                                 @PathVariable String adminSecret,
                                 @RequestParam(value = "emailFailed", defaultValue = "false") boolean emailFailed,
+                                @RequestParam(value = "emailDisabled", defaultValue = "false") boolean emailDisabled,
                                 Model model,
                                 HttpServletRequest request) {
         Poll poll = readPollUseCase.getAdmin(pollId, adminSecret);
@@ -65,6 +66,7 @@ public class PollViewController {
         model.addAttribute("participantShareUrl", origin + "/poll/" + pollId);
         model.addAttribute("adminShareUrl", origin + "/poll/" + pollId + "-" + adminSecret);
         model.addAttribute("emailFailed", emailFailed);
+        model.addAttribute("emailDisabled", emailDisabled);
         return "poll/view";
     }
 
