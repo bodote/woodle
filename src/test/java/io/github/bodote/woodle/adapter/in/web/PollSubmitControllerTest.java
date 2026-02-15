@@ -57,7 +57,7 @@ class PollSubmitControllerTest {
         session.setAttribute(WizardState.SESSION_KEY, state);
 
         when(createPollUseCase.create(any(CreatePollCommand.class)))
-                .thenReturn(new CreatePollResult(pollId, adminSecret));
+                .thenReturn(new CreatePollResult(pollId, adminSecret, true, false));
 
         mockMvc.perform(post("/poll/submit")
                         .session(session))
@@ -65,6 +65,48 @@ class PollSubmitControllerTest {
                 .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
 
         verify(createPollUseCase).create(any(CreatePollCommand.class));
+    }
+
+    @Test
+    @DisplayName("adds emailFailed flag when poll email was not queued")
+    void addsEmailFailedFlagWhenPollEmailWasNotQueued() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000101");
+        String adminSecret = "EmailFailed123";
+        MockHttpSession session = new MockHttpSession();
+        WizardState state = TestFixtures.wizardStateWithDates(
+                EventType.ALL_DAY,
+                List.of(LocalDate.of(2026, 2, 10))
+        );
+        session.setAttribute(WizardState.SESSION_KEY, state);
+
+        when(createPollUseCase.create(any(CreatePollCommand.class)))
+                .thenReturn(new CreatePollResult(pollId, adminSecret, false, false));
+
+        mockMvc.perform(post("/poll/submit")
+                        .session(session))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret + "?emailFailed=true"));
+    }
+
+    @Test
+    @DisplayName("adds emailDisabled flag when email delivery is disabled")
+    void addsEmailDisabledFlagWhenEmailDeliveryIsDisabled() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000102");
+        String adminSecret = "EmailDisabled123";
+        MockHttpSession session = new MockHttpSession();
+        WizardState state = TestFixtures.wizardStateWithDates(
+                EventType.ALL_DAY,
+                List.of(LocalDate.of(2026, 2, 12))
+        );
+        session.setAttribute(WizardState.SESSION_KEY, state);
+
+        when(createPollUseCase.create(any(CreatePollCommand.class)))
+                .thenReturn(new CreatePollResult(pollId, adminSecret, false, true));
+
+        mockMvc.perform(post("/poll/submit")
+                        .session(session))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret + "?emailDisabled=true"));
     }
 
     @Test
@@ -83,7 +125,7 @@ class PollSubmitControllerTest {
 
         when(wizardStateRepository.findById(draftId)).thenReturn(java.util.Optional.of(state));
         when(createPollUseCase.create(any(CreatePollCommand.class)))
-                .thenReturn(new CreatePollResult(pollId, adminSecret));
+                .thenReturn(new CreatePollResult(pollId, adminSecret, true, false));
 
         mockMvc.perform(post("/poll/submit")
                         .param("draftId", draftId.toString()))
@@ -117,7 +159,7 @@ class PollSubmitControllerTest {
         String adminSecret = "FallbackSecret123";
         when(wizardStateRepository.findById(draftId)).thenReturn(java.util.Optional.empty());
         when(createPollUseCase.create(any(CreatePollCommand.class)))
-                .thenReturn(new CreatePollResult(pollId, adminSecret));
+                .thenReturn(new CreatePollResult(pollId, adminSecret, true, false));
 
         mockMvc.perform(post("/poll/submit")
                         .param("draftId", draftId.toString())
@@ -143,7 +185,7 @@ class PollSubmitControllerTest {
         String adminSecret = "DraftLookupError";
         when(wizardStateRepository.findById(draftId)).thenThrow(new IllegalStateException("s3 unavailable"));
         when(createPollUseCase.create(any(CreatePollCommand.class)))
-                .thenReturn(new CreatePollResult(pollId, adminSecret));
+                .thenReturn(new CreatePollResult(pollId, adminSecret, true, false));
 
         mockMvc.perform(post("/poll/submit")
                         .param("draftId", draftId.toString())
@@ -167,7 +209,7 @@ class PollSubmitControllerTest {
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000005");
         String adminSecret = "IntradayFallback";
         when(createPollUseCase.create(any(CreatePollCommand.class)))
-                .thenReturn(new CreatePollResult(pollId, adminSecret));
+                .thenReturn(new CreatePollResult(pollId, adminSecret, true, false));
 
         mockMvc.perform(post("/poll/submit")
                         .param("authorName", "Fallback Author")

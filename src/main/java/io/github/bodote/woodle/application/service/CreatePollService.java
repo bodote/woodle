@@ -3,6 +3,8 @@ package io.github.bodote.woodle.application.service;
 import io.github.bodote.woodle.application.port.in.CreatePollResult;
 import io.github.bodote.woodle.application.port.in.CreatePollUseCase;
 import io.github.bodote.woodle.application.port.in.command.CreatePollCommand;
+import io.github.bodote.woodle.application.port.out.PollCreatedEmail;
+import io.github.bodote.woodle.application.port.out.PollEmailSender;
 import io.github.bodote.woodle.application.port.out.PollRepository;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.domain.model.PollOption;
@@ -22,10 +24,14 @@ public class CreatePollService implements CreatePollUseCase {
     private static final int ADMIN_SECRET_LENGTH = 12;
 
     private final PollRepository pollRepository;
+    private final PollEmailSender pollEmailSender;
+    private final boolean emailEnabled;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public CreatePollService(PollRepository pollRepository) {
+    public CreatePollService(PollRepository pollRepository, PollEmailSender pollEmailSender, boolean emailEnabled) {
         this.pollRepository = pollRepository;
+        this.pollEmailSender = pollEmailSender;
+        this.emailEnabled = emailEnabled;
     }
 
     @Override
@@ -53,7 +59,18 @@ public class CreatePollService implements CreatePollUseCase {
         );
 
         pollRepository.save(poll);
-        return new CreatePollResult(pollId, adminSecret);
+        if (!emailEnabled) {
+            return new CreatePollResult(pollId, adminSecret, false, true);
+        }
+
+        boolean notificationQueued = pollEmailSender.sendPollCreated(new PollCreatedEmail(
+                pollId,
+                adminSecret,
+                command.authorName(),
+                command.authorEmail(),
+                command.title()
+        ));
+        return new CreatePollResult(pollId, adminSecret, notificationQueued, false);
     }
 
     private List<PollOption> buildOptions(CreatePollCommand command) {

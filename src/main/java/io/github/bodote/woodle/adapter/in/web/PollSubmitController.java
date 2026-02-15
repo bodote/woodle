@@ -82,7 +82,13 @@ public class PollSubmitController {
             wizardStateRepository.delete(draftId);
         }
         session.removeAttribute(WizardState.SESSION_KEY);
-        return "redirect:/poll/" + result.pollId() + "-" + result.adminSecret();
+        String target = "/poll/" + result.pollId() + "-" + result.adminSecret();
+        if (result.notificationDisabled()) {
+            target = target + "?emailDisabled=true";
+        } else if (!result.notificationQueued()) {
+            target = target + "?emailFailed=true";
+        }
+        return "redirect:" + target;
     }
 
     private void applySubmitFallback(WizardState state,

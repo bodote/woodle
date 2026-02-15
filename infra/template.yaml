@@ -17,11 +17,29 @@ Parameters:
     Type: String
     Default: ""
     Description: Optional ACM certificate ARN (us-east-1) for CloudFront custom domain
+  EmailEnabled:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Enable SES email sending from Lambda
+  EmailFromAddress:
+    Type: String
+    Default: ""
+    Description: SES verified from address used for outbound poll emails
+  EmailSubjectPrefix:
+    Type: String
+    Default: ""
+    Description: Optional subject prefix for outbound poll emails
 
 Conditions:
   HasCustomDomain: !Not [!Equals [!Ref AppDomainName, ""]]
   HasCertificate: !Not [!Equals [!Ref AcmCertificateArn, ""]]
   UseAliasConfig: !And [!Condition HasCustomDomain, !Condition HasCertificate]
+  IsEmailEnabled: !Equals [!Ref EmailEnabled, "true"]
+  HasEmailFromAddress: !Not [!Equals [!Ref EmailFromAddress, ""]]
+  UseSesEmailPolicy: !And [!Condition IsEmailEnabled, !Condition HasEmailFromAddress]
 
 Resources:
   WebBucket:
@@ -212,6 +230,9 @@ Resources:
           WOODLE_S3_REGION: !Ref AWS::Region
           WOODLE_S3_BUCKET: !Ref PollsBucket
           WOODLE_S3_PATH_STYLE: "false"
+          WOODLE_EMAIL_ENABLED: !Ref EmailEnabled
+          WOODLE_EMAIL_FROM: !Ref EmailFromAddress
+          WOODLE_EMAIL_SUBJECT_PREFIX: !Ref EmailSubjectPrefix
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -229,6 +250,17 @@ Resources:
               Action:
                 - s3:ListBucket
               Resource: !GetAtt PollsBucket.Arn
+            - !If
+              - UseSesEmailPolicy
+              - Sid: PollEmailSesSend
+                Effect: Allow
+                Action:
+                  - ses:SendEmail
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    ses:FromAddress: !Ref EmailFromAddress
+              - !Ref AWS::NoValue
       Events:
         ProxyAny:
           Type: HttpApi
