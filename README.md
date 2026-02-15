@@ -104,6 +104,9 @@ Rules:
 *   No user accounts.
 *   Each poll has a UUID and a secret admin token.
 *   Polls are stored as a single JSON per UUID in S3.
+*   Poll JSON includes a top-level `schemaVersion` field. Default value is `"1"` (configurable via `woodle.poll.schema-version`).
+*   Rule for future schema changes: increment `schemaVersion` and add/maintain migration logic for older versions before rollout.
+*   Read-time migration: when a poll is loaded and `schemaVersion` is missing or lower than `woodle.poll.schema-version`, the app converts it to the current schema and immediately overwrites the S3 object before returning the poll to the UI.
 *   Polls are deleted after the expiry date.
 
 ## Product Spec (Date Poll)

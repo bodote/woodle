@@ -43,4 +43,15 @@ class PollErrorPageTest {
             org.junit.jupiter.api.Assertions.assertTrue(page.asNormalizedText().contains("Zeitpunkt"));
         }
     }
+
+    @Test
+    @DisplayName("returns bad request for invalid test-http-status parameter")
+    void returnsBadRequestForInvalidTestHttpStatusParameter() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
+            org.htmlunit.Page page = webClient.getPage("http://localhost/poll/error?test-http-status=999");
+
+            org.junit.jupiter.api.Assertions.assertEquals(400, page.getWebResponse().getStatusCode());
+        }
+    }
 }

@@ -35,6 +35,7 @@ public class ApplicationConfig {
     public PollRepository pollRepository(
             @Value("${woodle.s3.enabled:false}") boolean s3Enabled,
             @Value("${woodle.s3.bucket:woodle}") String bucketName,
+            @Value("${woodle.poll.schema-version:1}") String pollSchemaVersion,
             ObjectProvider<S3Client> s3ClientProvider,
             ObjectMapper objectMapper
     ) {
@@ -43,7 +44,7 @@ public class ApplicationConfig {
             if (s3Client == null) {
                 throw new IllegalStateException("S3 is enabled but no S3 client bean is available");
             }
-            return new S3PollRepository(s3Client, objectMapper, bucketName);
+            return new S3PollRepository(s3Client, objectMapper, bucketName, pollSchemaVersion);
         }
         return new InMemoryPollRepository();
     }
