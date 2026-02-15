@@ -110,11 +110,11 @@ h2 {
 
 .wizard-card,
 .content-card {
-  padding: clamp(1.2rem, 0.7rem + 1.6vw, 2rem);
+  padding: clamp(1.05rem, 0.65rem + 1.3vw, 1.8rem);
 }
 
 .votes-panel {
-  padding: clamp(1rem, 0.6rem + 1.2vw, 1.6rem);
+  padding: clamp(0.9rem, 0.55rem + 1vw, 1.4rem);
 }
 
 .admin-layout {
@@ -136,7 +136,7 @@ h2 {
 
 .admin-panel,
 .info-card {
-  padding: 1rem;
+  padding: 0.9rem;
 }
 
 .admin-panel h2,
@@ -177,7 +177,7 @@ select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  padding: 0.68rem 0.78rem;
+  padding: 0.6rem 0.7rem;
   background: #ffffff;
   color: var(--ink-900);
   font: inherit;
@@ -198,7 +198,7 @@ textarea {
 fieldset {
   border: 1px solid var(--line);
   border-radius: 16px;
-  padding: 1rem;
+  padding: 0.9rem;
   background: color-mix(in srgb, var(--accent-soft) 46%, #ffffff);
 }
 
@@ -254,10 +254,11 @@ button {
   appearance: none;
   border: 0;
   border-radius: 11px;
-  padding: 0.66rem 1.08rem;
+  padding: 0.56rem 0.94rem;
   color: #ffffff;
   background: linear-gradient(135deg, var(--accent), #0f89de);
   font: inherit;
+  font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   cursor: pointer;
@@ -595,10 +596,11 @@ input[type="radio"] {
   align-items: center;
   justify-content: center;
   border-radius: 11px;
-  padding: 0.66rem 1.08rem;
+  padding: 0.56rem 0.94rem;
   color: #ffffff;
   background: linear-gradient(135deg, var(--accent), #0f89de);
   text-decoration: none;
+  font-size: 0.92rem;
   font-weight: 700;
   box-shadow: var(--shadow-sm);
 }
