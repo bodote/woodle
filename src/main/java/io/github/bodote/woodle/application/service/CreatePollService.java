@@ -3,6 +3,8 @@ package io.github.bodote.woodle.application.service;
 import io.github.bodote.woodle.application.port.in.CreatePollResult;
 import io.github.bodote.woodle.application.port.in.CreatePollUseCase;
 import io.github.bodote.woodle.application.port.in.command.CreatePollCommand;
+import io.github.bodote.woodle.application.port.out.PollCreatedEmail;
+import io.github.bodote.woodle.application.port.out.PollEmailSender;
 import io.github.bodote.woodle.application.port.out.PollRepository;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.domain.model.PollOption;
@@ -22,10 +24,12 @@ public class CreatePollService implements CreatePollUseCase {
     private static final int ADMIN_SECRET_LENGTH = 12;
 
     private final PollRepository pollRepository;
+    private final PollEmailSender pollEmailSender;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public CreatePollService(PollRepository pollRepository) {
+    public CreatePollService(PollRepository pollRepository, PollEmailSender pollEmailSender) {
         this.pollRepository = pollRepository;
+        this.pollEmailSender = pollEmailSender;
     }
 
     @Override
@@ -53,7 +57,14 @@ public class CreatePollService implements CreatePollUseCase {
         );
 
         pollRepository.save(poll);
-        return new CreatePollResult(pollId, adminSecret);
+        boolean notificationQueued = pollEmailSender.sendPollCreated(new PollCreatedEmail(
+                pollId,
+                adminSecret,
+                command.authorName(),
+                command.authorEmail(),
+                command.title()
+        ));
+        return new CreatePollResult(pollId, adminSecret, notificationQueued);
     }
 
     private List<PollOption> buildOptions(CreatePollCommand command) {

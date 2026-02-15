@@ -92,6 +92,27 @@ class PollViewControllerTest {
     }
 
     @Test
+    @DisplayName("renders admin email warning when email delivery failed")
+    void rendersAdminEmailWarningWhenEmailDeliveryFailed() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000031");
+        String adminSecret = TestFixtures.ADMIN_SECRET;
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret + "?emailFailed=true"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("E-Mail konnte nicht gesendet werden")));
+    }
+
+    @Test
     @DisplayName("renders absolute share links for local host and port")
     void rendersAbsoluteShareLinksForLocalHostAndPort() throws Exception {
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000014");
@@ -442,7 +463,7 @@ class PollViewControllerTest {
         request.setServerPort(443);
         ExtendedModelMap model = new ExtendedModelMap();
 
-        String view = controller.viewPollAdmin(pollId, adminSecret, model, request);
+        String view = controller.viewPollAdmin(pollId, adminSecret, false, model, request);
 
         assertEquals("poll/view", view);
         assertEquals("https://null-base.woodle.click/poll/" + pollId, model.getAttribute("participantShareUrl"));

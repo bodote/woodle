@@ -56,7 +56,7 @@ class PollApiControllerTest {
     @DisplayName("creates poll via POST /v1/polls")
     void createsPollViaPost() throws Exception {
         when(createPollUseCase.create(any(CreatePollCommand.class)))
-                .thenReturn(new CreatePollResult(POLL_ID, ADMIN_SECRET));
+                .thenReturn(new CreatePollResult(POLL_ID, ADMIN_SECRET, true));
 
         String request = """
                 {
@@ -79,7 +79,8 @@ class PollApiControllerTest {
                 .andExpect(header().string("Location", "/v1/polls/" + POLL_ID))
                 .andExpect(jsonPath("$.id").value(POLL_ID.toString()))
                 .andExpect(jsonPath("$.adminUrl").value("/poll/" + POLL_ID + "-" + ADMIN_SECRET))
-                .andExpect(jsonPath("$.voteUrl").value("/poll/" + POLL_ID));
+                .andExpect(jsonPath("$.voteUrl").value("/poll/" + POLL_ID))
+                .andExpect(jsonPath("$.notificationQueued").value(true));
     }
 
     @Test
@@ -158,7 +159,7 @@ class PollApiControllerTest {
     @DisplayName("defaults missing startTimes to empty list in create command")
     void defaultsMissingStartTimesToEmptyListInCreateCommand() throws Exception {
         when(createPollUseCase.create(any(CreatePollCommand.class)))
-                .thenReturn(new CreatePollResult(POLL_ID, ADMIN_SECRET));
+                .thenReturn(new CreatePollResult(POLL_ID, ADMIN_SECRET, false));
 
         String request = """
                 {

@@ -254,6 +254,47 @@ CORS operational notes:
 4. Enable API throttling and request size limits in API Gateway.
 5. Add CORS rules only for required frontend origins.
 
+## Transactional Email (Amazon SES)
+
+Recommended AWS-native approach for Lambda email sending:
+- Use Amazon SES API (AWS SDK) from Lambda.
+- Do not run your own SMTP server.
+- Keep email sending optional via env config.
+
+### Runtime configuration
+- `WOODLE_EMAIL_ENABLED=true`
+- `WOODLE_EMAIL_FROM=noreply@woodle.click` (must be verified in SES)
+- `WOODLE_EMAIL_SUBJECT_PREFIX=[prod]` (optional)
+- `WOODLE_PUBLIC_BASE_URL=https://woodle.click` (for absolute links in email body)
+
+### SES prerequisites
+1. Verify sender identity (domain preferred) in SES.
+2. Configure DKIM and SPF (and ideally DMARC) on DNS.
+3. If account is in SES sandbox, request production access before sending to non-verified recipients.
+
+### Lambda IAM policy (least privilege)
+Attach to Lambda execution role and scope to your verified identity ARN:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowSesSendEmail",
+      "Effect": "Allow",
+      "Action": [
+        "ses:SendEmail"
+      ],
+      "Resource": "arn:aws:ses:eu-central-1:123456789012:identity/woodle.click"
+    }
+  ]
+}
+```
+
+Notes:
+- Keep region aligned with your SES identity/endpoint.
+- Add `ses:SendRawEmail` only if MIME/raw sending is required.
+
 ## Cost Guardrails
 
 1. Create AWS Budget with alert thresholds (for example 50%, 80%, 100%).

@@ -56,7 +56,8 @@ public class PollApiController {
         CreatePollResponseDTO responseDTO = new CreatePollResponseDTO(
                 pollId,
                 "/poll/" + pollId + "-" + result.adminSecret(),
-                "/poll/" + pollId
+                "/poll/" + pollId,
+                result.notificationQueued()
         );
 
         return ResponseEntity.created(URI.create("/v1/polls/" + pollId))

@@ -123,6 +123,10 @@
                 </section>
             </div>
             <aside class="admin-side">
+                <section class="info-card" th:if="${emailFailed}">
+                    <p><strong>E-Mail konnte nicht gesendet werden.</strong></p>
+                    <p>Bitte teilen Sie die Links unten manuell.</p>
+                </section>
                 <section class="info-card">
                     <h2>Links zum Teilen</h2>
                     <div class="copy-field">

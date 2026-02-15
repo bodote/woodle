@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.LocalDate;
@@ -52,6 +53,7 @@ public class PollViewController {
     @GetMapping("/poll/{pollId:[0-9a-fA-F\\-]{36}}-{adminSecret}")
     public String viewPollAdmin(@PathVariable UUID pollId,
                                 @PathVariable String adminSecret,
+                                @RequestParam(value = "emailFailed", defaultValue = "false") boolean emailFailed,
                                 Model model,
                                 HttpServletRequest request) {
         Poll poll = readPollUseCase.getAdmin(pollId, adminSecret);
@@ -62,6 +64,7 @@ public class PollViewController {
         String origin = resolveOrigin(request);
         model.addAttribute("participantShareUrl", origin + "/poll/" + pollId);
         model.addAttribute("adminShareUrl", origin + "/poll/" + pollId + "-" + adminSecret);
+        model.addAttribute("emailFailed", emailFailed);
         return "poll/view";
     }
 
