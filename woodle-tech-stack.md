@@ -5,6 +5,7 @@
 - Spring Boot
 - Thymeleaf als HTML-Template-Engine
 - HTMX (https://htmx.org) für dynamische Elemente
+- HTMX wird als lokale statische Asset-Datei ausgeliefert (`/js/vendor/htmx.min.js`), nicht über Drittanbieter-CDNs.
 
 ## Laufzeit & Deployment
 - Kein dauerhaft laufender Spring-Boot-Server.
@@ -102,6 +103,15 @@ class ArchitectureTest {
 ## Lambda-Integration
 - API Gateway + Spring Cloud Function.
 - HTTP-Requests werden über Function-Adapter entgegengenommen, kein dauerhaft laufender Server.
+
+## E-Mail-Versand
+- Optionaler E-Mail-Versand nach erfolgreicher Umfrage-Erstellung über Amazon SES (AWS SDK v2 `SesV2Client`).
+- Konfiguration über:
+  - `woodle.email.enabled`
+  - `woodle.email.from`
+  - `woodle.email.subject-prefix`
+- Fallback bei deaktivierter E-Mail-Konfiguration: No-op Sender ohne Versand.
+- IAM-Berechtigung im Lambda-Kontext: `ses:SendEmail` mit Einschränkung auf die konfigurierte Absenderadresse.
 
 ## S3-Datenmodell (Empfehlung zur Review)
 

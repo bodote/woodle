@@ -80,8 +80,20 @@ Rules:
 
 ## Step-1 UX Optimizations
 
-*   The static `/poll/new` page prewarms `/poll/step-2` in the background to reduce perceived Lambda cold-start delay before users continue to step 2.
 *   The footer shows **Anzahl aktiver Umfragen** and loads the value via HTMX from `/poll/active-count` with a spinner fallback while loading.
+*   Step 1 does not trigger background prewarm requests; wizard session state starts only after the user submits to `/poll/step-2`.
+*   HTMX is served from a local static asset (`/js/vendor/htmx.min.js`) instead of third-party CDNs.
+
+## Email Delivery
+
+*   Poll creation can send an author confirmation email.
+*   Email sending is environment-driven via:
+    * `woodle.email.enabled`
+    * `woodle.email.from`
+    * `woodle.email.subject-prefix`
+*   When disabled, the app uses a no-op sender.
+*   When enabled, the app uses AWS SES (`SesV2Client`).
+*   If delivery fails during creation, the admin page is opened with `?emailFailed=true` and shows a warning so links can be shared manually.
 
 ## Persistence & Data Lifecycle
 
@@ -219,7 +231,6 @@ Operational note:
 *   Test strategy: `/Users/bodo.te/dev/woodle/test-strategie.md`
 *   Product spec: `/Users/bodo.te/dev/woodle/woodle-create-poll-date-spec.md`
 *   AWS deployment guide: `deploy-on-aws.md` (Architektur, Deploy-Flows, Smoke-Checks)
-*   Open infra issue backlog: `todo.md` (aktuelle Blocker wie CloudFront-CNAME-Konflikt)
 *   HTMX usability guidance: `docs/usability-htmx-guide.md` (UX-/Interaktionsregeln für HTMX-Seiten)
 *   Infra module overview: `infra/README.md` (AWS-Infrastrukturstruktur und Templates)
 *   IAM policy notes for deploy identity: `infra/iam-deploy-identity-policies.md` (benötigte Deploy-Berechtigungen)
