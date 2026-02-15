@@ -435,10 +435,13 @@ How to force realistic cold-start conditions for testing:
 2. Example:
    - Resolve function name from stack resources:
      `aws cloudformation describe-stack-resources --stack-name woodle-qs --region eu-central-1 --logical-resource-id AppFunction`
-   - Read current env vars:
-     `aws lambda get-function-configuration --function-name <physical-function-name> --region eu-central-1`
-   - Update one dummy variable (keep existing vars unchanged):
-     `aws lambda update-function-configuration --function-name <physical-function-name> --region eu-central-1 --environment 'Variables={...,DUMMY_WARMUP_TEST=2026-02-15T11:00:00Z}'`
+   - Read current env vars and merge the dummy key (safe: preserves existing variables):
+     `CURRENT_VARS_JSON="$(aws lambda get-function-configuration --function-name <physical-function-name> --region eu-central-1 --query 'Environment.Variables' --output json)"`
+     `MERGED_VARS_JSON="$(echo "$CURRENT_VARS_JSON" | jq '. + {\"DUMMY_WARMUP_TEST\":\"2026-02-15T11:00:00Z\"}')"`
+   - Convert merged JSON map to AWS CLI shorthand and update:
+     `MERGED_VARS_SHORTHAND="$(echo "$MERGED_VARS_JSON" | jq -r 'to_entries | map(\"\\(.key)=\\(.value)\") | join(\",\")')"`
+     `aws lambda update-function-configuration --function-name <physical-function-name> --region eu-central-1 --environment "Variables={$MERGED_VARS_SHORTHAND}"`
+   - Important: `update-function-configuration --environment` replaces the full map; never update only one key without merging.
 3. Then run immediate UI smoke tests (step-1 submit and active-count load) and verify loading indicator + retry behavior.
 
 ## Definition of Done (Per Environment)
