@@ -23,6 +23,35 @@
                 transform: rotate(360deg);
             }
         }
+
+        .step1-loading-indicator {
+            display: none;
+            margin-left: 0.8rem;
+            padding: 0.3rem 0.55rem;
+            border-radius: 999px;
+            border: 1px solid #d8d2c8;
+            background: #fff6e8;
+            color: #6b3f10;
+            font-weight: 700;
+        }
+
+        .step1-loading-spinner {
+            display: inline-block;
+            width: 0.85rem;
+            height: 0.85rem;
+            margin-right: 0.4rem;
+            border: 2px solid #d8d2c8;
+            border-top-color: #6b3f10;
+            border-radius: 50%;
+            animation: poll-count-spin 0.7s linear infinite;
+            vertical-align: middle;
+        }
+
+        .step1-loading-indicator.step1-loading-indicator--visible {
+            display: inline-flex;
+            align-items: center;
+            opacity: 1 !important;
+        }
     </style>
 </head>
 <body>
@@ -33,7 +62,16 @@
     </header>
 
     <main>
-        <form class="wizard-card" id="step1-form" action="/poll/step-2" method="post">
+        <form class="wizard-card"
+              id="step1-form"
+              action="/poll/step-2"
+              method="post"
+              hx-post="/poll/step-2"
+              hx-target="body"
+              hx-swap="innerHTML"
+              hx-push-url="true"
+              hx-disabled-elt="this"
+              hx-indicator="#step1-loading-indicator">
             <div class="section-heading">
                 <h2>Grunddaten</h2>
                 <p>Definieren Sie den Rahmen der Umfrage. Diese Angaben erscheinen in der Übersicht.</p>
@@ -85,6 +123,12 @@
 
             <div class="actions">
                 <button type="submit">Weiter zum 2. Schritt</button>
+                <span id="step1-loading-indicator"
+                      class="htmx-indicator step1-loading-indicator"
+                      aria-live="polite">
+                    <span class="step1-loading-spinner" aria-hidden="true"></span>
+                    Schritt 2 wird geladen...
+                </span>
             </div>
         </form>
     </main>
@@ -106,14 +150,115 @@
         const base = configuredBase ? configuredBase.replace(/\/+$/, "") : "";
         const step1Form = document.getElementById("step1-form");
         const activePollCount = document.getElementById("active-poll-count");
+        const loadingIndicator = document.getElementById("step1-loading-indicator");
+        const maxTransientRetries = 10;
+        const transientRetryDelayMs = 1000;
+        const maxActivePollCountRetries = 10;
+        const activePollCountRetryDelayMs = 1000;
+        let transientRetryCount = 0;
+        let retryInFlight = false;
+        let activePollCountRetryCount = 0;
+        let loadingHintTimer = null;
+        const loadingHintDelayMs = 200;
+
+        function setLoadingHintVisible(visible) {
+            if (!loadingIndicator) {
+                return;
+            }
+            loadingIndicator.classList.toggle("step1-loading-indicator--visible", visible);
+        }
+
+        function clearLoadingHintTimer() {
+            if (loadingHintTimer !== null) {
+                clearTimeout(loadingHintTimer);
+                loadingHintTimer = null;
+            }
+        }
         if (step1Form && base) {
             step1Form.action = base + "/poll/step-2";
+            step1Form.setAttribute("hx-post", base + "/poll/step-2");
         }
         if (activePollCount && base) {
             activePollCount.setAttribute("hx-get", base + "/poll/active-count");
             if (window.htmx && typeof window.htmx.process === "function") {
                 window.htmx.process(activePollCount);
             }
+        }
+        if (step1Form) {
+            step1Form.addEventListener("submit", function () {
+                if (!retryInFlight) {
+                    transientRetryCount = 0;
+                }
+            });
+            document.body.addEventListener("htmx:beforeRequest", function (event) {
+                if (event.target !== step1Form) {
+                    return;
+                }
+                clearLoadingHintTimer();
+                setLoadingHintVisible(false);
+                loadingHintTimer = setTimeout(function () {
+                    setLoadingHintVisible(true);
+                    loadingHintTimer = null;
+                }, 200);
+            });
+            document.body.addEventListener("htmx:responseError", function (event) {
+                if (event.target !== step1Form) {
+                    return;
+                }
+                const status = event.detail && event.detail.xhr ? event.detail.xhr.status : 0;
+                const isTransient = status === 502 || status === 503 || status === 504;
+                if (!isTransient || transientRetryCount >= maxTransientRetries) {
+                    clearLoadingHintTimer();
+                    setLoadingHintVisible(false);
+                    return;
+                }
+                transientRetryCount += 1;
+                retryInFlight = true;
+                setTimeout(function () {
+                    step1Form.requestSubmit();
+                    retryInFlight = false;
+                }, transientRetryDelayMs);
+            });
+            document.body.addEventListener("htmx:afterRequest", function (event) {
+                if (event.target === step1Form) {
+                    clearLoadingHintTimer();
+                    setLoadingHintVisible(false);
+                }
+                if (event.target === step1Form && event.detail && event.detail.successful) {
+                    transientRetryCount = 0;
+                    retryInFlight = false;
+                }
+                const requestPath = event.detail && event.detail.requestConfig ? event.detail.requestConfig.path : "";
+                const isActiveCountRequest = event.target === activePollCount
+                        || requestPath === "/poll/active-count"
+                        || requestPath.endsWith("/poll/active-count");
+                if (isActiveCountRequest && event.detail && event.detail.successful) {
+                    activePollCountRetryCount = 0;
+                }
+            });
+            document.body.addEventListener("htmx:responseError", function (event) {
+                const requestPath = event.detail && event.detail.requestConfig ? event.detail.requestConfig.path : "";
+                if (event.target !== activePollCount
+                        && requestPath !== "/poll/active-count"
+                        && !requestPath.endsWith("/poll/active-count")) {
+                    return;
+                }
+                const status = event.detail && event.detail.xhr ? event.detail.xhr.status : 0;
+                const isTransient = status === 502 || status === 503 || status === 504;
+                if (!isTransient || activePollCountRetryCount >= maxActivePollCountRetries) {
+                    return;
+                }
+                activePollCountRetryCount += 1;
+                const activeCountEndpoint = activePollCount.getAttribute("hx-get");
+                setTimeout(function () {
+                    if (window.htmx && typeof window.htmx.ajax === "function" && activeCountEndpoint) {
+                        window.htmx.ajax("GET", activeCountEndpoint, {
+                            target: activePollCount,
+                            swap: "innerHTML"
+                        });
+                    }
+                }, activePollCountRetryDelayMs);
+            });
         }
 
     })();

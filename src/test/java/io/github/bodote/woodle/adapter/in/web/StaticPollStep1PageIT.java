@@ -108,6 +108,82 @@ class StaticPollStep1PageIT {
     }
 
     @Test
+    @DisplayName("contains HTMX transient error retry handler with ten retries for step-1 submit")
+    void containsHtmxTransientErrorRetryHandlerWithTenRetriesForStep1Submit() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
+            String script = page.getElementById("step1-runtime-script").getTextContent();
+
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    script.contains("htmx:responseError"),
+                    "Expected HTMX response error handler in runtime script"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    script.contains("status === 502 || status === 503 || status === 504"),
+                    "Expected transient 5xx status guard for retries"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    script.contains("const maxTransientRetries = 10"),
+                    "Expected retry limit of ten transient retries"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    script.contains("const transientRetryDelayMs = 1000"),
+                    "Expected step-2 retry delay to be 1000ms"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    script.contains("requestSubmit"),
+                    "Expected retry to re-submit the step-1 form"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    script.contains("setTimeout(function ()"),
+                    "Expected delayed loading indicator handling"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    script.contains("}, 200)"),
+                    "Expected loading hint delay threshold of 200ms"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    script.contains("step1-loading-indicator--visible"),
+                    "Expected explicit visible state class for delayed loading hint"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.asXml().contains("step1-loading-spinner"),
+                    "Expected spinner element for step-2 loading hint"
+            );
+        }
+    }
+
+    @Test
+    @DisplayName("submits step-1 via HTMX post to step-2")
+    void submitsStep1ViaHtmxPostToStep2() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
+            org.htmlunit.html.HtmlForm form = page.getHtmlElementById("step1-form");
+
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    "/poll/step-2",
+                    form.getAttribute("hx-post"),
+                    "Expected HTMX post target for step-2 transition"
+            );
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    "body",
+                    form.getAttribute("hx-target"),
+                    "Expected HTMX to swap the main document body"
+            );
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    "innerHTML",
+                    form.getAttribute("hx-swap"),
+                    "Expected HTMX body swap mode for step transitions"
+            );
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    "true",
+                    form.getAttribute("hx-push-url"),
+                    "Expected browser URL updates on HTMX navigation"
+            );
+        }
+    }
+
+    @Test
     @DisplayName("does not prewarm step-2 on page load")
     void doesNotPrewarmStep2OnPageLoad() throws Exception {
         try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
@@ -152,6 +228,32 @@ class StaticPollStep1PageIT {
                     page.getElementById("step1-runtime-script").getTextContent()
                             .contains("setAttribute(\"hx-get\", base + \"/poll/active-count\")"),
                     "Expected runtime backend base wiring for active poll count endpoint"
+            );
+        }
+    }
+
+    @Test
+    @DisplayName("contains active poll count transient retry handler with ten retries and 1000ms interval")
+    void containsActivePollCountTransientRetryHandlerWithTenRetriesAnd1000msInterval() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
+            String script = page.getElementById("step1-runtime-script").getTextContent();
+
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    script.contains("maxActivePollCountRetries = 10"),
+                    "Expected active poll count retry limit to be ten"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    script.contains("activePollCountRetryDelayMs = 1000"),
+                    "Expected active poll count retry delay to be 1000ms"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    script.contains("event.target !== activePollCount"),
+                    "Expected retry handler to scope to the active poll count request"
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    script.contains("htmx.ajax(\"GET\", activeCountEndpoint"),
+                    "Expected retry to re-issue active poll count GET request"
             );
         }
     }
