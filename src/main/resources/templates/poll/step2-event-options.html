@@ -1,7 +1,7 @@
 <div id="event-options" th:fragment="eventOptions" class="stack">
     <div th:if="${eventType == T(io.github.bodote.woodle.domain.model.EventType).INTRADAY}" class="form-row">
         <label for="duration-minutes">Dauer (Minuten)</label>
-        <input id="duration-minutes" name="durationMinutes" type="number" min="1">
+        <input id="duration-minutes" name="durationMinutes" type="number" min="1" th:value="${durationMinutes}">
         <p class="form-help">Nur relevant für untertägige Events.</p>
     </div>
 
@@ -18,6 +18,7 @@
         <div class="actions">
             <button type="button"
                     hx-get="/poll/step-2/options/add"
+                    hx-include="closest form"
                     hx-target="#date-options"
                     hx-swap="outerHTML"
                     hx-indicator=".htmx-indicator"
@@ -26,6 +27,7 @@
                         : 'Einen Tag hinzufügen'}">Einen Tag hinzufügen</button>
             <button type="button"
                     hx-get="/poll/step-2/options/remove"
+                    hx-include="closest form"
                     hx-target="#date-options"
                     hx-swap="outerHTML"
                     hx-indicator=".htmx-indicator"

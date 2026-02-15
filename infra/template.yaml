@@ -19,7 +19,7 @@ Parameters:
     Description: Optional ACM certificate ARN (us-east-1) for CloudFront custom domain
   EmailEnabled:
     Type: String
-    Default: "false"
+    Default: "true"
     AllowedValues:
       - "true"
       - "false"

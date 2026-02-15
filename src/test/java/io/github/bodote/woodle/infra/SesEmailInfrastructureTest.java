@@ -35,4 +35,18 @@ class SesEmailInfrastructureTest {
                 template.contains("ses:FromAddress: !Ref EmailFromAddress"),
                 "Expected SES policy to restrict allowed sender via ses:FromAddress condition");
     }
+
+    @Test
+    @DisplayName("enables email by default for deployed stages")
+    void enablesEmailByDefaultForDeployedStages() throws IOException {
+        String template = Files.readString(Path.of("infra/template.yaml"));
+        String deployScript = Files.readString(Path.of("aws-deploy.sh"));
+
+        assertTrue(
+                template.contains("Default: \"true\""),
+                "Expected EmailEnabled CloudFormation default to be true");
+        assertTrue(
+                deployScript.contains("WOODLE_EMAIL_ENABLED=\"${WOODLE_EMAIL_ENABLED:-true}\""),
+                "Expected deploy script email default to be enabled");
+    }
 }
