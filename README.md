@@ -84,7 +84,8 @@ Rules:
 *   Step-1 submit (`Weiter zum 2. Schritt`) uses a transient error handler for `502/503/504` with up to **10 retries** and **1000ms** delay.
 *   The loading hint `Schritt 2 wird geladen...` includes a spinner and is shown with a short delay (200ms), so very fast responses do not flicker.
 *   The active poll count request uses the same transient retry strategy (**10 retries**, **1000ms**).
-*   Step 1 does not trigger background prewarm requests; wizard session state starts only after the user submits to `/poll/step-2`.
+*   Step 1 does not prewarm `/poll/step-2` in the background; wizard session state starts only after the user submits to `/poll/step-2`.
+*   The only background request on step 1 is `/poll/active-count`, which is read-only and does not start wizard session state.
 *   HTMX is served from a local static asset (`/js/vendor/htmx.min.js`) instead of third-party CDNs.
 
 ## Email Delivery
