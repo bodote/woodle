@@ -3,6 +3,10 @@ package io.github.bodote.woodle.adapter.out.persistence;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import io.github.bodote.woodle.domain.model.EventType;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.domain.model.PollOption;
@@ -45,10 +49,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.LoggerFactory;
 
 @DisplayName("S3PollRepository")
 class S3PollRepositoryTest {
@@ -100,6 +106,7 @@ class S3PollRepositoryTest {
         assertEquals("application/json", request.contentType());
 
         String json = new String(bodyCaptor.getValue().contentStreamProvider().newStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertTrue(json.contains("\"schemaVersion\":\"1\""));
         assertTrue(json.contains("\"title\":\"Team Sync\""));
         assertTrue(json.contains("\"eventType\":\"INTRADAY\""));
         assertTrue(json.contains("\"startTime\":\"09:00\""));
@@ -233,6 +240,217 @@ class S3PollRepositoryTest {
         assertEquals(LocalDate.of(2026, 2, 10), poll.options().getFirst().date());
         assertNull(poll.options().getFirst().startTime());
         assertNull(poll.options().getFirst().endTime());
+    }
+
+    @Test
+    @DisplayName("migrates legacy poll without schema version and saves it back before returning")
+    void migratesLegacyPollWithoutSchemaVersionAndSavesItBackBeforeReturning() throws IOException {
+        S3Client s3Client = mock(S3Client.class);
+        String json = """
+                {
+                  "pollId":"00000000-0000-0000-0000-000000000031",
+                  "type":"date",
+                  "title":"Legacy",
+                  "descriptionHtml":"Description",
+                  "language":"de",
+                  "createdAt":"2026-02-10T10:00:00Z",
+                  "updatedAt":"2026-02-10T10:00:00Z",
+                  "author":{"name":"Alice","email":"alice@invalid"},
+                  "access":{"customSlug":null,"passwordHash":null,"resultsPublic":true,"adminToken":"secret"},
+                  "permissions":{"voteChangePolicy":"ALL_CAN_EDIT"},
+                  "notifications":{"onVote":false,"onComment":false},
+                  "resultsVisibility":{"onlyAuthor":false},
+                  "status":"OPEN",
+                  "expiresAt":"2026-03-01",
+                  "options":{"eventType":"ALL_DAY","durationMinutes":null,"items":[
+                    {"optionId":"00000000-0000-0000-0000-000000000032","date":"2026-02-10","startTime":null,"endTime":null}
+                  ]},
+                  "responses":[]
+                }
+                """;
+        GetObjectResponse response = GetObjectResponse.builder().build();
+        ResponseInputStream<GetObjectResponse> stream = new ResponseInputStream<>(
+                response,
+                AbortableInputStream.create(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)))
+        );
+        when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        Optional<Poll> found = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000031"));
+
+        assertTrue(found.isPresent());
+        Poll poll = found.orElseThrow();
+        assertEquals("Legacy", poll.title());
+
+        ArgumentCaptor<PutObjectRequest> requestCaptor = ArgumentCaptor.forClass(PutObjectRequest.class);
+        ArgumentCaptor<RequestBody> bodyCaptor = ArgumentCaptor.forClass(RequestBody.class);
+        verify(s3Client).putObject(requestCaptor.capture(), bodyCaptor.capture());
+        assertEquals("polls/00000000-0000-0000-0000-000000000031.json", requestCaptor.getValue().key());
+        String migratedJson = new String(
+                bodyCaptor.getValue().contentStreamProvider().newStream().readAllBytes(),
+                StandardCharsets.UTF_8
+        );
+        assertTrue(migratedJson.contains("\"schemaVersion\":\"1\""));
+    }
+
+    @Test
+    @DisplayName("logs info when legacy poll migration is performed on read")
+    void logsInfoWhenLegacyPollMigrationIsPerformedOnRead() {
+        S3Client s3Client = mock(S3Client.class);
+        String json = """
+                {
+                  "pollId":"00000000-0000-0000-0000-000000000061",
+                  "type":"date",
+                  "title":"Legacy",
+                  "descriptionHtml":"Description",
+                  "language":"de",
+                  "createdAt":"2026-02-10T10:00:00Z",
+                  "updatedAt":"2026-02-10T10:00:00Z",
+                  "author":{"name":"Alice","email":"alice@invalid"},
+                  "access":{"customSlug":null,"passwordHash":null,"resultsPublic":true,"adminToken":"secret"},
+                  "permissions":{"voteChangePolicy":"ALL_CAN_EDIT"},
+                  "notifications":{"onVote":false,"onComment":false},
+                  "resultsVisibility":{"onlyAuthor":false},
+                  "status":"OPEN",
+                  "expiresAt":"2026-03-01",
+                  "options":{"eventType":"ALL_DAY","durationMinutes":null,"items":[
+                    {"optionId":"00000000-0000-0000-0000-000000000062","date":"2026-02-10","startTime":null,"endTime":null}
+                  ]},
+                  "responses":[]
+                }
+                """;
+        GetObjectResponse response = GetObjectResponse.builder().build();
+        ResponseInputStream<GetObjectResponse> stream = new ResponseInputStream<>(
+                response,
+                AbortableInputStream.create(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)))
+        );
+        when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+
+        Logger logger = (Logger) LoggerFactory.getLogger(S3PollRepository.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JavaTimeModule());
+            S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+            repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000061"));
+
+            boolean migrationInfoLogged = appender.list.stream()
+                    .anyMatch(event ->
+                            event.getLevel() == Level.INFO
+                                    && event.getFormattedMessage().contains("Migrating poll")
+                                    && event.getFormattedMessage().contains("00000000-0000-0000-0000-000000000061")
+                    );
+            assertTrue(migrationInfoLogged);
+        } finally {
+            logger.detachAppender(appender);
+        }
+    }
+
+    @Test
+    @DisplayName("migrates poll with older schema version and saves it back before returning")
+    void migratesPollWithOlderSchemaVersionAndSavesItBackBeforeReturning() throws IOException {
+        S3Client s3Client = mock(S3Client.class);
+        String json = """
+                {
+                  "pollId":"00000000-0000-0000-0000-000000000041",
+                  "schemaVersion":"0",
+                  "type":"date",
+                  "title":"Old Version",
+                  "descriptionHtml":"Description",
+                  "language":"de",
+                  "createdAt":"2026-02-10T10:00:00Z",
+                  "updatedAt":"2026-02-10T10:00:00Z",
+                  "author":{"name":"Alice","email":"alice@invalid"},
+                  "access":{"customSlug":null,"passwordHash":null,"resultsPublic":true,"adminToken":"secret"},
+                  "permissions":{"voteChangePolicy":"ALL_CAN_EDIT"},
+                  "notifications":{"onVote":false,"onComment":false},
+                  "resultsVisibility":{"onlyAuthor":false},
+                  "status":"OPEN",
+                  "expiresAt":"2026-03-01",
+                  "options":{"eventType":"ALL_DAY","durationMinutes":null,"items":[
+                    {"optionId":"00000000-0000-0000-0000-000000000042","date":"2026-02-10","startTime":null,"endTime":null}
+                  ]},
+                  "responses":[]
+                }
+                """;
+        GetObjectResponse response = GetObjectResponse.builder().build();
+        ResponseInputStream<GetObjectResponse> stream = new ResponseInputStream<>(
+                response,
+                AbortableInputStream.create(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)))
+        );
+        when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        Optional<Poll> found = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000041"));
+
+        assertTrue(found.isPresent());
+        Poll poll = found.orElseThrow();
+        assertEquals("Old Version", poll.title());
+
+        ArgumentCaptor<RequestBody> bodyCaptor = ArgumentCaptor.forClass(RequestBody.class);
+        verify(s3Client).putObject(any(PutObjectRequest.class), bodyCaptor.capture());
+        String migratedJson = new String(
+                bodyCaptor.getValue().contentStreamProvider().newStream().readAllBytes(),
+                StandardCharsets.UTF_8
+        );
+        assertTrue(migratedJson.contains("\"schemaVersion\":\"1\""));
+    }
+
+    @Test
+    @DisplayName("does not rewrite poll when schema version is already current")
+    void doesNotRewritePollWhenSchemaVersionIsAlreadyCurrent() {
+        S3Client s3Client = mock(S3Client.class);
+        String json = """
+                {
+                  "pollId":"00000000-0000-0000-0000-000000000051",
+                  "schemaVersion":"1",
+                  "type":"date",
+                  "title":"Current Version",
+                  "descriptionHtml":"Description",
+                  "language":"de",
+                  "createdAt":"2026-02-10T10:00:00Z",
+                  "updatedAt":"2026-02-10T10:00:00Z",
+                  "author":{"name":"Alice","email":"alice@invalid"},
+                  "access":{"customSlug":null,"passwordHash":null,"resultsPublic":true,"adminToken":"secret"},
+                  "permissions":{"voteChangePolicy":"ALL_CAN_EDIT"},
+                  "notifications":{"onVote":false,"onComment":false},
+                  "resultsVisibility":{"onlyAuthor":false},
+                  "status":"OPEN",
+                  "expiresAt":"2026-03-01",
+                  "options":{"eventType":"ALL_DAY","durationMinutes":null,"items":[
+                    {"optionId":"00000000-0000-0000-0000-000000000052","date":"2026-02-10","startTime":null,"endTime":null}
+                  ]},
+                  "responses":[]
+                }
+                """;
+        GetObjectResponse response = GetObjectResponse.builder().build();
+        ResponseInputStream<GetObjectResponse> stream = new ResponseInputStream<>(
+                response,
+                AbortableInputStream.create(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)))
+        );
+        when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        Optional<Poll> found = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000051"));
+
+        assertTrue(found.isPresent());
+        assertEquals("Current Version", found.orElseThrow().title());
+        verify(s3Client, never()).putObject(any(PutObjectRequest.class), any(RequestBody.class));
     }
 
     @Test

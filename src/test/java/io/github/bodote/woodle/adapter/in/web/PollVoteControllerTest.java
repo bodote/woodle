@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -200,5 +201,21 @@ class PollVoteControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.error.message").value("Response not found"));
+    }
+
+    @Test
+    @DisplayName("redirects when htmx header is true but response id is missing")
+    void redirectsWhenHtmxHeaderIsTrueButResponseIdIsMissing() throws Exception {
+        UUID optionId = UUID.fromString("99999999-9999-9999-9999-999999999991");
+
+        mockMvc.perform(post("/poll/" + POLL_ID + "/vote")
+                        .header("HX-Request", "true")
+                        .param("participantName", "Alice")
+                        .param("vote_edit_" + optionId, "YES"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/" + POLL_ID));
+
+        verify(submitVoteUseCase).submit(any(SubmitVoteCommand.class));
+        verifyNoInteractions(readPollUseCase);
     }
 }

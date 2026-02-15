@@ -204,6 +204,9 @@ Die Benutzersicht zeigt eine tabellenbasierte Übersicht aller Teilnehmenden und
 - Unter dieser UUID werden Stammdaten der Umfrage sowie später die Auswahl/Antworten der Teilnehmenden gespeichert.
 - Jede Umfrage ist ausschließlich über einen Link erreichbar, der die UUID enthält.
 - Speicherung erfolgt in Amazon S3 (keine Datenbank).
+- Das gespeicherte Poll-JSON enthält ein Top-Level-Feld `schemaVersion` (Standard `"1"`, konfigurierbar über `woodle.poll.schema-version`).
+- Bei jeder Änderung des Poll-JSON-Schemas muss `schemaVersion` erhöht werden, damit ältere Polls erkannt und migriert/konvertiert werden können.
+- Beim Lesen einer Umfrage gilt: fehlt `schemaVersion` oder ist sie kleiner als `woodle.poll.schema-version`, wird die Umfrage auf das aktuelle Schema migriert und sofort in S3 überschrieben, bevor die Antwort an die UI zurückgeht.
 - Umfragen werden nach Ablauf des Verfallsdatums vollständig gelöscht (inklusive aller Antworten).
 
 # Flow (Event-Typ und Zeitlogik)

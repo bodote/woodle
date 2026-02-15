@@ -61,6 +61,29 @@ class ApplicationConfigPollRepositorySelectionTest {
         context.close();
     }
 
+    @Test
+    @DisplayName("fails fast when poll schema version is not numeric")
+    void failsFastWhenPollSchemaVersionIsNotNumeric() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        context.getEnvironment().getPropertySources().addFirst(
+                new MapPropertySource("test", Map.of(
+                        "woodle.s3.enabled", "true",
+                        "woodle.s3.bucket", "woodle-test",
+                        "woodle.poll.schema-version", "abc"
+                ))
+        );
+        context.registerBean(ObjectMapper.class, () -> new ObjectMapper());
+        context.registerBean(S3Client.class, () -> mock(S3Client.class));
+        context.register(ApplicationConfig.class);
+
+        Exception exception = assertThrows(Exception.class, context::refresh);
+
+        assertTrue(
+                containsMessage(exception, "woodle.poll.schema-version must be a positive integer"),
+                "Expected explicit startup failure for invalid poll schema version"
+        );
+    }
+
     private boolean containsMessage(Throwable throwable, String expected) {
         Throwable current = throwable;
         while (current != null) {

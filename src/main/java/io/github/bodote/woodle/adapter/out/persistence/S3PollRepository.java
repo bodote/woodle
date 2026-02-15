@@ -8,6 +8,8 @@ import io.github.bodote.woodle.domain.model.PollOption;
 import io.github.bodote.woodle.domain.model.PollResponse;
 import io.github.bodote.woodle.domain.model.PollVote;
 import io.github.bodote.woodle.domain.model.PollVoteValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -30,21 +32,36 @@ import software.amazon.awssdk.core.exception.SdkException;
 
 public class S3PollRepository implements PollRepository {
 
+    private static final String DEFAULT_SCHEMA_VERSION = "1";
+    private static final Logger LOGGER = LoggerFactory.getLogger(S3PollRepository.class);
+
     private final S3Client s3Client;
     private final ObjectMapper objectMapper;
     private final String bucketName;
+    private final String currentSchemaVersion;
+    private final int currentSchemaVersionNumber;
 
     public S3PollRepository(S3Client s3Client, ObjectMapper objectMapper, String bucketName) {
+        this(s3Client, objectMapper, bucketName, DEFAULT_SCHEMA_VERSION);
+    }
+
+    public S3PollRepository(S3Client s3Client, ObjectMapper objectMapper, String bucketName, String currentSchemaVersion) {
         this.s3Client = s3Client;
         this.objectMapper = objectMapper;
         this.bucketName = bucketName;
+        this.currentSchemaVersionNumber = parseCurrentSchemaVersion(currentSchemaVersion);
+        this.currentSchemaVersion = Integer.toString(this.currentSchemaVersionNumber);
     }
 
     @Override
     public void save(Poll poll) {
         PollDAO pollDAO = toDao(poll);
+        saveDao(pollDAO);
+    }
+
+    private void saveDao(PollDAO pollDAO) {
         String json = writeJson(pollDAO);
-        String key = "polls/" + poll.pollId() + ".json";
+        String key = "polls/" + pollDAO.pollId() + ".json";
 
         PutObjectRequest request = PutObjectRequest.builder()
                 .bucket(bucketName)
@@ -65,6 +82,14 @@ public class S3PollRepository implements PollRepository {
         try (ResponseInputStream<GetObjectResponse> response = s3Client.getObject(request)) {
             String json = new String(response.readAllBytes(), StandardCharsets.UTF_8);
             PollDAO pollDAO = objectMapper.readValue(json, PollDAO.class);
+            if (requiresMigration(pollDAO.schemaVersion())) {
+                String previousVersion = pollDAO.schemaVersion() == null ? "<missing>" : pollDAO.schemaVersion();
+                LOGGER.info("Migrating poll {} from schemaVersion {} to {}", pollDAO.pollId(), previousVersion, currentSchemaVersion);
+                PollDAO migratedPoll = migrateToCurrentSchema(pollDAO);
+                saveDao(migratedPoll);
+                LOGGER.info("Migration persisted for poll {} with schemaVersion {}", migratedPoll.pollId(), currentSchemaVersion);
+                pollDAO = migratedPoll;
+            }
             return Optional.of(fromDao(pollDAO));
         } catch (NoSuchKeyException e) {
             return Optional.empty();
@@ -125,6 +150,7 @@ public class S3PollRepository implements PollRepository {
 
         return new PollDAO(
                 poll.pollId(),
+                currentSchemaVersion,
                 "date",
                 poll.title(),
                 poll.description(),
@@ -194,5 +220,54 @@ public class S3PollRepository implements PollRepository {
             return null;
         }
         return LocalTime.parse(value);
+    }
+
+    private boolean requiresMigration(String schemaVersion) {
+        if (schemaVersion == null || schemaVersion.isBlank()) {
+            return true;
+        }
+        try {
+            int existing = Integer.parseInt(schemaVersion);
+            return existing < currentSchemaVersionNumber;
+        } catch (NumberFormatException e) {
+            return true;
+        }
+    }
+
+    private PollDAO migrateToCurrentSchema(PollDAO pollDAO) {
+        return new PollDAO(
+                pollDAO.pollId(),
+                currentSchemaVersion,
+                pollDAO.type(),
+                pollDAO.title(),
+                pollDAO.descriptionHtml(),
+                pollDAO.language(),
+                pollDAO.createdAt(),
+                pollDAO.updatedAt(),
+                pollDAO.author(),
+                pollDAO.access(),
+                pollDAO.permissions(),
+                pollDAO.notifications(),
+                pollDAO.resultsVisibility(),
+                pollDAO.status(),
+                pollDAO.expiresAt(),
+                pollDAO.options(),
+                pollDAO.responses()
+        );
+    }
+
+    private int parseCurrentSchemaVersion(String schemaVersion) {
+        if (schemaVersion == null || schemaVersion.isBlank()) {
+            throw new IllegalArgumentException("woodle.poll.schema-version must be a positive integer");
+        }
+        try {
+            int value = Integer.parseInt(schemaVersion);
+            if (value < 1) {
+                throw new IllegalArgumentException("woodle.poll.schema-version must be a positive integer");
+            }
+            return value;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("woodle.poll.schema-version must be a positive integer", e);
+        }
     }
 }
