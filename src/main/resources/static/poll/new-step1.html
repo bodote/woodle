@@ -66,6 +66,7 @@
               id="step1-form"
               action="/poll/step-2"
               method="post"
+              autocomplete="on"
               hx-post="/poll/step-2"
               hx-target="body"
               hx-swap="innerHTML"
@@ -79,7 +80,7 @@
             <div class="dual-row">
                 <div class="form-row">
                     <label for="author-name">Ihr Name</label>
-                    <input id="author-name" name="authorName" type="text" required>
+                    <input id="author-name" name="authorName" type="text" autocomplete="name" required>
                     <p class="form-help form-help--ghost" aria-hidden="true"></p>
                 </div>
 
@@ -88,6 +89,11 @@
                     <input id="author-email"
                            name="authorEmail"
                            type="email"
+                           autocomplete="email"
+                           inputmode="email"
+                           autocapitalize="none"
+                           autocorrect="off"
+                           spellcheck="false"
                            required>
                     <p class="form-help">E-Mail wird nur für Admin-Link genutzt.</p>
                 </div>
@@ -95,12 +101,13 @@
 
             <div class="form-row">
                 <label for="poll-title">Titel der Umfrage</label>
-                <input id="poll-title" name="pollTitle" type="text" required>
+                <input id="poll-title" name="pollTitle" type="text" autocomplete="on" list="poll-title-history" required>
+                <datalist id="poll-title-history"></datalist>
             </div>
 
             <div class="form-row">
                 <label for="poll-description">Beschreibung</label>
-                <textarea id="poll-description" name="description" rows="6"></textarea>
+                <textarea id="poll-description" name="description" rows="6" autocomplete="on"></textarea>
             </div>
 
             <section class="stack">
@@ -151,6 +158,21 @@
         const step1Form = document.getElementById("step1-form");
         const activePollCount = document.getElementById("active-poll-count");
         const loadingIndicator = document.getElementById("step1-loading-indicator");
+        const authorNameInput = document.getElementById("author-name");
+        const authorEmailInput = document.getElementById("author-email");
+        const pollTitleInput = document.getElementById("poll-title");
+        const descriptionInput = document.getElementById("poll-description");
+        const notifyOnVoteInput = document.querySelector("input[name='notifyOnVote']");
+        const notifyOnCommentInput = document.querySelector("input[name='notifyOnComment']");
+        const pollTitleHistory = document.getElementById("poll-title-history");
+        const authorNameStorageKey = "woodle.poll.step1.authorName";
+        const authorEmailStorageKey = "woodle.poll.step1.authorEmail";
+        const pollTitleStorageKey = "woodle.poll.step1.titleHistory";
+        const pollTitleCurrentStorageKey = "woodle.poll.step1.pollTitle";
+        const descriptionStorageKey = "woodle.poll.step1.description";
+        const notifyOnVoteStorageKey = "woodle.poll.step1.notifyOnVote";
+        const notifyOnCommentStorageKey = "woodle.poll.step1.notifyOnComment";
+        const maxPollTitleSuggestions = 8;
         const maxTransientRetries = 10;
         const transientRetryDelayMs = 1000;
         const maxActivePollCountRetries = 10;
@@ -174,6 +196,148 @@
                 loadingHintTimer = null;
             }
         }
+
+        function normalizePollTitle(value) {
+            return value ? value.trim() : "";
+        }
+
+        function normalizeTextValue(value) {
+            return value ? value.trim() : "";
+        }
+
+        function writeStoredValue(key, value) {
+            if (!window.localStorage) {
+                return;
+            }
+            try {
+                const normalized = normalizeTextValue(value);
+                if (normalized) {
+                    window.localStorage.setItem(key, normalized);
+                } else {
+                    window.localStorage.removeItem(key);
+                }
+            } catch (error) {
+                // Ignore storage errors (private mode / blocked storage).
+            }
+        }
+
+        function readStoredValue(key) {
+            if (!window.localStorage) {
+                return "";
+            }
+            try {
+                return normalizeTextValue(window.localStorage.getItem(key) || "");
+            } catch (error) {
+                return "";
+            }
+        }
+
+        function writeStoredBoolean(key, value) {
+            if (!window.localStorage) {
+                return;
+            }
+            try {
+                window.localStorage.setItem(key, value ? "true" : "false");
+            } catch (error) {
+                // Ignore storage errors (private mode / blocked storage).
+            }
+        }
+
+        function readStoredBoolean(key) {
+            if (!window.localStorage) {
+                return false;
+            }
+            try {
+                return window.localStorage.getItem(key) === "true";
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function readPollTitleHistory() {
+            if (!window.localStorage) {
+                return [];
+            }
+            try {
+                const raw = window.localStorage.getItem(pollTitleStorageKey);
+                if (!raw) {
+                    return [];
+                }
+                const parsed = JSON.parse(raw);
+                if (!Array.isArray(parsed)) {
+                    return [];
+                }
+                return parsed
+                        .filter(function (item) {
+                            return typeof item === "string";
+                        })
+                        .map(normalizePollTitle)
+                        .filter(function (item) {
+                            return item.length > 0;
+                        });
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function writePollTitleHistory(values) {
+            if (!window.localStorage) {
+                return;
+            }
+            try {
+                window.localStorage.setItem(pollTitleStorageKey, JSON.stringify(values));
+            } catch (error) {
+                // Ignore storage errors (private mode / blocked storage).
+            }
+        }
+
+        function renderPollTitleHistory(values) {
+            if (!pollTitleHistory) {
+                return;
+            }
+            pollTitleHistory.innerHTML = "";
+            values.forEach(function (value) {
+                const option = document.createElement("option");
+                option.value = value;
+                pollTitleHistory.appendChild(option);
+            });
+        }
+
+        function rememberPollTitle(value) {
+            const normalized = normalizePollTitle(value);
+            writeStoredValue(pollTitleCurrentStorageKey, normalized);
+            if (!normalized) {
+                return;
+            }
+            const existing = readPollTitleHistory().filter(function (item) {
+                return item !== normalized;
+            });
+            const updated = [normalized]
+                    .concat(existing)
+                    .slice(0, maxPollTitleSuggestions);
+            writePollTitleHistory(updated);
+            renderPollTitleHistory(updated);
+        }
+
+        renderPollTitleHistory(readPollTitleHistory());
+        if (authorNameInput && !authorNameInput.value) {
+            authorNameInput.value = readStoredValue(authorNameStorageKey);
+        }
+        if (authorEmailInput && !authorEmailInput.value) {
+            authorEmailInput.value = readStoredValue(authorEmailStorageKey);
+        }
+        if (pollTitleInput && !pollTitleInput.value) {
+            pollTitleInput.value = readStoredValue(pollTitleCurrentStorageKey);
+        }
+        if (descriptionInput && !descriptionInput.value) {
+            descriptionInput.value = readStoredValue(descriptionStorageKey);
+        }
+        if (notifyOnVoteInput) {
+            notifyOnVoteInput.checked = readStoredBoolean(notifyOnVoteStorageKey);
+        }
+        if (notifyOnCommentInput) {
+            notifyOnCommentInput.checked = readStoredBoolean(notifyOnCommentStorageKey);
+        }
         if (step1Form && base) {
             step1Form.action = base + "/poll/step-2";
             step1Form.setAttribute("hx-post", base + "/poll/step-2");
@@ -186,6 +350,24 @@
         }
         if (step1Form) {
             step1Form.addEventListener("submit", function () {
+                if (authorNameInput) {
+                    writeStoredValue(authorNameStorageKey, authorNameInput.value);
+                }
+                if (authorEmailInput) {
+                    writeStoredValue(authorEmailStorageKey, authorEmailInput.value);
+                }
+                if (pollTitleInput) {
+                    rememberPollTitle(pollTitleInput.value);
+                }
+                if (descriptionInput) {
+                    writeStoredValue(descriptionStorageKey, descriptionInput.value);
+                }
+                if (notifyOnVoteInput) {
+                    writeStoredBoolean(notifyOnVoteStorageKey, notifyOnVoteInput.checked);
+                }
+                if (notifyOnCommentInput) {
+                    writeStoredBoolean(notifyOnCommentStorageKey, notifyOnCommentInput.checked);
+                }
                 if (!retryInFlight) {
                     transientRetryCount = 0;
                 }
@@ -258,6 +440,36 @@
                         });
                     }
                 }, activePollCountRetryDelayMs);
+            });
+        }
+        if (pollTitleInput) {
+            pollTitleInput.addEventListener("blur", function () {
+                rememberPollTitle(pollTitleInput.value);
+            });
+        }
+        if (descriptionInput) {
+            descriptionInput.addEventListener("blur", function () {
+                writeStoredValue(descriptionStorageKey, descriptionInput.value);
+            });
+        }
+        if (notifyOnVoteInput) {
+            notifyOnVoteInput.addEventListener("change", function () {
+                writeStoredBoolean(notifyOnVoteStorageKey, notifyOnVoteInput.checked);
+            });
+        }
+        if (notifyOnCommentInput) {
+            notifyOnCommentInput.addEventListener("change", function () {
+                writeStoredBoolean(notifyOnCommentStorageKey, notifyOnCommentInput.checked);
+            });
+        }
+        if (authorNameInput) {
+            authorNameInput.addEventListener("blur", function () {
+                writeStoredValue(authorNameStorageKey, authorNameInput.value);
+            });
+        }
+        if (authorEmailInput) {
+            authorEmailInput.addEventListener("blur", function () {
+                writeStoredValue(authorEmailStorageKey, authorEmailInput.value);
             });
         }
 
