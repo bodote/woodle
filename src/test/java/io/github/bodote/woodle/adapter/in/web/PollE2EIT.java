@@ -142,6 +142,70 @@ class PollE2EIT {
         }
     }
 
+    @Test
+    @DisplayName("step-2 intraday keeps existing values when adding third proposal")
+    void step2IntradayKeepsExistingValuesWhenAddingThirdProposal() {
+        String baseUrl = "http://localhost:" + port;
+
+        try (Playwright playwright = Playwright.create()) {
+            Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+            Page page = browser.newPage();
+
+            page.navigate(baseUrl + "/poll/new");
+            page.getByLabel("Ihr Name").fill("Max");
+            page.getByLabel("Ihre E-Mail-Adresse").fill("max@example.com");
+            page.getByLabel("Titel der Umfrage").fill("Intraday Preserve");
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Weiter zum 2. Schritt")).click();
+
+            page.getByLabel("Untertägig").check();
+            page.waitForSelector("input[name='startTime1']");
+
+            page.locator("input[name='dateOption1']").fill("2026-03-10");
+            page.locator("input[name='dateOption2']").fill("2026-03-11");
+            page.locator("input[name='startTime1']").fill("09:15");
+            page.locator("input[name='startTime2']").fill("13:45");
+
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Termin hinzufügen")).click();
+            page.waitForSelector("input[name='dateOption3']");
+            page.waitForSelector("input[name='startTime3']");
+
+            assertTrue("2026-03-10".equals(page.locator("input[name='dateOption1']").inputValue()));
+            assertTrue("2026-03-11".equals(page.locator("input[name='dateOption2']").inputValue()));
+            assertTrue("09:15".equals(page.locator("input[name='startTime1']").inputValue()));
+            assertTrue("13:45".equals(page.locator("input[name='startTime2']").inputValue()));
+
+            browser.close();
+        }
+    }
+
+    @Test
+    @DisplayName("step-2 all-day keeps existing values when adding third proposal")
+    void step2AllDayKeepsExistingValuesWhenAddingThirdProposal() {
+        String baseUrl = "http://localhost:" + port;
+
+        try (Playwright playwright = Playwright.create()) {
+            Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+            Page page = browser.newPage();
+
+            page.navigate(baseUrl + "/poll/new");
+            page.getByLabel("Ihr Name").fill("Max");
+            page.getByLabel("Ihre E-Mail-Adresse").fill("max@example.com");
+            page.getByLabel("Titel der Umfrage").fill("All Day Preserve");
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Weiter zum 2. Schritt")).click();
+
+            page.locator("input[name='dateOption1']").fill("2026-03-10");
+            page.locator("input[name='dateOption2']").fill("2026-03-11");
+
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Einen Tag hinzufügen")).click();
+            page.waitForSelector("input[name='dateOption3']");
+
+            assertTrue("2026-03-10".equals(page.locator("input[name='dateOption1']").inputValue()));
+            assertTrue("2026-03-11".equals(page.locator("input[name='dateOption2']").inputValue()));
+
+            browser.close();
+        }
+    }
+
     private String toParticipantUrl(String adminUrl) {
         int index = adminUrl.indexOf("/poll/");
         String path = adminUrl.substring(index + "/poll/".length());

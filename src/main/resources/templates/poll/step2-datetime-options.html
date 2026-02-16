@@ -5,12 +5,14 @@
             <input th:id="${'date-option-' + i}"
                    th:name="${'dateOption' + i}"
                    type="date"
+                   th:value="${dateValues != null and #lists.size(dateValues) >= i ? dateValues[i - 1] : ''}"
                    placeholder="yyyy-mm-dd">
         </div>
         <div class="form-row">
             <label th:for="${'start-time-' + i}" th:text="'Startzeit ' + i">Startzeit</label>
             <input th:id="${'start-time-' + i}"
                    th:name="${'startTime' + i}"
+                   th:value="${startTimeValues != null and #lists.size(startTimeValues) >= i ? startTimeValues[i - 1] : ''}"
                    type="time">
         </div>
     </div>

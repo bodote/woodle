@@ -96,4 +96,34 @@ class PollNewStep2PageTest {
             assertEquals(3, addOnce.getByXPath("//input[starts-with(@name,'startTime')]").size());
         }
     }
+
+    @Test
+    @DisplayName("keeps entered date and time values when adding a third intraday option")
+    void keepsEnteredDateAndTimeValuesWhenAddingThirdIntradayOption() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            webClient.getPage(BASE_URL + "/poll/step-2/event-type?eventType=INTRADAY");
+
+            HtmlPage addOnce = webClient.getPage(
+                    BASE_URL + "/poll/step-2/options/add?"
+                            + "&dateOption1=2026-03-10"
+                            + "&dateOption2=2026-03-11"
+                            + "&startTime1=09:15"
+                            + "&startTime2=13:45"
+            );
+
+            HtmlInput dateOption1 = addOnce.getFirstByXPath("//input[@name='dateOption1']");
+            HtmlInput dateOption2 = addOnce.getFirstByXPath("//input[@name='dateOption2']");
+            HtmlInput startTime1 = addOnce.getFirstByXPath("//input[@name='startTime1']");
+            HtmlInput startTime2 = addOnce.getFirstByXPath("//input[@name='startTime2']");
+            HtmlInput dateOption3 = addOnce.getFirstByXPath("//input[@name='dateOption3']");
+            HtmlInput startTime3 = addOnce.getFirstByXPath("//input[@name='startTime3']");
+
+            assertEquals("2026-03-10", dateOption1.getValueAttribute());
+            assertEquals("2026-03-11", dateOption2.getValueAttribute());
+            assertEquals("09:15", startTime1.getValueAttribute());
+            assertEquals("13:45", startTime2.getValueAttribute());
+            assertEquals("", dateOption3.getValueAttribute());
+            assertEquals("", startTime3.getValueAttribute());
+        }
+    }
 }

@@ -32,6 +32,7 @@
                        value="ALL_DAY"
                        th:checked="${eventType == T(io.github.bodote.woodle.domain.model.EventType).ALL_DAY}"
                        hx-get="/poll/step-2/event-type?eventType=ALL_DAY"
+                       hx-include="closest form"
                        hx-target="#event-options"
                        hx-swap="outerHTML">
                 <span class="choice-card__label">Ganz-/Mehrtägig</span>
@@ -42,6 +43,7 @@
                        value="INTRADAY"
                        th:checked="${eventType == T(io.github.bodote.woodle.domain.model.EventType).INTRADAY}"
                        hx-get="/poll/step-2/event-type?eventType=INTRADAY"
+                       hx-include="closest form"
                        hx-target="#event-options"
                        hx-swap="outerHTML">
                 <span class="choice-card__label">Untertägig</span>

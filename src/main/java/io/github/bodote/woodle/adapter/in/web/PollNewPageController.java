@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.ui.Model;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -49,6 +50,7 @@ public class PollNewPageController {
         model.addAttribute("dateCount", count);
         WizardState state = getOrInitWizard(session);
         applyStep2Model(model, state);
+        applyOptionValuesModel(model, state, Map.of(), count);
         return "poll/new-step2";
     }
 
@@ -79,39 +81,45 @@ public class PollNewPageController {
         session.setAttribute(WizardState.SESSION_KEY, state);
         model.addAttribute("dateCount", getOrInitDateCount(session));
         applyStep2Model(model, state);
+        applyOptionValuesModel(model, state, Map.of(), getOrInitDateCount(session));
         model.addAttribute("draftId", draftId);
         return "poll/new-step2";
     }
 
     @GetMapping("/poll/step-2/options/add")
-    public String addDateOption(Model model, HttpSession session) {
+    public String addDateOption(Model model, HttpSession session, HttpServletRequest request) {
         int count = Math.min(getOrInitDateCount(session) + 1, STEP2_MAX_DATES);
         session.setAttribute(STEP2_DATE_COUNT, count);
         model.addAttribute("dateCount", count);
         WizardState state = getOrInitWizard(session);
         model.addAttribute("eventType", state.eventType());
+        applyOptionValuesModel(model, state, request.getParameterMap(), count);
         return resolveOptionsFragment(state);
     }
 
     @GetMapping("/poll/step-2/options/remove")
-    public String removeDateOption(Model model, HttpSession session) {
+    public String removeDateOption(Model model, HttpSession session, HttpServletRequest request) {
         int count = Math.max(getOrInitDateCount(session) - 1, STEP2_MIN_DATES);
         session.setAttribute(STEP2_DATE_COUNT, count);
         model.addAttribute("dateCount", count);
         WizardState state = getOrInitWizard(session);
         model.addAttribute("eventType", state.eventType());
+        applyOptionValuesModel(model, state, request.getParameterMap(), count);
         return resolveOptionsFragment(state);
     }
 
     @GetMapping("/poll/step-2/event-type")
     public String setEventType(@RequestParam("eventType") io.github.bodote.woodle.domain.model.EventType eventType,
                                Model model,
-                               HttpSession session) {
+                               HttpSession session,
+                               HttpServletRequest request) {
         WizardState state = getOrInitWizard(session);
         state.setEventType(eventType);
         session.setAttribute(WizardState.SESSION_KEY, state);
         model.addAttribute("eventType", eventType);
-        model.addAttribute("dateCount", getOrInitDateCount(session));
+        int count = getOrInitDateCount(session);
+        model.addAttribute("dateCount", count);
+        applyOptionValuesModel(model, state, request.getParameterMap(), count);
         return "poll/step2-event-options :: eventOptions";
     }
 
@@ -290,6 +298,84 @@ public class PollNewPageController {
         model.addAttribute("authorEmail", state.authorEmail());
         model.addAttribute("pollTitle", state.title());
         model.addAttribute("description", state.description());
+        model.addAttribute("durationMinutes", state.durationMinutes());
+    }
+
+    private void applyOptionValuesModel(Model model, WizardState state, Map<String, String[]> parameterMap, int count) {
+        List<String> dateValues = extractInputValues(parameterMap, "dateOption", count);
+        if (allBlank(dateValues)) {
+            dateValues = dateValuesFromState(state, count);
+        }
+        model.addAttribute("dateValues", dateValues);
+
+        Integer durationMinutes = firstInteger(parameterMap, "durationMinutes");
+        model.addAttribute("durationMinutes", durationMinutes != null ? durationMinutes : state.durationMinutes());
+
+        if (state.eventType() == io.github.bodote.woodle.domain.model.EventType.INTRADAY) {
+            List<String> startTimeValues = extractInputValues(parameterMap, "startTime", count);
+            if (allBlank(startTimeValues)) {
+                startTimeValues = startTimeValuesFromState(state, count);
+            }
+            model.addAttribute("startTimeValues", startTimeValues);
+        }
+    }
+
+    private List<String> extractInputValues(Map<String, String[]> parameterMap, String prefix, int count) {
+        List<String> values = new ArrayList<>();
+        for (int i = 1; i <= count; i++) {
+            String[] raw = parameterMap.get(prefix + i);
+            if (raw == null || raw.length == 0 || raw[0] == null) {
+                values.add("");
+                continue;
+            }
+            values.add(raw[0]);
+        }
+        return values;
+    }
+
+    private List<String> dateValuesFromState(WizardState state, int count) {
+        List<String> values = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            if (i < state.dates().size()) {
+                values.add(state.dates().get(i).toString());
+            } else {
+                values.add("");
+            }
+        }
+        return values;
+    }
+
+    private List<String> startTimeValuesFromState(WizardState state, int count) {
+        List<String> values = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            if (i < state.startTimes().size()) {
+                values.add(state.startTimes().get(i).toString());
+            } else {
+                values.add("");
+            }
+        }
+        return values;
+    }
+
+    private boolean allBlank(List<String> values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private Integer firstInteger(Map<String, String[]> parameterMap, String key) {
+        String[] raw = parameterMap.get(key);
+        if (raw == null || raw.length == 0 || raw[0] == null || raw[0].isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(raw[0]);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private void applyStep1Fallback(WizardState state,
