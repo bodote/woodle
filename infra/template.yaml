@@ -155,6 +155,18 @@ Resources:
           - ErrorCode: 403
             ResponseCode: 200
             ResponsePagePath: /poll/new-step1.html
+          - ErrorCode: 500
+            ResponseCode: 503
+            ResponsePagePath: /error-unavailable.html
+          - ErrorCode: 502
+            ResponseCode: 503
+            ResponsePagePath: /error-unavailable.html
+          - ErrorCode: 503
+            ResponseCode: 503
+            ResponsePagePath: /error-unavailable.html
+          - ErrorCode: 504
+            ResponseCode: 503
+            ResponsePagePath: /error-unavailable.html
         PriceClass: PriceClass_100
         Aliases: !If [HasCustomDomain, [!Ref AppDomainName], !Ref "AWS::NoValue"]
         ViewerCertificate: !If

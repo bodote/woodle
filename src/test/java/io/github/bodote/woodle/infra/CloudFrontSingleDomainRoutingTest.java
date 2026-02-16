@@ -38,4 +38,33 @@ class CloudFrontSingleDomainRoutingTest {
                 template.contains("ReferrerPolicy: no-referrer"),
                 "Expected CloudFront to enforce Referrer-Policy=no-referrer");
     }
+
+    @Test
+    @DisplayName("serves static unavailable page for upstream 5xx errors")
+    void servesStaticUnavailablePageForUpstream5xxErrors() throws IOException {
+        String template = Files.readString(Path.of("infra/template.yaml"));
+        String unavailablePage = Files.readString(Path.of("src/main/resources/static/error-unavailable.html"));
+
+        assertTrue(
+                template.contains("ErrorCode: 500"),
+                "Expected CloudFront custom error response for 500");
+        assertTrue(
+                template.contains("ErrorCode: 502"),
+                "Expected CloudFront custom error response for 502");
+        assertTrue(
+                template.contains("ErrorCode: 503"),
+                "Expected CloudFront custom error response for 503");
+        assertTrue(
+                template.contains("ErrorCode: 504"),
+                "Expected CloudFront custom error response for 504");
+        assertTrue(
+                template.contains("ResponseCode: 503"),
+                "Expected CloudFront to keep an outage status code for fallback page");
+        assertTrue(
+                template.contains("ResponsePagePath: /error-unavailable.html"),
+                "Expected static unavailable fallback page path");
+        assertTrue(
+                unavailablePage.contains("vorübergehend nicht verfügbar"),
+                "Expected user-facing unavailable message on static fallback page");
+    }
 }
