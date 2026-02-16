@@ -51,6 +51,50 @@ class StaticPollStep1PageIT {
     }
 
     @Test
+    @DisplayName("provides browser autofill hints for identity and poll fields")
+    void providesBrowserAutofillHintsForIdentityAndPollFields() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/new-step1.html");
+
+            HtmlInput nameInput = page.getFirstByXPath("//input[@name='authorName']");
+            HtmlInput emailInput = page.getFirstByXPath("//input[@name='authorEmail']");
+            HtmlInput titleInput = page.getFirstByXPath("//input[@name='pollTitle']");
+            HtmlTextArea descriptionInput = page.getFirstByXPath("//textarea[@name='description']");
+
+            org.junit.jupiter.api.Assertions.assertEquals("name", nameInput.getAttribute("autocomplete"));
+            org.junit.jupiter.api.Assertions.assertEquals("email", emailInput.getAttribute("autocomplete"));
+            org.junit.jupiter.api.Assertions.assertEquals("email", emailInput.getAttribute("type"));
+            org.junit.jupiter.api.Assertions.assertEquals("on", titleInput.getAttribute("autocomplete"));
+            org.junit.jupiter.api.Assertions.assertEquals("poll-title-history", titleInput.getAttribute("list"));
+            org.junit.jupiter.api.Assertions.assertEquals("on", descriptionInput.getAttribute("autocomplete"));
+            org.junit.jupiter.api.Assertions.assertNotNull(
+                    page.getFirstByXPath("//datalist[@id='poll-title-history']")
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.getWebResponse().getContentAsString().contains("woodle.poll.step1.titleHistory")
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.getWebResponse().getContentAsString().contains("woodle.poll.step1.authorName")
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.getWebResponse().getContentAsString().contains("woodle.poll.step1.authorEmail")
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.getWebResponse().getContentAsString().contains("woodle.poll.step1.pollTitle")
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.getWebResponse().getContentAsString().contains("woodle.poll.step1.description")
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.getWebResponse().getContentAsString().contains("woodle.poll.step1.notifyOnVote")
+            );
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    page.getWebResponse().getContentAsString().contains("woodle.poll.step1.notifyOnComment")
+            );
+        }
+    }
+
+    @Test
     @DisplayName("contains runtime backend config wiring for form post and HTMX email validation")
     void containsRuntimeBackendConfigWiring() throws Exception {
         try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
