@@ -1,19 +1,46 @@
 <div id="date-options" th:fragment="dateTimeOptions" class="option-grid">
-    <div th:each="i : ${#numbers.sequence(1, dateCount)}" class="option-item stack">
-        <label th:for="${'date-option-' + i}" th:text="'Tag ' + i">Tag</label>
+    <div th:each="dayIndex : ${#numbers.sequence(1, dateCount)}"
+         th:with="timeCount=${timeCountByDay != null and #lists.size(timeCountByDay) >= dayIndex ? timeCountByDay[dayIndex - 1] : 1}"
+         class="option-item stack">
+        <label th:for="${'date-option-' + dayIndex}" th:text="|Tag ${dayIndex}|">Tag 1</label>
         <div class="form-row">
-            <input th:id="${'date-option-' + i}"
-                   th:name="${'dateOption' + i}"
+            <input th:id="${'date-option-' + dayIndex}"
+                   th:name="${'dateOption' + dayIndex}"
                    type="date"
-                   th:value="${dateValues != null and #lists.size(dateValues) >= i ? dateValues[i - 1] : ''}"
+                   th:value="${dateValues != null and #lists.size(dateValues) >= dayIndex ? dateValues[dayIndex - 1] : ''}"
                    placeholder="yyyy-mm-dd">
         </div>
-        <div class="form-row">
-            <label th:for="${'start-time-' + i}" th:text="'Startzeit ' + i">Startzeit</label>
-            <input th:id="${'start-time-' + i}"
-                   th:name="${'startTime' + i}"
-                   th:value="${startTimeValues != null and #lists.size(startTimeValues) >= i ? startTimeValues[i - 1] : ''}"
+        <div th:each="timeIndex : ${#numbers.sequence(1, timeCount)}" class="form-row">
+            <label th:for="${'start-time-' + dayIndex + '-' + timeIndex}" th:text="|Uhrzeit ${timeIndex}|">Uhrzeit</label>
+            <input th:id="${'start-time-' + dayIndex + '-' + timeIndex}"
+                   th:name="${'startTime' + dayIndex + '_' + timeIndex}"
+                   th:value="${startTimeValuesByDay != null
+                       and #lists.size(startTimeValuesByDay) >= dayIndex
+                       and #lists.size(startTimeValuesByDay[dayIndex - 1]) >= timeIndex
+                       ? startTimeValuesByDay[dayIndex - 1][timeIndex - 1] : ''}"
                    type="time">
+        </div>
+        <div class="actions">
+            <button type="button"
+                    th:if="${dayIndex == 1}"
+                    hx-get="/poll/step-2/options/time/copy"
+                    hx-include="closest form"
+                    hx-target="#date-options"
+                    hx-swap="outerHTML"
+                    hx-indicator=".htmx-indicator">Kopiere Uhrzeiten</button>
+            <button type="button"
+                    th:attr="hx-get=@{/poll/step-2/options/time/add(day=${dayIndex})}"
+                    hx-include="closest form"
+                    hx-target="#date-options"
+                    hx-swap="outerHTML"
+                    hx-indicator=".htmx-indicator">Uhrzeit hinzufügen</button>
+            <button type="button"
+                    th:attr="hx-get=@{/poll/step-2/options/time/remove(day=${dayIndex})}"
+                    hx-include="closest form"
+                    hx-target="#date-options"
+                    hx-swap="outerHTML"
+                    hx-indicator=".htmx-indicator"
+                    th:disabled="${timeCount <= 1}">Uhrzeit entfernen</button>
         </div>
     </div>
 </div>

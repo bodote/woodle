@@ -104,6 +104,7 @@ public class PollViewController {
         model.addAttribute("voteOptionHeaders", buildOptionHeaders(options));
         model.addAttribute("voteOptions", options);
         model.addAttribute("monthGroups", buildMonthGroups(dates));
+        model.addAttribute("dateGroups", buildDateGroups(options));
         model.addAttribute("participantRows", buildParticipantRows(options, poll.responses()));
         model.addAttribute("summaryCells", buildSummaryCells(options, poll.responses()));
     }
@@ -136,6 +137,33 @@ public class PollViewController {
         return name.substring(0, 1).toUpperCase(Locale.GERMAN) + name.substring(1) + " " + month.getYear();
     }
 
+    private List<DateGroup> buildDateGroups(List<PollOption> options) {
+        List<DateGroup> groups = new ArrayList<>();
+        LocalDate currentDate = null;
+        int startIndex = 0;
+        for (int i = 0; i < options.size(); i++) {
+            LocalDate date = options.get(i).date();
+            if (currentDate == null) {
+                currentDate = date;
+                startIndex = i;
+                continue;
+            }
+            if (!date.equals(currentDate)) {
+                groups.add(new DateGroup(formatDateGroupLabel(currentDate), startIndex, i - startIndex));
+                currentDate = date;
+                startIndex = i;
+            }
+        }
+        if (currentDate != null) {
+            groups.add(new DateGroup(formatDateGroupLabel(currentDate), startIndex, options.size() - startIndex));
+        }
+        return groups;
+    }
+
+    private String formatDateGroupLabel(LocalDate date) {
+        return date.format(DateTimeFormatter.ofPattern("EEE, dd.MM.", Locale.GERMAN));
+    }
+
     private List<OptionHeader> buildOptionHeaders(List<PollOption> options) {
         return options.stream()
                 .map(option -> new OptionHeader(option, formatOptionLabel(option)))
@@ -149,7 +177,7 @@ public class PollViewController {
         if (startTime == null) {
             return dayLabel;
         }
-        return dayLabel + " " + startTime;
+        return startTime.toString();
     }
 
     private List<ParticipantRow> buildParticipantRows(List<PollOption> options, List<PollResponse> responses) {
@@ -291,6 +319,16 @@ public class PollViewController {
     }
 
     record MonthGroup(String label, int startIndex, int span) {
+        public String getLabel() {
+            return label;
+        }
+
+        public int getSpan() {
+            return span;
+        }
+    }
+
+    record DateGroup(String label, int startIndex, int span) {
         public String getLabel() {
             return label;
         }

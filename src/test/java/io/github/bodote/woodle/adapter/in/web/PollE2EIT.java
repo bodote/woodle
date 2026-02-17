@@ -158,21 +158,21 @@ class PollE2EIT {
             page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Weiter zum 2. Schritt")).click();
 
             page.getByLabel("Untertägig").check();
-            page.waitForSelector("input[name='startTime1']");
+            page.waitForSelector("input[name='startTime1_1']");
 
             page.locator("input[name='dateOption1']").fill("2026-03-10");
             page.locator("input[name='dateOption2']").fill("2026-03-11");
-            page.locator("input[name='startTime1']").fill("09:15");
-            page.locator("input[name='startTime2']").fill("13:45");
+            page.locator("input[name='startTime1_1']").fill("09:15");
+            page.locator("input[name='startTime2_1']").fill("13:45");
 
-            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Termin hinzufügen")).click();
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Tag hinzufügen")).click();
             page.waitForSelector("input[name='dateOption3']");
-            page.waitForSelector("input[name='startTime3']");
+            page.waitForSelector("input[name='startTime3_1']");
 
             assertTrue("2026-03-10".equals(page.locator("input[name='dateOption1']").inputValue()));
             assertTrue("2026-03-11".equals(page.locator("input[name='dateOption2']").inputValue()));
-            assertTrue("09:15".equals(page.locator("input[name='startTime1']").inputValue()));
-            assertTrue("13:45".equals(page.locator("input[name='startTime2']").inputValue()));
+            assertTrue("09:15".equals(page.locator("input[name='startTime1_1']").inputValue()));
+            assertTrue("13:45".equals(page.locator("input[name='startTime2_1']").inputValue()));
 
             browser.close();
         }
