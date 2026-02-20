@@ -26,7 +26,7 @@ Parameters:
     Description: Enable email sending from Lambda
   EmailProvider:
     Type: String
-    Default: "smtp"
+    Default: "ses"
     AllowedValues:
       - "ses"
       - "smtp"
@@ -277,7 +277,7 @@ Resources:
           WOODLE_EMAIL_SMTP_PASSWORD: !If
             - HasEmailSmtpPasswordSecretId
             - !Sub "{{resolve:secretsmanager:${EmailSmtpPasswordSecretId}:SecretString:password}}"
-            - ""
+            - !Ref AWS::NoValue
       Policies:
         - Version: "2012-10-17"
           Statement:
