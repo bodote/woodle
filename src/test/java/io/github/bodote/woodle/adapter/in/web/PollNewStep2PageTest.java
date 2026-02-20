@@ -105,6 +105,68 @@ class PollNewStep2PageTest {
     }
 
     @Test
+    @DisplayName("revisiting step-2 keeps all saved intraday date options")
+    void revisitingStep2KeepsAllSavedIntradayDateOptions() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            org.htmlunit.WebRequest saveStep2Request = new org.htmlunit.WebRequest(
+                    new java.net.URL(BASE_URL + "/poll/step-3"),
+                    org.htmlunit.HttpMethod.POST
+            );
+            saveStep2Request.setRequestParameters(java.util.List.of(
+                    new org.htmlunit.util.NameValuePair("eventType", "INTRADAY"),
+                    new org.htmlunit.util.NameValuePair("durationMinutes", "30"),
+                    new org.htmlunit.util.NameValuePair("dateOption1", "2026-04-10"),
+                    new org.htmlunit.util.NameValuePair("dateOption2", "2026-04-11"),
+                    new org.htmlunit.util.NameValuePair("dateOption3", "2026-04-12"),
+                    new org.htmlunit.util.NameValuePair("startTime1_1", "09:00"),
+                    new org.htmlunit.util.NameValuePair("startTime2_1", "10:00"),
+                    new org.htmlunit.util.NameValuePair("startTime3_1", "11:00")
+            ));
+            webClient.getPage(saveStep2Request);
+
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/step-2");
+
+            assertEquals(3, page.getByXPath("//input[starts-with(@name,'dateOption')]").size());
+        }
+    }
+
+    @Test
+    @DisplayName("revisiting step-2 keeps intraday times grouped by day")
+    void revisitingStep2KeepsIntradayTimesGroupedByDay() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            org.htmlunit.WebRequest saveStep2Request = new org.htmlunit.WebRequest(
+                    new java.net.URL(BASE_URL + "/poll/step-3"),
+                    org.htmlunit.HttpMethod.POST
+            );
+            saveStep2Request.setRequestParameters(java.util.List.of(
+                    new org.htmlunit.util.NameValuePair("eventType", "INTRADAY"),
+                    new org.htmlunit.util.NameValuePair("durationMinutes", "30"),
+                    new org.htmlunit.util.NameValuePair("dateOption1", "2026-04-10"),
+                    new org.htmlunit.util.NameValuePair("dateOption2", "2026-04-11"),
+                    new org.htmlunit.util.NameValuePair("startTime1_1", "09:00"),
+                    new org.htmlunit.util.NameValuePair("startTime1_2", "11:30"),
+                    new org.htmlunit.util.NameValuePair("startTime2_1", "14:00")
+            ));
+            webClient.getPage(saveStep2Request);
+
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/step-2");
+
+            HtmlInput dateOption1 = page.getFirstByXPath("//input[@name='dateOption1']");
+            HtmlInput dateOption2 = page.getFirstByXPath("//input[@name='dateOption2']");
+            HtmlInput startTime1 = page.getFirstByXPath("//input[@name='startTime1_1']");
+            HtmlInput startTime2 = page.getFirstByXPath("//input[@name='startTime1_2']");
+            HtmlInput startTime3 = page.getFirstByXPath("//input[@name='startTime2_1']");
+
+            assertEquals(2, page.getByXPath("//input[starts-with(@name,'dateOption')]").size());
+            assertEquals("2026-04-10", dateOption1.getValueAttribute());
+            assertEquals("2026-04-11", dateOption2.getValueAttribute());
+            assertEquals("09:00", startTime1.getValueAttribute());
+            assertEquals("11:30", startTime2.getValueAttribute());
+            assertEquals("14:00", startTime3.getValueAttribute());
+        }
+    }
+
+    @Test
     @DisplayName("keeps entered date and time values when adding a third intraday option")
     void keepsEnteredDateAndTimeValuesWhenAddingThirdIntradayOption() throws Exception {
         try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
@@ -184,6 +246,126 @@ class PollNewStep2PageTest {
             );
 
             assertEquals(1, removed.getByXPath("//input[starts-with(@name,'startTime1_')]").size());
+        }
+    }
+
+    @Test
+    @DisplayName("ignores intraday time add when day index is out of range")
+    void ignoresIntradayTimeAddWhenDayIndexIsOutOfRange() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            webClient.getPage(BASE_URL + "/poll/step-2/event-type?eventType=INTRADAY");
+
+            HtmlPage unchanged = webClient.getPage(
+                    BASE_URL + "/poll/step-2/options/time/add?day=0"
+                            + "&dateOption1=2026-04-10"
+                            + "&dateOption2=2026-04-11"
+                            + "&startTime1_1=09:00"
+                            + "&startTime2_1=14:00"
+            );
+
+            assertEquals(1, unchanged.getByXPath("//input[starts-with(@name,'startTime1_')]").size());
+            assertEquals(1, unchanged.getByXPath("//input[starts-with(@name,'startTime2_')]").size());
+        }
+    }
+
+    @Test
+    @DisplayName("ignores intraday time remove when day index is out of range")
+    void ignoresIntradayTimeRemoveWhenDayIndexIsOutOfRange() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            webClient.getPage(BASE_URL + "/poll/step-2/event-type?eventType=INTRADAY");
+
+            HtmlPage unchanged = webClient.getPage(
+                    BASE_URL + "/poll/step-2/options/time/remove?day=99"
+                            + "&dateOption1=2026-04-10"
+                            + "&dateOption2=2026-04-11"
+                            + "&startTime1_1=09:00"
+                            + "&startTime1_2=10:00"
+                            + "&startTime2_1=14:00"
+            );
+
+            assertEquals(1, unchanged.getByXPath("//input[starts-with(@name,'startTime1_')]").size());
+            assertEquals(1, unchanged.getByXPath("//input[starts-with(@name,'startTime2_')]").size());
+        }
+    }
+
+    @Test
+    @DisplayName("revisiting step-2 restores all-day date values from saved state")
+    void revisitingStep2RestoresAllDayDateValuesFromSavedState() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            org.htmlunit.WebRequest saveStep2Request = new org.htmlunit.WebRequest(
+                    new java.net.URL(BASE_URL + "/poll/step-3"),
+                    org.htmlunit.HttpMethod.POST
+            );
+            saveStep2Request.setRequestParameters(java.util.List.of(
+                    new org.htmlunit.util.NameValuePair("eventType", "ALL_DAY"),
+                    new org.htmlunit.util.NameValuePair("dateOption1", "2026-06-01"),
+                    new org.htmlunit.util.NameValuePair("dateOption2", "2026-06-02")
+            ));
+            webClient.getPage(saveStep2Request);
+
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/step-2");
+            HtmlInput dateOption1 = page.getFirstByXPath("//input[@name='dateOption1']");
+            HtmlInput dateOption2 = page.getFirstByXPath("//input[@name='dateOption2']");
+
+            assertEquals("2026-06-01", dateOption1.getValueAttribute());
+            assertEquals("2026-06-02", dateOption2.getValueAttribute());
+        }
+    }
+
+    @Test
+    @DisplayName("invalid duration parameter keeps saved duration value")
+    void invalidDurationParameterKeepsSavedDurationValue() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            org.htmlunit.WebRequest saveStep2Request = new org.htmlunit.WebRequest(
+                    new java.net.URL(BASE_URL + "/poll/step-3"),
+                    org.htmlunit.HttpMethod.POST
+            );
+            saveStep2Request.setRequestParameters(java.util.List.of(
+                    new org.htmlunit.util.NameValuePair("eventType", "INTRADAY"),
+                    new org.htmlunit.util.NameValuePair("durationMinutes", "45"),
+                    new org.htmlunit.util.NameValuePair("dateOption1", "2026-07-01"),
+                    new org.htmlunit.util.NameValuePair("startTime1_1", "09:00")
+            ));
+            webClient.getPage(saveStep2Request);
+
+            HtmlPage updated = webClient.getPage(
+                    BASE_URL + "/poll/step-2/event-type?eventType=INTRADAY"
+                            + "&durationMinutes=NaN"
+                            + "&dateOption1=2026-07-01"
+                            + "&startTime1_1=09:00"
+            );
+            HtmlInput durationInput = updated.getFirstByXPath("//input[@name='durationMinutes']");
+            assertEquals("45", durationInput.getValueAttribute());
+        }
+    }
+
+    @Test
+    @DisplayName("intraday parsing ignores malformed day keys and keeps valid values")
+    void intradayParsingIgnoresMalformedDayKeysAndKeepsValidValues() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            org.htmlunit.WebRequest saveStep2Request = new org.htmlunit.WebRequest(
+                    new java.net.URL(BASE_URL + "/poll/step-3"),
+                    org.htmlunit.HttpMethod.POST
+            );
+            saveStep2Request.setRequestParameters(java.util.List.of(
+                    new org.htmlunit.util.NameValuePair("eventType", "INTRADAY"),
+                    new org.htmlunit.util.NameValuePair("durationMinutes", "30"),
+                    new org.htmlunit.util.NameValuePair("dateOption1", "2026-08-01"),
+                    new org.htmlunit.util.NameValuePair("dateOptionX", "2026-08-02"),
+                    new org.htmlunit.util.NameValuePair("startTime1_1", "09:00"),
+                    new org.htmlunit.util.NameValuePair("startTimeX_1", "10:00"),
+                    new org.htmlunit.util.NameValuePair("startTime_1", "11:00"),
+                    new org.htmlunit.util.NameValuePair("startTimeNoIndex", "12:00")
+            ));
+            webClient.getPage(saveStep2Request);
+
+            HtmlPage page = webClient.getPage(BASE_URL + "/poll/step-2");
+            HtmlInput dateOption1 = page.getFirstByXPath("//input[@name='dateOption1']");
+            HtmlInput startTime1 = page.getFirstByXPath("//input[@name='startTime1_1']");
+
+            assertEquals(1, page.getByXPath("//input[starts-with(@name,'dateOption')]").size());
+            assertEquals("2026-08-01", dateOption1.getValueAttribute());
+            assertEquals("09:00", startTime1.getValueAttribute());
         }
     }
 
