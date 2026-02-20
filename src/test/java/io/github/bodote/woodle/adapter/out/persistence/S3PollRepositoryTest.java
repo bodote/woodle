@@ -106,7 +106,7 @@ class S3PollRepositoryTest {
         assertEquals("application/json", request.contentType());
 
         String json = new String(bodyCaptor.getValue().contentStreamProvider().newStream().readAllBytes(), StandardCharsets.UTF_8);
-        assertTrue(json.contains("\"schemaVersion\":\"1\""));
+        assertTrue(json.contains("\"schemaVersion\":\"2\""));
         assertTrue(json.contains("\"title\":\"Team Sync\""));
         assertTrue(json.contains("\"eventType\":\"INTRADAY\""));
         assertTrue(json.contains("\"startTime\":\"09:00\""));
@@ -294,7 +294,7 @@ class S3PollRepositoryTest {
                 bodyCaptor.getValue().contentStreamProvider().newStream().readAllBytes(),
                 StandardCharsets.UTF_8
         );
-        assertTrue(migratedJson.contains("\"schemaVersion\":\"1\""));
+        assertTrue(migratedJson.contains("\"schemaVersion\":\"2\""));
     }
 
     @Test
@@ -406,7 +406,7 @@ class S3PollRepositoryTest {
                 bodyCaptor.getValue().contentStreamProvider().newStream().readAllBytes(),
                 StandardCharsets.UTF_8
         );
-        assertTrue(migratedJson.contains("\"schemaVersion\":\"1\""));
+        assertTrue(migratedJson.contains("\"schemaVersion\":\"2\""));
     }
 
     @Test
@@ -416,7 +416,7 @@ class S3PollRepositoryTest {
         String json = """
                 {
                   "pollId":"00000000-0000-0000-0000-000000000051",
-                  "schemaVersion":"1",
+                  "schemaVersion":"2",
                   "type":"date",
                   "title":"Current Version",
                   "descriptionHtml":"Description",
