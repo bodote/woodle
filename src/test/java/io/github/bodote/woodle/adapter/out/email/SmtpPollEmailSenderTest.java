@@ -99,4 +99,58 @@ class SmtpPollEmailSenderTest {
         assertTrue(message.getText().contains("/poll/00000000-0000-0000-0000-000000000213"));
         assertTrue(message.getText().contains("/poll/00000000-0000-0000-0000-000000000213-Secret113ABC"));
     }
+
+    @Test
+    @DisplayName("normalizes trailing slash in configured base URL")
+    void normalizesTrailingSlashInConfiguredBaseUrl() {
+        JavaMailSender javaMailSender = mock(JavaMailSender.class);
+        SmtpPollEmailSender sender = new SmtpPollEmailSender(
+                javaMailSender,
+                "woodle@funknstein.de",
+                "[Woodle]",
+                "https://woodle.click/"
+        );
+
+        boolean queued = sender.sendPollCreated(new PollCreatedEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000214"),
+                "Secret114ABC",
+                "Diana",
+                "diana@example.com",
+                "Lunch vote"
+        ));
+
+        assertTrue(queued);
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(javaMailSender).send(messageCaptor.capture());
+        String body = messageCaptor.getValue().getText();
+        assertTrue(body.contains("https://woodle.click/poll/00000000-0000-0000-0000-000000000214"));
+        assertFalse(body.contains("https://woodle.click//poll/00000000-0000-0000-0000-000000000214"));
+    }
+
+    @Test
+    @DisplayName("uses relative links when base URL is null")
+    void usesRelativeLinksWhenBaseUrlIsNull() {
+        JavaMailSender javaMailSender = mock(JavaMailSender.class);
+        SmtpPollEmailSender sender = new SmtpPollEmailSender(
+                javaMailSender,
+                "woodle@funknstein.de",
+                "[Woodle]",
+                null
+        );
+
+        boolean queued = sender.sendPollCreated(new PollCreatedEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000215"),
+                "Secret115ABC",
+                "Eve",
+                "eve@example.com",
+                "Sprint planning"
+        ));
+
+        assertTrue(queued);
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(javaMailSender).send(messageCaptor.capture());
+        String body = messageCaptor.getValue().getText();
+        assertTrue(body.contains("/poll/00000000-0000-0000-0000-000000000215"));
+        assertFalse(body.contains("https://"));
+    }
 }
