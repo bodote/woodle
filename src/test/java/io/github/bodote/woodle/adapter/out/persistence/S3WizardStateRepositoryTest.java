@@ -1,6 +1,7 @@
 package io.github.bodote.woodle.adapter.out.persistence;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.bodote.woodle.adapter.in.web.WizardState;
 import io.github.bodote.woodle.domain.model.EventType;
@@ -23,6 +24,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -232,5 +234,63 @@ class S3WizardStateRepositoryTest {
                 .orElseThrow();
         assertEquals(List.of(), loaded.dates());
         assertEquals(List.of(), loaded.startTimes());
+    }
+
+    @Test
+    @DisplayName("saves intraday draft with grouped days and times structure")
+    void savesIntradayDraftWithGroupedDaysAndTimesStructure() throws Exception {
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3WizardStateRepository repository = new S3WizardStateRepository(s3Client, objectMapper, "woodle");
+
+        WizardState state = new WizardState();
+        state.setEventType(EventType.INTRADAY);
+        state.setDates(List.of(
+                LocalDate.of(2026, 2, 1),
+                LocalDate.of(2026, 2, 1),
+                LocalDate.of(2026, 2, 2)
+        ));
+        state.setStartTimes(List.of(
+                LocalTime.of(19, 21),
+                LocalTime.of(20, 21),
+                LocalTime.of(19, 21)
+        ));
+
+        repository.save(UUID.fromString("00000000-0000-0000-0000-000000000308"), state);
+
+        ArgumentCaptor<RequestBody> bodyCaptor = ArgumentCaptor.forClass(RequestBody.class);
+        verify(s3Client).putObject(any(PutObjectRequest.class), bodyCaptor.capture());
+        String json = new String(bodyCaptor.getValue().contentStreamProvider().newStream().readAllBytes(), StandardCharsets.UTF_8);
+        JsonNode root = objectMapper.readTree(json);
+
+        JsonNode days = root.get("days");
+        assertEquals(2, days.size());
+        assertEquals(null, root.get("dates"));
+        assertEquals(null, root.get("startTimes"));
+        assertEquals("2026-02-01", asIsoDate(days.get(0).get("day")));
+        assertEquals("19:21:00", asIsoTime(days.get(0).get("times").get(0)));
+        assertEquals("20:21:00", asIsoTime(days.get(0).get("times").get(1)));
+        assertEquals("2026-02-02", asIsoDate(days.get(1).get("day")));
+        assertEquals("19:21:00", asIsoTime(days.get(1).get("times").get(0)));
+    }
+
+    private String asIsoDate(JsonNode node) {
+        if (node.isTextual()) {
+            return node.asText();
+        }
+        return String.format("%04d-%02d-%02d", node.get(0).asInt(), node.get(1).asInt(), node.get(2).asInt());
+    }
+
+    private String asIsoTime(JsonNode node) {
+        if (node.isTextual()) {
+            return node.asText();
+        }
+        int hour = node.get(0).asInt();
+        int minute = node.get(1).asInt();
+        int second = node.size() > 2 ? node.get(2).asInt() : 0;
+        return String.format("%02d:%02d:%02d", hour, minute, second);
     }
 }

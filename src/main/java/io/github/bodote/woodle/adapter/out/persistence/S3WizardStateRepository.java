@@ -94,6 +94,7 @@ public class S3WizardStateRepository implements WizardStateRepository {
         return "drafts/" + draftId + ".json";
     }
 
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
     private record WizardStateDocument(
             String authorName,
             String authorEmail,
@@ -103,6 +104,7 @@ public class S3WizardStateRepository implements WizardStateRepository {
             Integer durationMinutes,
             java.util.List<java.time.LocalDate> dates,
             java.util.List<java.time.LocalTime> startTimes,
+            java.util.List<WizardDayDocument> days,
             java.time.LocalDate expiresAtOverride
     ) {
         static WizardStateDocument from(WizardState state) {
@@ -113,8 +115,9 @@ public class S3WizardStateRepository implements WizardStateRepository {
                     state.description(),
                     state.eventType(),
                     state.durationMinutes(),
-                    state.dates(),
-                    state.startTimes(),
+                    null,
+                    null,
+                    toDayDocuments(state),
                     state.expiresAtOverride()
             );
         }
@@ -127,10 +130,78 @@ public class S3WizardStateRepository implements WizardStateRepository {
             state.setDescription(description);
             state.setEventType(eventType);
             state.setDurationMinutes(durationMinutes);
-            state.setDates(dates == null ? java.util.List.of() : dates);
-            state.setStartTimes(startTimes == null ? java.util.List.of() : startTimes);
+            if (days != null && !days.isEmpty()) {
+                LegacySelection legacySelection = toLegacySelection(days, eventType);
+                state.setDates(legacySelection.dates());
+                state.setStartTimes(legacySelection.startTimes());
+            } else {
+                state.setDates(dates == null ? java.util.List.of() : dates);
+                state.setStartTimes(startTimes == null ? java.util.List.of() : startTimes);
+            }
             state.setExpiresAtOverride(expiresAtOverride);
             return state;
         }
+
+        private static java.util.List<WizardDayDocument> toDayDocuments(WizardState state) {
+            java.util.List<WizardDayDocument> values = new java.util.ArrayList<>();
+            if (state.eventType() == EventType.INTRADAY) {
+                java.time.LocalDate previousDate = null;
+                java.util.List<java.time.LocalTime> currentTimes = new java.util.ArrayList<>();
+                int startTimeIndex = 0;
+                for (java.time.LocalDate date : state.dates()) {
+                    if (previousDate == null || !previousDate.equals(date)) {
+                        if (previousDate != null) {
+                            values.add(new WizardDayDocument(previousDate, currentTimes));
+                        }
+                        previousDate = date;
+                        currentTimes = new java.util.ArrayList<>();
+                    }
+                    if (startTimeIndex < state.startTimes().size()) {
+                        currentTimes.add(state.startTimes().get(startTimeIndex));
+                        startTimeIndex++;
+                    }
+                }
+                if (previousDate != null) {
+                    values.add(new WizardDayDocument(previousDate, currentTimes));
+                }
+                return values;
+            }
+            for (java.time.LocalDate date : state.dates()) {
+                values.add(new WizardDayDocument(date, java.util.List.of()));
+            }
+            return values;
+        }
+
+        private static LegacySelection toLegacySelection(java.util.List<WizardDayDocument> days, EventType eventType) {
+            java.util.List<java.time.LocalDate> selectionDates = new java.util.ArrayList<>();
+            java.util.List<java.time.LocalTime> selectionStartTimes = new java.util.ArrayList<>();
+            for (WizardDayDocument day : days) {
+                if (day.day() == null) {
+                    continue;
+                }
+                java.util.List<java.time.LocalTime> times = day.times() == null ? java.util.List.of() : day.times();
+                if (eventType == EventType.INTRADAY && !times.isEmpty()) {
+                    for (java.time.LocalTime time : times) {
+                        selectionDates.add(day.day());
+                        selectionStartTimes.add(time);
+                    }
+                } else {
+                    selectionDates.add(day.day());
+                }
+            }
+            return new LegacySelection(selectionDates, selectionStartTimes);
+        }
+    }
+
+    private record WizardDayDocument(
+            java.time.LocalDate day,
+            java.util.List<java.time.LocalTime> times
+    ) {
+    }
+
+    private record LegacySelection(
+            java.util.List<java.time.LocalDate> dates,
+            java.util.List<java.time.LocalTime> startTimes
+    ) {
     }
 }

@@ -85,6 +85,56 @@ public class WizardState {
         this.startTimes = new ArrayList<>(startTimes);
     }
 
+    public List<DayOption> dayOptions() {
+        List<DayOption> values = new ArrayList<>();
+        if (eventType != EventType.INTRADAY) {
+            for (LocalDate date : dates) {
+                values.add(new DayOption(date, List.of()));
+            }
+            return values;
+        }
+        LocalDate previousDate = null;
+        List<LocalTime> currentTimes = new ArrayList<>();
+        int startTimeIndex = 0;
+        for (LocalDate date : dates) {
+            if (previousDate == null || !previousDate.equals(date)) {
+                if (previousDate != null) {
+                    values.add(new DayOption(previousDate, currentTimes));
+                }
+                previousDate = date;
+                currentTimes = new ArrayList<>();
+            }
+            if (startTimeIndex < startTimes.size()) {
+                currentTimes.add(startTimes.get(startTimeIndex));
+                startTimeIndex++;
+            }
+        }
+        if (previousDate != null) {
+            values.add(new DayOption(previousDate, currentTimes));
+        }
+        return values;
+    }
+
+    public void setDayOptions(List<DayOption> dayOptions) {
+        List<LocalDate> flattenedDates = new ArrayList<>();
+        List<LocalTime> flattenedStartTimes = new ArrayList<>();
+        for (DayOption dayOption : dayOptions) {
+            if (dayOption.day() == null) {
+                continue;
+            }
+            if (eventType == EventType.INTRADAY && !dayOption.times().isEmpty()) {
+                for (LocalTime time : dayOption.times()) {
+                    flattenedDates.add(dayOption.day());
+                    flattenedStartTimes.add(time);
+                }
+                continue;
+            }
+            flattenedDates.add(dayOption.day());
+        }
+        this.dates = flattenedDates;
+        this.startTimes = flattenedStartTimes;
+    }
+
     public LocalDate expiresAtOverride() {
         return expiresAtOverride;
     }
@@ -105,5 +155,11 @@ public class WizardState {
         copy.setStartTimes(source.startTimes());
         copy.setExpiresAtOverride(source.expiresAtOverride());
         return copy;
+    }
+
+    public record DayOption(LocalDate day, List<LocalTime> times) {
+        public DayOption {
+            times = List.copyOf(times);
+        }
     }
 }

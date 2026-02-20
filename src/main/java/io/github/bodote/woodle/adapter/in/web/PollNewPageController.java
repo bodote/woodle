@@ -414,6 +414,10 @@ public class PollNewPageController {
     }
 
     private List<String> dateValuesFromState(WizardState state, int count) {
+        List<LocalDate> dayDates = state.dates();
+        if (state.eventType() == io.github.bodote.woodle.domain.model.EventType.INTRADAY) {
+            dayDates = intradayDayDatesFromState(state);
+        }
         List<String> values = new ArrayList<>();
         if (state.eventType() == io.github.bodote.woodle.domain.model.EventType.INTRADAY) {
             LocalDate previousDate = null;
@@ -433,8 +437,8 @@ public class PollNewPageController {
             return values;
         }
         for (int i = 0; i < count; i++) {
-            if (i < state.dates().size()) {
-                values.add(state.dates().get(i).toString());
+            if (i < dayDates.size()) {
+                values.add(dayDates.get(i).toString());
             } else {
                 values.add("");
             }
@@ -462,17 +466,58 @@ public class PollNewPageController {
     }
 
     private List<List<String>> startTimeValuesByDayFromState(WizardState state, List<Integer> timeCountByDay) {
+        List<List<LocalTime>> startTimesByDay = intradayStartTimesByDayFromState(state);
         List<List<String>> values = new ArrayList<>();
-        int startTimeIndex = 0;
         for (int day = 0; day < timeCountByDay.size(); day++) {
             int timeCount = timeCountByDay.get(day);
             List<String> dayValues = new ArrayList<>();
+            List<LocalTime> stateDayValues = day < startTimesByDay.size() ? startTimesByDay.get(day) : List.of();
             for (int time = 0; time < timeCount; time++) {
-                if (startTimeIndex < state.startTimes().size() && state.startTimes().get(startTimeIndex) != null) {
-                    dayValues.add(state.startTimes().get(startTimeIndex).toString());
+                if (time < stateDayValues.size() && stateDayValues.get(time) != null) {
+                    dayValues.add(stateDayValues.get(time).toString());
                 } else {
                     dayValues.add("");
                 }
+            }
+            values.add(dayValues);
+        }
+        return values;
+    }
+
+    private List<LocalDate> intradayDayDatesFromState(WizardState state) {
+        List<LocalDate> dayDates = new ArrayList<>();
+        LocalDate previous = null;
+        for (LocalDate date : state.dates()) {
+            if (previous == null || !previous.equals(date)) {
+                dayDates.add(date);
+                previous = date;
+            }
+        }
+        return dayDates;
+    }
+
+    private List<List<LocalTime>> intradayStartTimesByDayFromState(WizardState state) {
+        List<Integer> entriesPerDay = new ArrayList<>();
+        LocalDate previous = null;
+        for (LocalDate date : state.dates()) {
+            if (previous == null || !previous.equals(date)) {
+                entriesPerDay.add(1);
+                previous = date;
+                continue;
+            }
+            int lastIndex = entriesPerDay.size() - 1;
+            entriesPerDay.set(lastIndex, entriesPerDay.get(lastIndex) + 1);
+        }
+
+        List<List<LocalTime>> values = new ArrayList<>();
+        int startTimeIndex = 0;
+        for (int dayCount : entriesPerDay) {
+            List<LocalTime> dayValues = new ArrayList<>();
+            for (int i = 0; i < dayCount; i++) {
+                if (startTimeIndex >= state.startTimes().size()) {
+                    break;
+                }
+                dayValues.add(state.startTimes().get(startTimeIndex));
                 startTimeIndex++;
             }
             values.add(dayValues);
