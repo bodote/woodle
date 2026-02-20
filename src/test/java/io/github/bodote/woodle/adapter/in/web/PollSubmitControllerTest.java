@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -241,5 +243,189 @@ class PollSubmitControllerTest {
                 .andExpect(header().string("Location", "/poll/new"));
 
         verify(createPollUseCase, never()).create(any(CreatePollCommand.class));
+    }
+
+    @Test
+    @DisplayName("keeps existing session values when fallback payload is blank")
+    void keepsExistingSessionValuesWhenFallbackPayloadIsBlank() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000006");
+        String adminSecret = "KeepSessionValues";
+        MockHttpSession session = new MockHttpSession();
+        WizardState state = TestFixtures.wizardStateWithDates(
+                EventType.INTRADAY,
+                List.of(LocalDate.of(2026, 4, 1))
+        );
+        state.setAuthorName("Existing Name");
+        state.setAuthorEmail("existing@example.com");
+        state.setTitle("Existing Title");
+        state.setDurationMinutes(60);
+        state.setStartTimes(List.of(LocalTime.of(9, 15)));
+        session.setAttribute(WizardState.SESSION_KEY, state);
+
+        when(createPollUseCase.create(any(CreatePollCommand.class)))
+                .thenReturn(new CreatePollResult(pollId, adminSecret, true, false));
+
+        mockMvc.perform(post("/poll/submit")
+                        .session(session)
+                        .param("authorName", " ")
+                        .param("authorEmail", " ")
+                        .param("pollTitle", " ")
+                        .param("durationMinutes", "15")
+                        .param("startTime1", "18:00"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+
+        org.mockito.ArgumentCaptor<CreatePollCommand> captor =
+                org.mockito.ArgumentCaptor.forClass(CreatePollCommand.class);
+        verify(createPollUseCase).create(captor.capture());
+        CreatePollCommand command = captor.getValue();
+        assertEquals("Existing Name", command.authorName());
+        assertEquals("existing@example.com", command.authorEmail());
+        assertEquals("Existing Title", command.title());
+        assertEquals(60, command.durationMinutes());
+        assertIterableEquals(List.of(LocalTime.of(9, 15)), command.startTimes());
+    }
+
+    @Test
+    @DisplayName("ignores blank date and start time values in fallback parsing")
+    void ignoresBlankDateAndStartTimeValuesInFallbackParsing() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000007");
+        String adminSecret = "IgnoreBlankInputs";
+        when(createPollUseCase.create(any(CreatePollCommand.class)))
+                .thenReturn(new CreatePollResult(pollId, adminSecret, true, false));
+
+        mockMvc.perform(post("/poll/submit")
+                        .param("authorName", "Fallback Author")
+                        .param("authorEmail", "fallback@example.com")
+                        .param("pollTitle", "Fallback title")
+                        .param("eventType", "INTRADAY")
+                        .param("dateOption1", "")
+                        .param("dateOption2", "2026-05-02")
+                        .param("startTime1", "")
+                        .param("startTime2", "14:30"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+
+        org.mockito.ArgumentCaptor<CreatePollCommand> captor =
+                org.mockito.ArgumentCaptor.forClass(CreatePollCommand.class);
+        verify(createPollUseCase, times(1)).create(captor.capture());
+        CreatePollCommand command = captor.getValue();
+        assertIterableEquals(List.of(LocalDate.of(2026, 5, 2)), command.dates());
+        assertIterableEquals(List.of(LocalTime.of(14, 30)), command.startTimes());
+    }
+
+    @Test
+    @DisplayName("redirects to first step when author name is missing")
+    void redirectsWhenAuthorNameMissing() throws Exception {
+        mockMvc.perform(post("/poll/submit")
+                        .param("authorEmail", "fallback@example.com")
+                        .param("pollTitle", "Fallback title")
+                        .param("eventType", "ALL_DAY")
+                        .param("dateOption1", "2026-03-01"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/new"));
+
+        verify(createPollUseCase, never()).create(any(CreatePollCommand.class));
+    }
+
+    @Test
+    @DisplayName("redirects to first step when author email is missing")
+    void redirectsWhenAuthorEmailMissing() throws Exception {
+        mockMvc.perform(post("/poll/submit")
+                        .param("authorName", "Fallback Author")
+                        .param("pollTitle", "Fallback title")
+                        .param("eventType", "ALL_DAY")
+                        .param("dateOption1", "2026-03-01"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/new"));
+
+        verify(createPollUseCase, never()).create(any(CreatePollCommand.class));
+    }
+
+    @Test
+    @DisplayName("redirects to first step when author name is blank")
+    void redirectsWhenAuthorNameBlank() throws Exception {
+        mockMvc.perform(post("/poll/submit")
+                        .param("authorName", " ")
+                        .param("authorEmail", "fallback@example.com")
+                        .param("pollTitle", "Fallback title")
+                        .param("eventType", "ALL_DAY")
+                        .param("dateOption1", "2026-03-01"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/new"));
+
+        verify(createPollUseCase, never()).create(any(CreatePollCommand.class));
+    }
+
+    @Test
+    @DisplayName("redirects to first step when author email is blank")
+    void redirectsWhenAuthorEmailBlank() throws Exception {
+        mockMvc.perform(post("/poll/submit")
+                        .param("authorName", "Fallback Author")
+                        .param("authorEmail", " ")
+                        .param("pollTitle", "Fallback title")
+                        .param("eventType", "ALL_DAY")
+                        .param("dateOption1", "2026-03-01"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/new"));
+
+        verify(createPollUseCase, never()).create(any(CreatePollCommand.class));
+    }
+
+    @Test
+    @DisplayName("redirects to first step when poll title is missing")
+    void redirectsWhenPollTitleMissing() throws Exception {
+        mockMvc.perform(post("/poll/submit")
+                        .param("authorName", "Fallback Author")
+                        .param("authorEmail", "fallback@example.com")
+                        .param("eventType", "ALL_DAY")
+                        .param("dateOption1", "2026-03-01"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/new"));
+
+        verify(createPollUseCase, never()).create(any(CreatePollCommand.class));
+    }
+
+    @Test
+    @DisplayName("redirects to first step when poll title is blank")
+    void redirectsWhenPollTitleBlank() throws Exception {
+        mockMvc.perform(post("/poll/submit")
+                        .param("authorName", "Fallback Author")
+                        .param("authorEmail", "fallback@example.com")
+                        .param("pollTitle", " ")
+                        .param("eventType", "ALL_DAY")
+                        .param("dateOption1", "2026-03-01"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/new"));
+
+        verify(createPollUseCase, never()).create(any(CreatePollCommand.class));
+    }
+
+    @Test
+    @DisplayName("handles blank parameters in date and time extraction")
+    void handlesParametersWithNoValuesInDateAndTimeExtraction() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000008");
+        String adminSecret = "EmptyParameterValues";
+        when(createPollUseCase.create(any(CreatePollCommand.class)))
+                .thenReturn(new CreatePollResult(pollId, adminSecret, true, false));
+
+        mockMvc.perform(post("/poll/submit")
+                        .param("authorName", "Fallback Author")
+                        .param("authorEmail", "fallback@example.com")
+                        .param("pollTitle", "Fallback title")
+                        .param("eventType", "INTRADAY")
+                        .param("dateOption1", "")
+                        .param("dateOption2", "2026-06-15")
+                        .param("startTime1", "")
+                        .param("startTime2", "10:15"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+
+        org.mockito.ArgumentCaptor<CreatePollCommand> captor =
+                org.mockito.ArgumentCaptor.forClass(CreatePollCommand.class);
+        verify(createPollUseCase, times(1)).create(captor.capture());
+        CreatePollCommand command = captor.getValue();
+        assertIterableEquals(List.of(LocalDate.of(2026, 6, 15)), command.dates());
+        assertIterableEquals(List.of(LocalTime.of(10, 15)), command.startTimes());
     }
 }

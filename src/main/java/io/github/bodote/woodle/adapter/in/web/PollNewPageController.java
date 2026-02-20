@@ -21,9 +21,12 @@ import java.util.UUID;
 public class PollNewPageController {
 
     private static final String STEP2_DATE_COUNT = "step2DateCount";
+    private static final String STEP2_TIME_COUNT_BY_DAY = "step2TimeCountByDay";
     private static final int STEP2_MIN_DATES = 1;
     private static final int STEP2_DEFAULT_DATES = 2;
     private static final int STEP2_MAX_DATES = 10;
+    private static final int STEP2_MIN_TIMES_PER_DAY = 1;
+    private static final int STEP2_MAX_TIMES_PER_DAY = 10;
     private static final String EMAIL_ERROR_MESSAGE = "Bitte eine gültige E-Mail-Adresse eingeben";
     private final WizardStateRepository wizardStateRepository;
 
@@ -46,11 +49,20 @@ public class PollNewPageController {
 
     @GetMapping("/poll/step-2")
     public String renderStep2(Model model, HttpSession session) {
-        int count = getOrInitDateCount(session);
-        model.addAttribute("dateCount", count);
         WizardState state = getOrInitWizard(session);
+        int count = Math.max(getOrInitDateCount(session), state.dates().size());
+        List<Integer> timeCountByDay;
+        if (state.eventType() == io.github.bodote.woodle.domain.model.EventType.INTRADAY && !state.dates().isEmpty()) {
+            count = intradayDayCountFromState(state);
+            timeCountByDay = intradayTimeCountByDayFromState(state, count);
+            session.setAttribute(STEP2_TIME_COUNT_BY_DAY, timeCountByDay);
+        } else {
+            timeCountByDay = getOrInitTimeCountByDay(session, count);
+        }
+        session.setAttribute(STEP2_DATE_COUNT, count);
+        model.addAttribute("dateCount", count);
         applyStep2Model(model, state);
-        applyOptionValuesModel(model, state, Map.of(), count);
+        applyOptionValuesModel(model, state, Map.of(), count, timeCountByDay);
         return "poll/new-step2";
     }
 
@@ -81,7 +93,9 @@ public class PollNewPageController {
         session.setAttribute(WizardState.SESSION_KEY, state);
         model.addAttribute("dateCount", getOrInitDateCount(session));
         applyStep2Model(model, state);
-        applyOptionValuesModel(model, state, Map.of(), getOrInitDateCount(session));
+        int dateCount = getOrInitDateCount(session);
+        List<Integer> timeCountByDay = getOrInitTimeCountByDay(session, dateCount);
+        applyOptionValuesModel(model, state, Map.of(), dateCount, timeCountByDay);
         model.addAttribute("draftId", draftId);
         return "poll/new-step2";
     }
@@ -93,7 +107,8 @@ public class PollNewPageController {
         model.addAttribute("dateCount", count);
         WizardState state = getOrInitWizard(session);
         model.addAttribute("eventType", state.eventType());
-        applyOptionValuesModel(model, state, request.getParameterMap(), count);
+        List<Integer> timeCountByDay = getOrInitTimeCountByDay(session, count);
+        applyOptionValuesModel(model, state, request.getParameterMap(), count, timeCountByDay);
         return resolveOptionsFragment(state);
     }
 
@@ -104,7 +119,77 @@ public class PollNewPageController {
         model.addAttribute("dateCount", count);
         WizardState state = getOrInitWizard(session);
         model.addAttribute("eventType", state.eventType());
-        applyOptionValuesModel(model, state, request.getParameterMap(), count);
+        List<Integer> timeCountByDay = getOrInitTimeCountByDay(session, count);
+        applyOptionValuesModel(model, state, request.getParameterMap(), count, timeCountByDay);
+        return resolveOptionsFragment(state);
+    }
+
+    @GetMapping("/poll/step-2/options/time/add")
+    public String addIntradayTimeOption(@RequestParam("day") int day,
+                                        Model model,
+                                        HttpSession session,
+                                        HttpServletRequest request) {
+        WizardState state = getOrInitWizard(session);
+        int count = getOrInitDateCount(session);
+        List<Integer> timeCountByDay = getOrInitTimeCountByDay(session, count);
+        if (day >= 1 && day <= count) {
+            int current = timeCountByDay.get(day - 1);
+            timeCountByDay.set(day - 1, Math.min(current + 1, STEP2_MAX_TIMES_PER_DAY));
+            session.setAttribute(STEP2_TIME_COUNT_BY_DAY, timeCountByDay);
+        }
+        model.addAttribute("dateCount", count);
+        model.addAttribute("eventType", state.eventType());
+        applyOptionValuesModel(model, state, request.getParameterMap(), count, timeCountByDay);
+        return resolveOptionsFragment(state);
+    }
+
+    @GetMapping("/poll/step-2/options/time/remove")
+    public String removeIntradayTimeOption(@RequestParam("day") int day,
+                                           Model model,
+                                           HttpSession session,
+                                           HttpServletRequest request) {
+        WizardState state = getOrInitWizard(session);
+        int count = getOrInitDateCount(session);
+        List<Integer> timeCountByDay = getOrInitTimeCountByDay(session, count);
+        if (day >= 1 && day <= count) {
+            int current = timeCountByDay.get(day - 1);
+            timeCountByDay.set(day - 1, Math.max(current - 1, STEP2_MIN_TIMES_PER_DAY));
+            session.setAttribute(STEP2_TIME_COUNT_BY_DAY, timeCountByDay);
+        }
+        model.addAttribute("dateCount", count);
+        model.addAttribute("eventType", state.eventType());
+        applyOptionValuesModel(model, state, request.getParameterMap(), count, timeCountByDay);
+        return resolveOptionsFragment(state);
+    }
+
+    @GetMapping("/poll/step-2/options/time/copy")
+    public String copyIntradayTimesToFollowingDays(Model model, HttpSession session, HttpServletRequest request) {
+        WizardState state = getOrInitWizard(session);
+        int count = getOrInitDateCount(session);
+        List<Integer> timeCountByDay = getOrInitTimeCountByDay(session, count);
+        if (!timeCountByDay.isEmpty()) {
+            int firstDayCount = timeCountByDay.getFirst();
+            for (int day = 2; day <= count; day++) {
+                timeCountByDay.set(day - 1, firstDayCount);
+            }
+            session.setAttribute(STEP2_TIME_COUNT_BY_DAY, timeCountByDay);
+        }
+        model.addAttribute("dateCount", count);
+        model.addAttribute("eventType", state.eventType());
+        applyOptionValuesModel(model, state, request.getParameterMap(), count, timeCountByDay);
+
+        List<List<String>> copiedStartTimesByDay = resolveStartTimeValuesByDay(
+                request.getParameterMap(),
+                state,
+                timeCountByDay
+        );
+        if (!copiedStartTimesByDay.isEmpty()) {
+            List<String> firstDayValues = new ArrayList<>(copiedStartTimesByDay.getFirst());
+            for (int day = 2; day <= copiedStartTimesByDay.size(); day++) {
+                copiedStartTimesByDay.set(day - 1, new ArrayList<>(firstDayValues));
+            }
+            model.addAttribute("startTimeValuesByDay", copiedStartTimesByDay);
+        }
         return resolveOptionsFragment(state);
     }
 
@@ -119,7 +204,8 @@ public class PollNewPageController {
         model.addAttribute("eventType", eventType);
         int count = getOrInitDateCount(session);
         model.addAttribute("dateCount", count);
-        applyOptionValuesModel(model, state, request.getParameterMap(), count);
+        List<Integer> timeCountByDay = getOrInitTimeCountByDay(session, count);
+        applyOptionValuesModel(model, state, request.getParameterMap(), count, timeCountByDay);
         return "poll/step2-event-options :: eventOptions";
     }
 
@@ -156,8 +242,14 @@ public class PollNewPageController {
         applyStep1Fallback(state, authorName, authorEmail, pollTitle, description);
         state.setEventType(eventType);
         state.setDurationMinutes(durationMinutes);
-        state.setDates(extractDates(request.getParameterMap()));
-        state.setStartTimes(extractStartTimes(request.getParameterMap(), eventType));
+        IntradaySelection selection = extractIntradaySelection(request.getParameterMap());
+        if (eventType == io.github.bodote.woodle.domain.model.EventType.INTRADAY) {
+            state.setDates(selection.optionDates());
+            state.setStartTimes(selection.optionStartTimes());
+        } else {
+            state.setDates(extractDates(request.getParameterMap()));
+            state.setStartTimes(List.of());
+        }
         session.setAttribute(WizardState.SESSION_KEY, state);
         if (draftId != null) {
             try {
@@ -241,30 +333,6 @@ public class PollNewPageController {
         return dates;
     }
 
-    private List<LocalTime> extractStartTimes(Map<String, String[]> parameterMap,
-                                              io.github.bodote.woodle.domain.model.EventType eventType) {
-        if (eventType != io.github.bodote.woodle.domain.model.EventType.INTRADAY) {
-            return List.of();
-        }
-        List<Map.Entry<String, String[]>> entries = new ArrayList<>(parameterMap.entrySet());
-        entries.sort(Comparator.comparing(Map.Entry::getKey));
-        List<LocalTime> times = new ArrayList<>();
-        for (Map.Entry<String, String[]> entry : entries) {
-            if (!entry.getKey().startsWith("startTime")) {
-                continue;
-            }
-            if (entry.getValue().length == 0) {
-                continue;
-            }
-            String value = entry.getValue()[0];
-            if (value == null || value.isBlank()) {
-                continue;
-            }
-            times.add(LocalTime.parse(value));
-        }
-        return times;
-    }
-
     private List<String> buildIntradaySummaries(WizardState state) {
         List<String> summaries = new ArrayList<>();
         List<LocalDate> dates = state.dates();
@@ -301,7 +369,11 @@ public class PollNewPageController {
         model.addAttribute("durationMinutes", state.durationMinutes());
     }
 
-    private void applyOptionValuesModel(Model model, WizardState state, Map<String, String[]> parameterMap, int count) {
+    private void applyOptionValuesModel(Model model,
+                                        WizardState state,
+                                        Map<String, String[]> parameterMap,
+                                        int count,
+                                        List<Integer> timeCountByDay) {
         List<String> dateValues = extractInputValues(parameterMap, "dateOption", count);
         if (allBlank(dateValues)) {
             dateValues = dateValuesFromState(state, count);
@@ -312,12 +384,20 @@ public class PollNewPageController {
         model.addAttribute("durationMinutes", durationMinutes != null ? durationMinutes : state.durationMinutes());
 
         if (state.eventType() == io.github.bodote.woodle.domain.model.EventType.INTRADAY) {
-            List<String> startTimeValues = extractInputValues(parameterMap, "startTime", count);
-            if (allBlank(startTimeValues)) {
-                startTimeValues = startTimeValuesFromState(state, count);
-            }
-            model.addAttribute("startTimeValues", startTimeValues);
+            List<List<String>> startTimeValuesByDay = resolveStartTimeValuesByDay(parameterMap, state, timeCountByDay);
+            model.addAttribute("timeCountByDay", timeCountByDay);
+            model.addAttribute("startTimeValuesByDay", startTimeValuesByDay);
         }
+    }
+
+    private List<List<String>> resolveStartTimeValuesByDay(Map<String, String[]> parameterMap,
+                                                            WizardState state,
+                                                            List<Integer> timeCountByDay) {
+        List<List<String>> startTimeValuesByDay = extractStartTimeInputValuesByDay(parameterMap, timeCountByDay);
+        if (allBlankByDay(startTimeValuesByDay)) {
+            startTimeValuesByDay = startTimeValuesByDayFromState(state, timeCountByDay);
+        }
+        return startTimeValuesByDay;
     }
 
     private List<String> extractInputValues(Map<String, String[]> parameterMap, String prefix, int count) {
@@ -335,6 +415,23 @@ public class PollNewPageController {
 
     private List<String> dateValuesFromState(WizardState state, int count) {
         List<String> values = new ArrayList<>();
+        if (state.eventType() == io.github.bodote.woodle.domain.model.EventType.INTRADAY) {
+            LocalDate previousDate = null;
+            for (LocalDate date : state.dates()) {
+                if (date.equals(previousDate)) {
+                    continue;
+                }
+                values.add(date.toString());
+                previousDate = date;
+                if (values.size() == count) {
+                    break;
+                }
+            }
+            while (values.size() < count) {
+                values.add("");
+            }
+            return values;
+        }
         for (int i = 0; i < count; i++) {
             if (i < state.dates().size()) {
                 values.add(state.dates().get(i).toString());
@@ -345,14 +442,40 @@ public class PollNewPageController {
         return values;
     }
 
-    private List<String> startTimeValuesFromState(WizardState state, int count) {
-        List<String> values = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            if (i < state.startTimes().size()) {
-                values.add(state.startTimes().get(i).toString());
-            } else {
-                values.add("");
+    private List<List<String>> extractStartTimeInputValuesByDay(Map<String, String[]> parameterMap,
+                                                                 List<Integer> timeCountByDay) {
+        List<List<String>> values = new ArrayList<>();
+        for (int day = 1; day <= timeCountByDay.size(); day++) {
+            int timeCount = timeCountByDay.get(day - 1);
+            List<String> dayValues = new ArrayList<>();
+            for (int time = 1; time <= timeCount; time++) {
+                String[] raw = parameterMap.get("startTime" + day + "_" + time);
+                if (raw == null || raw.length == 0 || raw[0] == null) {
+                    dayValues.add("");
+                    continue;
+                }
+                dayValues.add(raw[0]);
             }
+            values.add(dayValues);
+        }
+        return values;
+    }
+
+    private List<List<String>> startTimeValuesByDayFromState(WizardState state, List<Integer> timeCountByDay) {
+        List<List<String>> values = new ArrayList<>();
+        int startTimeIndex = 0;
+        for (int day = 0; day < timeCountByDay.size(); day++) {
+            int timeCount = timeCountByDay.get(day);
+            List<String> dayValues = new ArrayList<>();
+            for (int time = 0; time < timeCount; time++) {
+                if (startTimeIndex < state.startTimes().size() && state.startTimes().get(startTimeIndex) != null) {
+                    dayValues.add(state.startTimes().get(startTimeIndex).toString());
+                } else {
+                    dayValues.add("");
+                }
+                startTimeIndex++;
+            }
+            values.add(dayValues);
         }
         return values;
     }
@@ -360,6 +483,15 @@ public class PollNewPageController {
     private boolean allBlank(List<String> values) {
         for (String value : values) {
             if (value != null && !value.isBlank()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean allBlankByDay(List<List<String>> valuesByDay) {
+        for (List<String> values : valuesByDay) {
+            if (!allBlank(values)) {
                 return false;
             }
         }
@@ -419,5 +551,137 @@ public class PollNewPageController {
         }
         session.setAttribute(STEP2_DATE_COUNT, STEP2_DEFAULT_DATES);
         return STEP2_DEFAULT_DATES;
+    }
+
+    private List<Integer> getOrInitTimeCountByDay(HttpSession session, int dateCount) {
+        List<Integer> timeCountByDay = new ArrayList<>();
+        Object value = session.getAttribute(STEP2_TIME_COUNT_BY_DAY);
+        if (value instanceof List<?> rawValues) {
+            for (Object rawValue : rawValues) {
+                if (rawValue instanceof Integer count) {
+                    timeCountByDay.add(Math.max(count, STEP2_MIN_TIMES_PER_DAY));
+                }
+            }
+        }
+        while (timeCountByDay.size() < dateCount) {
+            timeCountByDay.add(STEP2_MIN_TIMES_PER_DAY);
+        }
+        while (timeCountByDay.size() > dateCount) {
+            timeCountByDay.remove(timeCountByDay.size() - 1);
+        }
+        session.setAttribute(STEP2_TIME_COUNT_BY_DAY, timeCountByDay);
+        return timeCountByDay;
+    }
+
+    private IntradaySelection extractIntradaySelection(Map<String, String[]> parameterMap) {
+        List<Map.Entry<String, String[]>> entries = new ArrayList<>(parameterMap.entrySet());
+        entries.sort(Comparator.comparing(Map.Entry::getKey));
+
+        Map<Integer, LocalDate> datesByDay = new java.util.TreeMap<>();
+        Map<Integer, List<LocalTime>> timesByDay = new java.util.TreeMap<>();
+        for (Map.Entry<String, String[]> entry : entries) {
+            if (entry.getValue().length == 0) {
+                continue;
+            }
+            String key = entry.getKey();
+            String value = entry.getValue()[0];
+            if (value == null || value.isBlank()) {
+                continue;
+            }
+            if (key.startsWith("dateOption")) {
+                Integer day = parseIndex(key, "dateOption");
+                if (day != null) {
+                    datesByDay.put(day, LocalDate.parse(value));
+                }
+                continue;
+            }
+            if (!key.startsWith("startTime")) {
+                continue;
+            }
+            int separator = key.indexOf('_');
+            if (separator > 0) {
+                Integer day = parseIndex(key.substring(0, separator), "startTime");
+                if (day != null) {
+                    timesByDay.computeIfAbsent(day, ignored -> new ArrayList<>()).add(LocalTime.parse(value));
+                }
+                continue;
+            }
+            Integer day = parseIndex(key, "startTime");
+            if (day != null) {
+                timesByDay.computeIfAbsent(day, ignored -> new ArrayList<>()).add(LocalTime.parse(value));
+            }
+        }
+
+        List<LocalDate> optionDates = new ArrayList<>();
+        List<LocalTime> optionStartTimes = new ArrayList<>();
+        for (Map.Entry<Integer, LocalDate> dateEntry : datesByDay.entrySet()) {
+            List<LocalTime> dayTimes = timesByDay.getOrDefault(dateEntry.getKey(), List.of());
+            if (dayTimes.isEmpty()) {
+                optionDates.add(dateEntry.getValue());
+                continue;
+            }
+            for (LocalTime dayTime : dayTimes) {
+                optionDates.add(dateEntry.getValue());
+                optionStartTimes.add(dayTime);
+            }
+        }
+        return new IntradaySelection(optionDates, optionStartTimes);
+    }
+
+    private Integer parseIndex(String raw, String prefix) {
+        if (!raw.startsWith(prefix)) {
+            return null;
+        }
+        String suffix = raw.substring(prefix.length());
+        if (suffix.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(suffix);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private int intradayDayCountFromState(WizardState state) {
+        int dayCount = 0;
+        LocalDate previousDate = null;
+        for (LocalDate date : state.dates()) {
+            if (!date.equals(previousDate)) {
+                dayCount++;
+                previousDate = date;
+            }
+        }
+        return dayCount;
+    }
+
+    private List<Integer> intradayTimeCountByDayFromState(WizardState state, int dayCount) {
+        List<Integer> counts = new ArrayList<>();
+        LocalDate previousDate = null;
+        int currentCount = 0;
+        for (LocalDate date : state.dates()) {
+            if (date.equals(previousDate)) {
+                currentCount++;
+                continue;
+            }
+            if (currentCount > 0) {
+                counts.add(currentCount);
+            }
+            previousDate = date;
+            currentCount = 1;
+        }
+        if (currentCount > 0) {
+            counts.add(currentCount);
+        }
+        while (counts.size() < dayCount) {
+            counts.add(STEP2_MIN_TIMES_PER_DAY);
+        }
+        while (counts.size() > dayCount) {
+            counts.remove(counts.size() - 1);
+        }
+        return counts;
+    }
+
+    private record IntradaySelection(List<LocalDate> optionDates, List<LocalTime> optionStartTimes) {
     }
 }

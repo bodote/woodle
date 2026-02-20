@@ -36,6 +36,15 @@
             </tr>
             <tr>
                 <th scope="col"> </th>
+                <th th:each="group : ${dateGroups}"
+                    scope="colgroup"
+                    class="votes-table__date-group"
+                    th:colspan="${group.span}"
+                    th:text="${group.label}">Datum</th>
+                <th scope="col"> </th>
+            </tr>
+            <tr>
+                <th scope="col"> </th>
                 <th th:each="header : ${voteOptionHeaders}"
                     scope="col"
                     class="votes-table__date"

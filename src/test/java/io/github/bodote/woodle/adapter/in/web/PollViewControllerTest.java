@@ -321,7 +321,7 @@ class PollViewControllerTest {
 
         mockMvc.perform(get("/poll/" + pollId))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Di., 10.02. 09:00")))
+                .andExpect(content().string(containsString("09:00")))
                 .andExpect(content().string(containsString("Di., 10.02.")))
                 .andExpect(content().string(containsString("✓")));
     }

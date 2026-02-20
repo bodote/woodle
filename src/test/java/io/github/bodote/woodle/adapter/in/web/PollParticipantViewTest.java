@@ -16,6 +16,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -132,5 +133,43 @@ class PollParticipantViewTest {
                 .andExpect(content().string(containsString("value=\"Alice\"")))
                 .andExpect(content().string(containsString("name=\"vote_edit_" + option.optionId() + "\"")))
                 .andExpect(content().string(containsString("value=\"YES\"")));
+    }
+
+    @Test
+    @DisplayName("groups intraday time options by date in voting header")
+    void groupsIntradayTimeOptionsByDateInVotingHeader() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000212");
+        PollOption option1 = TestFixtures.option(
+                UUID.fromString("00000000-0000-0000-0000-000000000101"),
+                LocalDate.of(2026, 2, 20),
+                LocalTime.of(9, 0),
+                LocalTime.of(10, 0)
+        );
+        PollOption option2 = TestFixtures.option(
+                UUID.fromString("00000000-0000-0000-0000-000000000102"),
+                LocalDate.of(2026, 2, 20),
+                LocalTime.of(11, 30),
+                LocalTime.of(12, 30)
+        );
+        PollOption option3 = TestFixtures.option(
+                UUID.fromString("00000000-0000-0000-0000-000000000103"),
+                LocalDate.of(2026, 2, 21),
+                LocalTime.of(9, 0),
+                LocalTime.of(10, 0)
+        );
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(option1, option2, option3),
+                List.of()
+        );
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("votes-table__date-group")))
+                .andExpect(content().string(containsString("colspan=\"2\"")))
+                .andExpect(content().string(containsString("20.02.")))
+                .andExpect(content().string(containsString("09:00")))
+                .andExpect(content().string(containsString("11:30")));
     }
 }

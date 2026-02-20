@@ -23,7 +23,7 @@
                     hx-swap="outerHTML"
                     hx-indicator=".htmx-indicator"
                     th:text="${eventType == T(io.github.bodote.woodle.domain.model.EventType).INTRADAY
-                        ? 'Termin hinzufügen'
+                        ? 'Tag hinzufügen'
                         : 'Einen Tag hinzufügen'}">Einen Tag hinzufügen</button>
             <button type="button"
                     hx-get="/poll/step-2/options/remove"
@@ -31,8 +31,9 @@
                     hx-target="#date-options"
                     hx-swap="outerHTML"
                     hx-indicator=".htmx-indicator"
+                    th:disabled="${eventType == T(io.github.bodote.woodle.domain.model.EventType).INTRADAY and dateCount <= 1}"
                     th:text="${eventType == T(io.github.bodote.woodle.domain.model.EventType).INTRADAY
-                        ? 'Termin entfernen'
+                        ? 'Tag löschen'
                         : 'Einen Tag entfernen'}">Einen Tag entfernen</button>
             <span class="htmx-indicator" aria-live="polite">Lade…</span>
         </div>
