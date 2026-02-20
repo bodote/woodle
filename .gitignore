@@ -2,3 +2,4 @@ build/
 .gradle/
 .claude/
 .DS_Store
+bin/
