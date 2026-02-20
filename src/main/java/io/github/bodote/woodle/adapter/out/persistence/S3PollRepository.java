@@ -32,7 +32,7 @@ import software.amazon.awssdk.core.exception.SdkException;
 
 public class S3PollRepository implements PollRepository {
 
-    private static final String DEFAULT_SCHEMA_VERSION = "1";
+    private static final String DEFAULT_SCHEMA_VERSION = "2";
     private static final Logger LOGGER = LoggerFactory.getLogger(S3PollRepository.class);
 
     private final S3Client s3Client;

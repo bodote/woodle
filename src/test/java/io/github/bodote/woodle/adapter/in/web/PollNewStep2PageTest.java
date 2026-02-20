@@ -1,15 +1,21 @@
 package io.github.bodote.woodle.adapter.in.web;
 
 import org.htmlunit.WebClient;
+import org.htmlunit.WebRequest;
+import org.htmlunit.HttpMethod;
 import org.htmlunit.html.HtmlButton;
 import org.htmlunit.html.HtmlInput;
 import org.htmlunit.html.HtmlPage;
+import org.htmlunit.util.NameValuePair;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.htmlunit.MockMvcWebClientBuilder;
+
+import java.net.URL;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -240,6 +246,44 @@ class PollNewStep2PageTest {
             assertEquals("11:30", day2Time2.getValueAttribute());
             assertEquals("09:00", day3Time1.getValueAttribute());
             assertEquals("11:30", day3Time2.getValueAttribute());
+        }
+    }
+
+    @Test
+    @DisplayName("reopening step-2 preserves existing intraday dates and times per day")
+    void reopeningStep2PreservesExistingIntradayDatesAndTimesPerDay() throws Exception {
+        try (WebClient webClient = MockMvcWebClientBuilder.mockMvcSetup(mockMvc).build()) {
+            webClient.getPage(BASE_URL + "/poll/step-2/event-type?eventType=INTRADAY");
+            webClient.getPage(BASE_URL + "/poll/step-2/options/time/add?day=1");
+
+            WebRequest submitStep2 = new WebRequest(new URL(BASE_URL + "/poll/step-3"), HttpMethod.POST);
+            submitStep2.setRequestParameters(List.of(
+                    new NameValuePair("eventType", "INTRADAY"),
+                    new NameValuePair("dateOption1", "2026-02-08"),
+                    new NameValuePair("dateOption2", "2026-02-14"),
+                    new NameValuePair("startTime1_1", "10:50"),
+                    new NameValuePair("startTime1_2", "13:50"),
+                    new NameValuePair("startTime2_1", "10:50")
+            ));
+            webClient.getPage(submitStep2);
+
+            HtmlPage reopenedStep2 = webClient.getPage(BASE_URL + "/poll/step-2");
+            HtmlInput dateOption1 = reopenedStep2.getFirstByXPath("//input[@name='dateOption1']");
+            HtmlInput dateOption2 = reopenedStep2.getFirstByXPath("//input[@name='dateOption2']");
+            HtmlInput startTime1_1 = reopenedStep2.getFirstByXPath("//input[@name='startTime1_1']");
+            HtmlInput startTime1_2 = reopenedStep2.getFirstByXPath("//input[@name='startTime1_2']");
+            HtmlInput startTime2_1 = reopenedStep2.getFirstByXPath("//input[@name='startTime2_1']");
+
+            assertNotNull(dateOption1);
+            assertNotNull(dateOption2);
+            assertNotNull(startTime1_1);
+            assertNotNull(startTime1_2);
+            assertNotNull(startTime2_1);
+            assertEquals("2026-02-08", dateOption1.getValueAttribute());
+            assertEquals("2026-02-14", dateOption2.getValueAttribute());
+            assertEquals("10:50", startTime1_1.getValueAttribute());
+            assertEquals("13:50", startTime1_2.getValueAttribute());
+            assertEquals("10:50", startTime2_1.getValueAttribute());
         }
     }
 }
