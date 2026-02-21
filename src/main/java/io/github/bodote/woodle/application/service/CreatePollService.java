@@ -36,6 +36,7 @@ public class CreatePollService implements CreatePollUseCase {
 
     @Override
     public CreatePollResult create(CreatePollCommand command) {
+        validateCommand(command);
         UUID pollId = UUID.randomUUID();
         String adminSecret = generateAdminSecret();
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -71,6 +72,19 @@ public class CreatePollService implements CreatePollUseCase {
                 command.title()
         ));
         return new CreatePollResult(pollId, adminSecret, notificationQueued, false);
+    }
+
+    private void validateCommand(CreatePollCommand command) {
+        if (command.dates().isEmpty()) {
+            throw new IllegalArgumentException("At least one date option is required");
+        }
+        if (command.eventType() != io.github.bodote.woodle.domain.model.EventType.INTRADAY) {
+            return;
+        }
+        List<LocalTime> startTimes = command.startTimes();
+        if (startTimes.size() != command.dates().size() || startTimes.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new IllegalArgumentException("Start time is required for intraday polls");
+        }
     }
 
     private List<PollOption> buildOptions(CreatePollCommand command) {

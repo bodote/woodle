@@ -262,8 +262,9 @@ public class PollViewController {
         if (hasProxyHost && "http".equalsIgnoreCase(scheme)) {
             port = 80;
         }
-        if (hasText(forwardedPort)) {
-            port = Integer.parseInt(forwardedPort.trim());
+        Integer parsedForwardedPort = parsePort(forwardedPort);
+        if (parsedForwardedPort != null) {
+            port = parsedForwardedPort;
         }
 
         boolean defaultHttp = "http".equalsIgnoreCase(scheme) && port == 80;
@@ -316,6 +317,21 @@ public class PollViewController {
             return value;
         }
         return null;
+    }
+
+    private Integer parsePort(String value) {
+        if (!hasText(value)) {
+            return null;
+        }
+        try {
+            int parsed = Integer.parseInt(value.trim());
+            if (parsed < 1 || parsed > 65535) {
+                return null;
+            }
+            return parsed;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     record MonthGroup(String label, int startIndex, int span) {

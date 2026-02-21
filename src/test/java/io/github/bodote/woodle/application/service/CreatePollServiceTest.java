@@ -15,6 +15,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -85,8 +86,8 @@ class CreatePollServiceTest {
     }
 
     @Test
-    @DisplayName("creates options with null start and end time when start time is missing")
-    void createsOptionsWithNullStartAndEndTimeWhenStartTimeIsMissing() {
+    @DisplayName("rejects intraday options when a start time is missing")
+    void rejectsIntradayOptionsWhenAStartTimeIsMissing() {
         CapturingPollRepository repository = new CapturingPollRepository();
         CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender(), true);
 
@@ -102,14 +103,55 @@ class CreatePollServiceTest {
                 null
         );
 
-        service.create(command);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> service.create(command));
+        assertEquals("Start time is required for intraday polls", exception.getMessage());
+        assertNull(repository.saved);
+    }
 
-        Poll saved = repository.saved;
-        assertNotNull(saved);
-        assertEquals(LocalTime.of(9, 0), saved.options().get(0).startTime());
-        assertEquals(LocalTime.of(10, 0), saved.options().get(0).endTime());
-        assertNull(saved.options().get(1).startTime());
-        assertNull(saved.options().get(1).endTime());
+    @Test
+    @DisplayName("rejects poll creation when no dates are provided")
+    void rejectsPollCreationWhenNoDatesAreProvided() {
+        CapturingPollRepository repository = new CapturingPollRepository();
+        CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender(), true);
+
+        CreatePollCommand command = new CreatePollCommand(
+                AUTHOR_NAME,
+                AUTHOR_EMAIL,
+                TITLE,
+                DESCRIPTION,
+                EventType.ALL_DAY,
+                null,
+                List.of(),
+                List.of(),
+                null
+        );
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> service.create(command));
+        assertEquals("At least one date option is required", exception.getMessage());
+        assertNull(repository.saved);
+    }
+
+    @Test
+    @DisplayName("rejects intraday options when a start time entry is null")
+    void rejectsIntradayOptionsWhenAStartTimeEntryIsNull() {
+        CapturingPollRepository repository = new CapturingPollRepository();
+        CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender(), true);
+
+        CreatePollCommand command = new CreatePollCommand(
+                AUTHOR_NAME,
+                AUTHOR_EMAIL,
+                TITLE,
+                DESCRIPTION,
+                EventType.INTRADAY,
+                60,
+                List.of(DATE_ONE, DATE_TWO),
+                java.util.Arrays.asList(LocalTime.of(9, 0), null),
+                null
+        );
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> service.create(command));
+        assertEquals("Start time is required for intraday polls", exception.getMessage());
+        assertNull(repository.saved);
     }
 
     @Test
@@ -146,6 +188,32 @@ class CreatePollServiceTest {
         assertNotNull(pollEmailSender.lastEmail);
         assertEquals(saved.pollId(), pollEmailSender.lastEmail.pollId());
         assertEquals(saved.adminSecret(), pollEmailSender.lastEmail.adminSecret());
+    }
+
+    @Test
+    @DisplayName("keeps all-day options without start and end time even when duration is set")
+    void keepsAllDayOptionsWithoutStartAndEndTimeEvenWhenDurationIsSet() {
+        CapturingPollRepository repository = new CapturingPollRepository();
+        CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender(), true);
+
+        CreatePollCommand command = new CreatePollCommand(
+                AUTHOR_NAME,
+                AUTHOR_EMAIL,
+                TITLE,
+                DESCRIPTION,
+                EventType.ALL_DAY,
+                45,
+                List.of(DATE_ONE),
+                List.of(),
+                null
+        );
+
+        service.create(command);
+
+        Poll saved = repository.saved;
+        assertNotNull(saved);
+        assertNull(saved.options().getFirst().startTime());
+        assertNull(saved.options().getFirst().endTime());
     }
 
     @Test

@@ -191,8 +191,8 @@ class PollWizardFlowTest {
     }
 
     @Test
-    @DisplayName("step-2 intraday summary falls back to date when a start time is missing")
-    void step2IntradaySummaryFallsBackToDateWhenStartTimeMissing() throws Exception {
+    @DisplayName("step-2 intraday summary renders date and time for each option")
+    void step2IntradaySummaryRendersDateAndTimeForEachOption() throws Exception {
         MockHttpSession session = new MockHttpSession();
         WizardState state = TestFixtures.wizardStateBasics();
         state.setAuthorEmail(VALID_EMAIL);
@@ -205,15 +205,34 @@ class PollWizardFlowTest {
                         .param("durationMinutes", "90")
                         .param("dateOption1", DATE_OPTION_1)
                         .param("dateOption2", DATE_OPTION_2)
-                        .param("startTime1", START_TIME_1)
-                        .param("startTime2", ""))
+                        .param("startTime1_1", START_TIME_1)
+                        .param("startTime2_1", START_TIME_2))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(DATE_OPTION_1 + " " + START_TIME_1)))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(DATE_OPTION_2)));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(DATE_OPTION_2 + " " + START_TIME_2)));
 
         WizardState updated = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
         assertNotNull(updated);
-        assertEquals(1, updated.startTimes().size());
+        assertEquals(2, updated.startTimes().size());
+    }
+
+    @Test
+    @DisplayName("step-2 intraday submit rejects missing start times")
+    void step2IntradaySubmitRejectsMissingStartTimes() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        WizardState state = TestFixtures.wizardStateBasics();
+        state.setAuthorEmail(VALID_EMAIL);
+        state.setTitle("Test");
+        session.setAttribute(WizardState.SESSION_KEY, state);
+
+        mockMvc.perform(post("/poll/step-3")
+                        .session(session)
+                        .param("eventType", "INTRADAY")
+                        .param("durationMinutes", "90")
+                        .param("dateOption1", DATE_OPTION_1)
+                        .param("dateOption2", DATE_OPTION_2)
+                        .param("startTime1_1", START_TIME_1))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -241,8 +260,8 @@ class PollWizardFlowTest {
     }
 
     @Test
-    @DisplayName("step-2 intraday ignores start times with empty parameter arrays")
-    void step2IntradayIgnoresStartTimesWithEmptyParameterArrays() throws Exception {
+    @DisplayName("step-2 intraday rejects start times with empty parameter arrays")
+    void step2IntradayRejectsStartTimesWithEmptyParameterArrays() throws Exception {
         MockHttpSession session = new MockHttpSession();
         WizardState state = TestFixtures.wizardStateBasics();
         state.setAuthorEmail(VALID_EMAIL);
@@ -255,16 +274,16 @@ class PollWizardFlowTest {
                         .param("durationMinutes", "90")
                         .param("dateOption1", DATE_OPTION_1)
                         .param("dateOption2", DATE_OPTION_2)
-                        .param("startTime1", START_TIME_1)
+                        .param("startTime1_1", START_TIME_1)
                         .with(request -> {
-                            request.addParameter("startTime2", new String[]{});
+                            request.addParameter("startTime2_1", new String[]{});
                             return request;
                         }))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
 
         WizardState updated = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
         assertNotNull(updated);
-        assertEquals(1, updated.startTimes().size());
+        assertEquals(0, updated.startTimes().size());
     }
 
     @Test

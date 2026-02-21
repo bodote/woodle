@@ -32,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @WebMvcTest(PollViewController.class)
@@ -60,6 +61,40 @@ class PollViewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Referrer-Policy", "no-referrer"))
                 .andExpect(content().string(containsString("Team Meeting")));
+    }
+
+    @Test
+    @DisplayName("renders participant view when no options exist")
+    void rendersParticipantViewWhenNoOptionsExist() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000044");
+        Poll poll = TestFixtures.poll(pollId, List.of(), List.of());
+
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Stimmabgaben zur Umfrage")));
+    }
+
+    @Test
+    @DisplayName("renders participant view for options across months and days")
+    void rendersParticipantViewForOptionsAcrossMonthsAndDays() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000046");
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(
+                        TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 28)),
+                        TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 3, 1))
+                ),
+                List.of()
+        );
+
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Februar 2026")))
+                .andExpect(content().string(containsString("März 2026")));
     }
 
     @Test
@@ -190,6 +225,125 @@ class PollViewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
                 .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("ignores malformed forwarded port when building share links")
+    void ignoresMalformedForwardedPortWhenBuildingShareLinks() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000042");
+        String adminSecret = "AdminSecretMalformedPort";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .header("X-Forwarded-Proto", "https")
+                        .header("X-Forwarded-Host", "woodle.click")
+                        .header("X-Forwarded-Port", "abc"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("ignores forwarded port outside valid range when building share links")
+    void ignoresForwardedPortOutsideValidRangeWhenBuildingShareLinks() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000045");
+        String adminSecret = "AdminSecretLargePort";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .header("X-Forwarded-Proto", "https")
+                        .header("X-Forwarded-Host", "woodle.click")
+                        .header("X-Forwarded-Port", "70000"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("ignores non-positive forwarded port when building share links")
+    void ignoresNonPositiveForwardedPortWhenBuildingShareLinks() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000047");
+        String adminSecret = "AdminSecretZeroPort";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .header("X-Forwarded-Proto", "https")
+                        .header("X-Forwarded-Host", "woodle.click")
+                        .header("X-Forwarded-Port", "0"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("falls back to forwarded host when Forwarded header omits host key")
+    void fallsBackToForwardedHostWhenForwardedHeaderOmitsHostKey() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000048");
+        String adminSecret = "AdminSecretMissingHost";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
+                        .header("Forwarded", "for=203.0.113.10;invalid;proto=https")
+                        .header("X-Forwarded-Host", "fallback.woodle.click"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("https://fallback.woodle.click/poll/" + pollId)))
+                .andExpect(content().string(containsString("https://fallback.woodle.click/poll/" + pollId + "-" + adminSecret)));
+    }
+
+    @Test
+    @DisplayName("returns HTML error for participant row edit when response is missing")
+    void returnsHtmlErrorForParticipantRowEditWhenResponseIsMissing() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000043");
+        UUID responseId = UUID.fromString("00000000-0000-0000-0000-000000000999");
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        jakarta.servlet.ServletException exception = assertThrows(
+                jakarta.servlet.ServletException.class,
+                () -> mockMvc.perform(get("/poll/" + pollId + "/responses/" + responseId + "/edit"))
+        );
+        assertTrue(exception.getCause() instanceof IllegalArgumentException);
     }
 
     @Test
