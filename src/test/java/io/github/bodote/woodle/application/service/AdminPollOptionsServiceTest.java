@@ -92,8 +92,8 @@ class AdminPollOptionsServiceTest {
     }
 
     @Test
-    @DisplayName("adds intraday option without time when start time is omitted")
-    void addsIntradayOptionWithoutTimeWhenStartTimeIsOmitted() {
+    @DisplayName("rejects intraday option when start time is omitted")
+    void rejectsIntradayOptionWhenStartTimeIsOmitted() {
         UUID pollId = UUID.randomUUID();
         Poll poll = TestFixtures.poll(
                 pollId,
@@ -107,11 +107,13 @@ class AdminPollOptionsServiceTest {
         CapturingRepo repo = new CapturingRepo(poll);
         AdminPollOptionsService service = new AdminPollOptionsService(repo);
 
-        service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 12), null);
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 12), null)
+        );
 
-        assertEquals(1, repo.saved.options().size());
-        assertNull(repo.saved.options().getFirst().startTime());
-        assertNull(repo.saved.options().getFirst().endTime());
+        assertEquals("Start time is required for intraday polls", exception.getMessage());
+        assertNull(repo.saved);
     }
 
     @Test

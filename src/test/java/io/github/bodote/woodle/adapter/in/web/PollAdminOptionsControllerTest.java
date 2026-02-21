@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -96,6 +97,30 @@ class PollAdminOptionsControllerTest {
                 LocalDate.of(2026, 2, 12),
                 LocalTime.of(14, 30)
         );
+    }
+
+    @Test
+    @DisplayName("rejects intraday option add without start time")
+    void rejectsIntradayOptionAddWithoutStartTime() throws Exception {
+        Poll poll = TestFixtures.poll(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                EventType.INTRADAY,
+                90,
+                List.of(TestFixtures.option(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 2, 12),
+                        LocalTime.of(14, 30),
+                        LocalTime.of(16, 0))),
+                List.of()
+        );
+        when(readPollUseCase.getAdmin(UUID.fromString(POLL_ID), ADMIN_SECRET)).thenReturn(poll);
+
+        mockMvc.perform(post("/poll/" + POLL_ID + "-" + ADMIN_SECRET + "/options/add")
+                        .param("date", "2026-02-13"))
+                .andExpect(status().isBadRequest());
+
+        verify(adminPollOptionsUseCase, never()).addDate(any(UUID.class), any(String.class), any(LocalDate.class), any());
     }
 
     @Test

@@ -23,6 +23,9 @@ public class AdminPollOptionsService implements AdminPollOptionsUseCase {
     @Override
     public void addDate(UUID pollId, String adminSecret, LocalDate date, LocalTime startTime) {
         Poll poll = requireAdminPoll(pollId, adminSecret);
+        if (poll.eventType() == EventType.INTRADAY && startTime == null) {
+            throw new IllegalArgumentException("Start time is required for intraday polls");
+        }
         LocalTime optionStartTime = poll.eventType() == EventType.INTRADAY ? startTime : null;
         LocalTime optionEndTime = optionStartTime == null || poll.durationMinutes() == null
                 ? null
