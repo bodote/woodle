@@ -401,6 +401,27 @@ class PollViewControllerTest {
     }
 
     @Test
+    @DisplayName("resets admin add-option form after successful htmx request")
+    void resetsAdminAddOptionFormAfterSuccessfulHtmxRequest() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000028");
+        String adminSecret = "AdminSecretResetForm";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.INTRADAY,
+                90,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10), LocalTime.of(9, 0), LocalTime.of(10, 30))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("hx-on::after-request=\"if(event.detail.successful) this.reset()\"")));
+    }
+
+    @Test
     @DisplayName("falls back to https when request scheme is blank")
     void fallsBackToHttpsWhenRequestSchemeIsBlank() throws Exception {
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000022");

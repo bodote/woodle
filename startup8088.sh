@@ -8,8 +8,14 @@ BUCKET_NAME="woodle"
 
 APP_PORT="8088"
 
-if ! docker ps --format '{{.Names}}' | grep -q "^${LOCALSTACK_CONTAINER}$"; then
-  docker run -d --name "${LOCALSTACK_CONTAINER}" -p ${LOCALSTACK_PORT}:4566 "${LOCALSTACK_IMAGE}"
+if docker ps --format '{{.Names}}' | grep -q "^${LOCALSTACK_CONTAINER}$"; then
+  echo "Reusing running container: ${LOCALSTACK_CONTAINER}"
+elif docker ps -a --format '{{.Names}}' | grep -q "^${LOCALSTACK_CONTAINER}$"; then
+  echo "Starting existing container: ${LOCALSTACK_CONTAINER}"
+  docker start "${LOCALSTACK_CONTAINER}" >/dev/null
+else
+  echo "Creating new container: ${LOCALSTACK_CONTAINER}"
+  docker run -d --name "${LOCALSTACK_CONTAINER}" -p ${LOCALSTACK_PORT}:4566 "${LOCALSTACK_IMAGE}" >/dev/null
 fi
 
 docker exec "${LOCALSTACK_CONTAINER}" awslocal s3 mb "s3://${BUCKET_NAME}" >/dev/null 2>&1 || true

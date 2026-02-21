@@ -118,7 +118,8 @@
                           th:attr="hx-post=@{/poll/{pollId}-{adminSecret}/options/add(pollId=${pollId},adminSecret=${adminSecret})}"
                           method="post"
                           hx-target="#options-list"
-                          hx-swap="outerHTML">
+                          hx-swap="outerHTML"
+                          hx-on::after-request="if(event.detail.successful) this.reset()">
                         <div class="form-row">
                             <label for="new-date">Neues Datum</label>
                             <input id="new-date" name="date" type="date" required>
