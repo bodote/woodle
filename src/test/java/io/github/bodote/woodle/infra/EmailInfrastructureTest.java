@@ -8,8 +8,8 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-@DisplayName("SES email infrastructure")
-class SesEmailInfrastructureTest {
+@DisplayName("Email infrastructure")
+class EmailInfrastructureTest {
 
     @Test
     @DisplayName("configures Lambda email environment and SES send permission")
@@ -80,5 +80,15 @@ class SesEmailInfrastructureTest {
         assertTrue(
                 !deployScript.contains("DEFAULT_SMTP_PASSWORD_SECRET_ID=\"\""),
                 "Expected deploy script not to use an empty default SMTP password secret for qs");
+    }
+
+    @Test
+    @DisplayName("uses SMTP account sender default for stage deployments")
+    void usesSmtpAccountSenderDefaultForStageDeployments() throws IOException {
+        String deployScript = Files.readString(Path.of("aws-deploy.sh"));
+
+        assertTrue(
+                deployScript.contains("DEFAULT_EMAIL_FROM=\"woodle@funknstein.de\""),
+                "Expected deploy script to default sender to SMTP mailbox for stage deployments");
     }
 }

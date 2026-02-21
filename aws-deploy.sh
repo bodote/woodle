@@ -21,12 +21,12 @@ fi
 
 DEFAULT_ENV_NAME="${DEPLOY_STAGE}"
 DEFAULT_FRONTEND_DOMAIN="qs.woodle.click"
-DEFAULT_EMAIL_FROM="no-reply@qs.woodle.click"
+DEFAULT_EMAIL_FROM="woodle@funknstein.de"
 DEFAULT_EMAIL_SUBJECT_PREFIX="[Woodle-QS]"
 DEFAULT_SMTP_PASSWORD_SECRET_ID="arn:aws:secretsmanager:eu-central-1:168474026156:secret:woodle/prod/smtp-8zh1Zn"
 if [[ "${DEPLOY_STAGE}" == "prod" ]]; then
   DEFAULT_FRONTEND_DOMAIN="woodle.click"
-  DEFAULT_EMAIL_FROM="no-reply@woodle.click"
+  DEFAULT_EMAIL_FROM="woodle@funknstein.de"
   DEFAULT_EMAIL_SUBJECT_PREFIX="[Woodle]"
 fi
 
@@ -58,7 +58,7 @@ WOODLE_EMAIL_SMTP_PASSWORD_SECRET_ID="${WOODLE_EMAIL_SMTP_PASSWORD_SECRET_ID:-${
 DRY_RUN="${DRY_RUN:-false}"
 
 if [[ -z "${WOODLE_EMAIL_FROM}" ]]; then
-  echo "WOODLE_EMAIL_FROM must be set (for example no-reply@${DEFAULT_FRONTEND_DOMAIN})." >&2
+  echo "WOODLE_EMAIL_FROM must be set (for example woodle@funknstein.de)." >&2
   exit 1
 fi
 

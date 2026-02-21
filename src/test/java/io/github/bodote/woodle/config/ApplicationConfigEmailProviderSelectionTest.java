@@ -2,6 +2,7 @@ package io.github.bodote.woodle.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.bodote.woodle.application.port.out.PollEmailSender;
+import io.github.bodote.woodle.application.port.out.WizardStateRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
@@ -9,6 +10,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.mail.javamail.JavaMailSender;
 import software.amazon.awssdk.services.sesv2.SesV2Client;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import java.util.Map;
 
@@ -93,6 +95,40 @@ class ApplicationConfigEmailProviderSelectionTest {
         );
 
         assertEquals("Email provider smtp is enabled but no JavaMailSender bean is available", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("returns no-op sender when email is disabled")
+    void returnsNoopSenderWhenEmailIsDisabled() {
+        ObjectProvider<SesV2Client> sesProvider = mock(ObjectProvider.class);
+        ObjectProvider<JavaMailSender> smtpProvider = mock(ObjectProvider.class);
+
+        PollEmailSender sender = applicationConfig.pollEmailSender(
+                false,
+                "smtp",
+                "woodle@funknstein.de",
+                "[Woodle]",
+                "https://woodle.click",
+                sesProvider,
+                smtpProvider
+        );
+
+        assertTrue(sender.getClass().getName().contains("NoopPollEmailSender"));
+    }
+
+    @Test
+    @DisplayName("fails fast when wizard state repository is S3-enabled but S3 client is missing")
+    void failsFastWhenWizardStateRepositoryS3ClientMissing() {
+        ObjectProvider<S3Client> s3Provider = mock(ObjectProvider.class);
+        ObjectMapper objectMapper = new ObjectMapper();
+        when(s3Provider.getIfAvailable()).thenReturn(null);
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> applicationConfig.wizardStateRepository(true, "woodle", s3Provider, objectMapper)
+        );
+
+        assertEquals("S3 is enabled but no S3 client bean is available", exception.getMessage());
     }
 
     @Test

@@ -276,7 +276,7 @@ Resources:
           WOODLE_EMAIL_SMTP_USERNAME: !Ref EmailSmtpUsername
           WOODLE_EMAIL_SMTP_PASSWORD: !If
             - HasEmailSmtpPasswordSecretId
-            - !Sub "{{resolve:secretsmanager:${EmailSmtpPasswordSecretId}:SecretString:password}}"
+            - !Sub "{{resolve:secretsmanager:${EmailSmtpPasswordSecretId}:SecretString}}"
             - !Ref AWS::NoValue
       Policies:
         - Version: "2012-10-17"
