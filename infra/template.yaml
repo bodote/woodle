@@ -23,23 +23,48 @@ Parameters:
     AllowedValues:
       - "true"
       - "false"
-    Description: Enable SES email sending from Lambda
+    Description: Enable email sending from Lambda
+  EmailProvider:
+    Type: String
+    Default: "ses"
+    AllowedValues:
+      - "ses"
+      - "smtp"
+    Description: Outbound email provider used by Lambda
   EmailFromAddress:
     Type: String
     Default: ""
-    Description: SES verified from address used for outbound poll emails
+    Description: From address used for outbound poll emails
   EmailSubjectPrefix:
     Type: String
     Default: ""
     Description: Optional subject prefix for outbound poll emails
+  EmailSmtpHost:
+    Type: String
+    Default: "smtp.ionos.de"
+    Description: SMTP host used when EmailProvider is smtp
+  EmailSmtpPort:
+    Type: Number
+    Default: 587
+    Description: SMTP port used when EmailProvider is smtp
+  EmailSmtpUsername:
+    Type: String
+    Default: "woodle@funknstein.de"
+    Description: SMTP username used when EmailProvider is smtp
+  EmailSmtpPasswordSecretId:
+    Type: String
+    Default: ""
+    Description: Optional Secrets Manager secret id containing JSON field password for SMTP password
 
 Conditions:
   HasCustomDomain: !Not [!Equals [!Ref AppDomainName, ""]]
   HasCertificate: !Not [!Equals [!Ref AcmCertificateArn, ""]]
   UseAliasConfig: !And [!Condition HasCustomDomain, !Condition HasCertificate]
   IsEmailEnabled: !Equals [!Ref EmailEnabled, "true"]
+  IsEmailProviderSes: !Equals [!Ref EmailProvider, "ses"]
   HasEmailFromAddress: !Not [!Equals [!Ref EmailFromAddress, ""]]
-  UseSesEmailPolicy: !And [!Condition IsEmailEnabled, !Condition HasEmailFromAddress]
+  HasEmailSmtpPasswordSecretId: !Not [!Equals [!Ref EmailSmtpPasswordSecretId, ""]]
+  UseSesEmailPolicy: !And [!Condition IsEmailEnabled, !Condition IsEmailProviderSes, !Condition HasEmailFromAddress]
 
 Resources:
   WebBucket:
@@ -243,8 +268,16 @@ Resources:
           WOODLE_S3_BUCKET: !Ref PollsBucket
           WOODLE_S3_PATH_STYLE: "false"
           WOODLE_EMAIL_ENABLED: !Ref EmailEnabled
+          WOODLE_EMAIL_PROVIDER: !Ref EmailProvider
           WOODLE_EMAIL_FROM: !Ref EmailFromAddress
           WOODLE_EMAIL_SUBJECT_PREFIX: !Ref EmailSubjectPrefix
+          WOODLE_EMAIL_SMTP_HOST: !Ref EmailSmtpHost
+          WOODLE_EMAIL_SMTP_PORT: !Ref EmailSmtpPort
+          WOODLE_EMAIL_SMTP_USERNAME: !Ref EmailSmtpUsername
+          WOODLE_EMAIL_SMTP_PASSWORD: !If
+            - HasEmailSmtpPasswordSecretId
+            - !Sub "{{resolve:secretsmanager:${EmailSmtpPasswordSecretId}:SecretString}}"
+            - !Ref AWS::NoValue
       Policies:
         - Version: "2012-10-17"
           Statement:
