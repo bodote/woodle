@@ -39,9 +39,81 @@ class AdminPollOptionsServiceTest {
         CapturingRepo repo = new CapturingRepo(poll);
         AdminPollOptionsService service = new AdminPollOptionsService(repo);
 
-        service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 12));
+        service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 12), null);
 
         assertEquals(1, repo.saved.options().size());
+        assertNull(repo.saved.options().getFirst().startTime());
+    }
+
+    @Test
+    @DisplayName("adds intraday option with start and computed end time")
+    void addsIntradayOptionWithStartAndComputedEndTime() {
+        UUID pollId = UUID.randomUUID();
+        Poll poll = TestFixtures.poll(
+                pollId,
+                TestFixtures.ADMIN_SECRET,
+                EventType.INTRADAY,
+                90,
+                List.of(),
+                List.of()
+        );
+
+        CapturingRepo repo = new CapturingRepo(poll);
+        AdminPollOptionsService service = new AdminPollOptionsService(repo);
+
+        service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 12), LocalTime.of(14, 30));
+
+        assertEquals(1, repo.saved.options().size());
+        assertEquals(LocalTime.of(14, 30), repo.saved.options().getFirst().startTime());
+        assertEquals(LocalTime.of(16, 0), repo.saved.options().getFirst().endTime());
+    }
+
+    @Test
+    @DisplayName("adds intraday option without end time when duration is missing")
+    void addsIntradayOptionWithoutEndTimeWhenDurationIsMissing() {
+        UUID pollId = UUID.randomUUID();
+        Poll poll = TestFixtures.poll(
+                pollId,
+                TestFixtures.ADMIN_SECRET,
+                EventType.INTRADAY,
+                null,
+                List.of(),
+                List.of()
+        );
+
+        CapturingRepo repo = new CapturingRepo(poll);
+        AdminPollOptionsService service = new AdminPollOptionsService(repo);
+
+        service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 12), LocalTime.of(14, 30));
+
+        assertEquals(1, repo.saved.options().size());
+        assertEquals(LocalTime.of(14, 30), repo.saved.options().getFirst().startTime());
+        assertNull(repo.saved.options().getFirst().endTime());
+    }
+
+    @Test
+    @DisplayName("rejects intraday option when start time is omitted")
+    void rejectsIntradayOptionWhenStartTimeIsOmitted() {
+        UUID pollId = UUID.randomUUID();
+        Poll poll = TestFixtures.poll(
+                pollId,
+                TestFixtures.ADMIN_SECRET,
+                EventType.INTRADAY,
+                90,
+                List.of(),
+                List.of()
+        );
+
+        CapturingRepo repo = new CapturingRepo(poll);
+        AdminPollOptionsService service = new AdminPollOptionsService(repo);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 12), null)
+        );
+
+        assertEquals("Start time is required for intraday polls", exception.getMessage());
+        assertNull(repo.saved);
     }
 
     @Test
@@ -142,7 +214,7 @@ class AdminPollOptionsServiceTest {
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 10))
+                () -> service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 10), null)
         );
 
         assertEquals("Poll not found", exception.getMessage());
@@ -166,7 +238,7 @@ class AdminPollOptionsServiceTest {
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> service.addDate(pollId, "wrong-secret", LocalDate.of(2026, 2, 10))
+                () -> service.addDate(pollId, "wrong-secret", LocalDate.of(2026, 2, 10), null)
         );
 
         assertEquals("Invalid admin secret", exception.getMessage());

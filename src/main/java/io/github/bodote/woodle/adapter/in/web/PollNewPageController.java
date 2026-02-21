@@ -5,7 +5,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.ui.Model;
+import org.springframework.http.HttpStatus;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -244,6 +246,9 @@ public class PollNewPageController {
         state.setDurationMinutes(durationMinutes);
         IntradaySelection selection = extractIntradaySelection(request.getParameterMap());
         if (eventType == io.github.bodote.woodle.domain.model.EventType.INTRADAY) {
+            if (selection.missingStartTime() || selection.optionDates().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start time is required for intraday polls");
+            }
             state.setDates(selection.optionDates());
             state.setStartTimes(selection.optionStartTimes());
         } else {
@@ -659,10 +664,11 @@ public class PollNewPageController {
 
         List<LocalDate> optionDates = new ArrayList<>();
         List<LocalTime> optionStartTimes = new ArrayList<>();
+        boolean missingStartTime = false;
         for (Map.Entry<Integer, LocalDate> dateEntry : datesByDay.entrySet()) {
             List<LocalTime> dayTimes = timesByDay.getOrDefault(dateEntry.getKey(), List.of());
             if (dayTimes.isEmpty()) {
-                optionDates.add(dateEntry.getValue());
+                missingStartTime = true;
                 continue;
             }
             for (LocalTime dayTime : dayTimes) {
@@ -670,7 +676,7 @@ public class PollNewPageController {
                 optionStartTimes.add(dayTime);
             }
         }
-        return new IntradaySelection(optionDates, optionStartTimes);
+        return new IntradaySelection(optionDates, optionStartTimes, missingStartTime);
     }
 
     private Integer parseIndex(String raw, String prefix) {
@@ -727,6 +733,6 @@ public class PollNewPageController {
         return counts;
     }
 
-    private record IntradaySelection(List<LocalDate> optionDates, List<LocalTime> optionStartTimes) {
+    private record IntradaySelection(List<LocalDate> optionDates, List<LocalTime> optionStartTimes, boolean missingStartTime) {
     }
 }

@@ -118,10 +118,15 @@
                           th:attr="hx-post=@{/poll/{pollId}-{adminSecret}/options/add(pollId=${pollId},adminSecret=${adminSecret})}"
                           method="post"
                           hx-target="#options-list"
-                          hx-swap="outerHTML">
+                          hx-swap="outerHTML"
+                          hx-on::after-request="if(event.detail.successful) this.reset()">
                         <div class="form-row">
                             <label for="new-date">Neues Datum</label>
                             <input id="new-date" name="date" type="date" required>
+                        </div>
+                        <div class="form-row" th:if="${poll.eventType.name() == 'INTRADAY'}">
+                            <label for="new-start-time">Startzeit</label>
+                            <input id="new-start-time" name="startTime" type="time" required>
                         </div>
                         <div class="actions">
                             <button type="submit" hx-indicator=".htmx-indicator">Datum hinzufügen</button>
