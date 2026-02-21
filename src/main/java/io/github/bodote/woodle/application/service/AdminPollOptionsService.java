@@ -2,6 +2,7 @@ package io.github.bodote.woodle.application.service;
 
 import io.github.bodote.woodle.application.port.in.AdminPollOptionsUseCase;
 import io.github.bodote.woodle.application.port.out.PollRepository;
+import io.github.bodote.woodle.domain.model.EventType;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.domain.model.PollOption;
 
@@ -20,10 +21,14 @@ public class AdminPollOptionsService implements AdminPollOptionsUseCase {
     }
 
     @Override
-    public void addDate(UUID pollId, String adminSecret, LocalDate date) {
+    public void addDate(UUID pollId, String adminSecret, LocalDate date, LocalTime startTime) {
         Poll poll = requireAdminPoll(pollId, adminSecret);
+        LocalTime optionStartTime = poll.eventType() == EventType.INTRADAY ? startTime : null;
+        LocalTime optionEndTime = optionStartTime == null || poll.durationMinutes() == null
+                ? null
+                : optionStartTime.plusMinutes(poll.durationMinutes());
         List<PollOption> options = new ArrayList<>(poll.options());
-        options.add(new PollOption(UUID.randomUUID(), date, null, null));
+        options.add(new PollOption(UUID.randomUUID(), date, optionStartTime, optionEndTime));
         pollRepository.save(poll.withOptions(options));
     }
 

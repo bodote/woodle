@@ -378,6 +378,29 @@ class PollViewControllerTest {
     }
 
     @Test
+    @DisplayName("renders time input for adding options in intraday admin view")
+    void rendersTimeInputForAddingOptionsInIntradayAdminView() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000027");
+        String adminSecret = "AdminSecretIntradayInput";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.INTRADAY,
+                90,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10), LocalTime.of(9, 0), LocalTime.of(10, 30))),
+                List.of()
+        );
+
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("name=\"startTime\"")))
+                .andExpect(content().string(containsString("id=\"new-start-time\"")))
+                .andExpect(content().string(containsString("type=\"time\"")));
+    }
+
+    @Test
     @DisplayName("falls back to https when request scheme is blank")
     void fallsBackToHttpsWhenRequestSchemeIsBlank() throws Exception {
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000022");

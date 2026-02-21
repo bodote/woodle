@@ -29,9 +29,10 @@ public class PollAdminOptionsController {
             @PathVariable UUID pollId,
             @PathVariable String adminSecret,
             @RequestParam("date") LocalDate date,
+            @RequestParam(value = "startTime", required = false) LocalTime startTime,
             Model model
     ) {
-        adminPollOptionsUseCase.addDate(pollId, adminSecret, date);
+        adminPollOptionsUseCase.addDate(pollId, adminSecret, date, startTime);
         Poll poll = readPollUseCase.getAdmin(pollId, adminSecret);
         model.addAttribute("poll", poll);
         model.addAttribute("adminView", true);

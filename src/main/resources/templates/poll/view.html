@@ -123,6 +123,10 @@
                             <label for="new-date">Neues Datum</label>
                             <input id="new-date" name="date" type="date" required>
                         </div>
+                        <div class="form-row" th:if="${poll.eventType.name() == 'INTRADAY'}">
+                            <label for="new-start-time">Startzeit</label>
+                            <input id="new-start-time" name="startTime" type="time" required>
+                        </div>
                         <div class="actions">
                             <button type="submit" hx-indicator=".htmx-indicator">Datum hinzufügen</button>
                             <span class="htmx-indicator" aria-live="polite">Lade…</span>
