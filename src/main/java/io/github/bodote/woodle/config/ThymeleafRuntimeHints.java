@@ -12,6 +12,7 @@ public class ThymeleafRuntimeHints implements RuntimeHintsRegistrar {
         registerType(hints, "io.github.bodote.woodle.domain.model.Poll");
         registerType(hints, "io.github.bodote.woodle.domain.model.PollOption");
         registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollViewController$MonthGroup");
+        registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollViewController$DateGroup");
         registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollViewController$OptionHeader");
         registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollViewController$ParticipantRow");
         registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollViewController$EditableRow");
@@ -19,6 +20,7 @@ public class ThymeleafRuntimeHints implements RuntimeHintsRegistrar {
         registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollViewController$SummaryCell");
         registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollVoteController$ParticipantRow");
         registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollVoteController$VoteCell");
+        registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollVoteController$SummaryCell");
         registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.PollDAO");
         registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.PollDAO$Author");
         registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.PollDAO$Access");

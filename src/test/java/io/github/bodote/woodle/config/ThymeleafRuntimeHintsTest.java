@@ -31,5 +31,15 @@ class ThymeleafRuntimeHintsTest {
         assertNotNull(wizardDraftHint);
         assertTrue(wizardDraftHint.getMemberCategories().contains(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS));
         assertTrue(wizardDraftHint.getMemberCategories().contains(MemberCategory.DECLARED_FIELDS));
+
+        var dateGroupHint = hints.reflection().getTypeHint(
+                TypeReference.of("io.github.bodote.woodle.adapter.in.web.PollViewController$DateGroup"));
+        assertNotNull(dateGroupHint);
+        assertTrue(dateGroupHint.getMemberCategories().contains(MemberCategory.INVOKE_DECLARED_METHODS));
+
+        var voteSummaryHint = hints.reflection().getTypeHint(
+                TypeReference.of("io.github.bodote.woodle.adapter.in.web.PollVoteController$SummaryCell"));
+        assertNotNull(voteSummaryHint);
+        assertTrue(voteSummaryHint.getMemberCategories().contains(MemberCategory.INVOKE_DECLARED_METHODS));
     }
 }
