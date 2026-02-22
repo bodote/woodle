@@ -2,7 +2,7 @@ package io.github.bodote.woodle.adapter.in.web;
 
 import io.github.bodote.woodle.testfixtures.TestFixtures;
 
-import io.github.bodote.woodle.adapter.in.web.WizardState;
+import io.github.bodote.woodle.application.model.WizardState;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;

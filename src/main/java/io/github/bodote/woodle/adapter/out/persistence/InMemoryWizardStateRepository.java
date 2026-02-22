@@ -1,6 +1,6 @@
 package io.github.bodote.woodle.adapter.out.persistence;
 
-import io.github.bodote.woodle.adapter.in.web.WizardState;
+import io.github.bodote.woodle.application.model.WizardState;
 import io.github.bodote.woodle.application.port.out.WizardStateRepository;
 
 import java.util.Optional;
