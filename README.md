@@ -238,6 +238,7 @@ Operational note:
 *   Test strategy: `/Users/bodo.te/dev/woodle/test-strategie.md`
 *   Product spec: `/Users/bodo.te/dev/woodle/woodle-create-poll-date-spec.md`
 *   AWS deployment guide: `deploy-on-aws.md` (Architektur, Deploy-Flows, Smoke-Checks)
+*   Native deployment gotchas: `docs/native-deploy-gotchas.md` (GraalVM/AOT Fallstricke, Logs, Smoke-Checks)
 *   HTMX usability guidance: `docs/usability-htmx-guide.md` (UX-/Interaktionsregeln für HTMX-Seiten)
 *   Infra module overview: `infra/README.md` (AWS-Infrastrukturstruktur und Templates)
 *   IAM policy notes for deploy identity: `infra/iam-deploy-identity-policies.md` (benötigte Deploy-Berechtigungen)

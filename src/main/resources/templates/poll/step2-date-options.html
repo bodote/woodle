@@ -4,7 +4,7 @@
         <input th:id="${'date-option-' + i}"
                th:name="${'dateOption' + i}"
                type="date"
-               th:value="${dateValues != null and #lists.size(dateValues) >= i ? dateValues[i - 1] : ''}"
+               th:value="${dateValues[i - 1]}"
                placeholder="yyyy-mm-dd">
     </div>
 </div>

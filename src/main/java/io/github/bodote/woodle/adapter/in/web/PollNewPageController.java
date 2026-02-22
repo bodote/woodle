@@ -91,7 +91,12 @@ public class PollNewPageController {
         state.setAuthorEmail(authorEmail);
         state.setTitle(pollTitle);
         state.setDescription(description);
-        UUID draftId = wizardStateRepository.create(state);
+        UUID draftId = null;
+        try {
+            draftId = wizardStateRepository.create(state);
+        } catch (IllegalStateException ignored) {
+            // Keep step-2 usable when draft persistence is temporarily unavailable.
+        }
         session.setAttribute(WizardState.SESSION_KEY, state);
         model.addAttribute("dateCount", getOrInitDateCount(session));
         applyStep2Model(model, state);

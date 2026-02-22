@@ -57,6 +57,30 @@ class PollWizardFlowTest {
     }
 
     @Test
+    @DisplayName("step-1 submit continues when draft persistence create fails")
+    void step1SubmitContinuesWhenDraftPersistenceCreateFails() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        doThrow(new IllegalStateException("s3 unavailable"))
+                .when(wizardStateRepository).create(any(WizardState.class));
+
+        mockMvc.perform(post("/poll/step-2")
+                        .session(session)
+                        .param("authorName", TestFixtures.AUTHOR_NAME)
+                        .param("authorEmail", VALID_EMAIL)
+                        .param("pollTitle", "Test")
+                        .param("description", TestFixtures.DESCRIPTION))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Umfragedaten")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("name=\"draftId\""))));
+
+        WizardState state = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
+        assertNotNull(state);
+        assertEquals(TestFixtures.AUTHOR_NAME, state.authorName());
+        assertEquals(VALID_EMAIL, state.authorEmail());
+        assertEquals("Test", state.title());
+    }
+
+    @Test
     @DisplayName("step-1 submits and stores basics in session")
     void step1StoresBasicsInSession() throws Exception {
         MockHttpSession session = new MockHttpSession();

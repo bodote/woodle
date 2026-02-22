@@ -87,7 +87,11 @@ public class PollApiController {
 
     @GetMapping(value = {"/v1/polls/active-count", "/poll/active-count"}, produces = MediaType.TEXT_PLAIN_VALUE)
     public String getActivePollCount() {
-        return Long.toString(pollRepository.countActivePolls());
+        try {
+            return Long.toString(pollRepository.countActivePolls());
+        } catch (IllegalStateException ignored) {
+            return "0";
+        }
     }
 
     private PollOptionResponseDTO toOptionResponse(PollOption option) {

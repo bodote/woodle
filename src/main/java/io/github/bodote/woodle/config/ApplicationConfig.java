@@ -79,6 +79,10 @@ public class ApplicationConfig {
             @Value("${woodle.email.from:noreply@woodle.click}") String fromAddress,
             @Value("${woodle.email.subject-prefix:}") String subjectPrefix,
             @Value("${woodle.public-base-url:}") String publicBaseUrl,
+            @Value("${woodle.email.smtp.host:}") String smtpHost,
+            @Value("${woodle.email.smtp.port:587}") int smtpPort,
+            @Value("${woodle.email.smtp.username:}") String smtpUsername,
+            @Value("${woodle.email.smtp.password:}") String smtpPassword,
             ObjectProvider<SesV2Client> sesV2ClientProvider,
             ObjectProvider<JavaMailSender> javaMailSenderProvider
     ) {
@@ -90,7 +94,7 @@ public class ApplicationConfig {
         if ("smtp".equals(provider)) {
             JavaMailSender javaMailSender = javaMailSenderProvider.getIfAvailable();
             if (javaMailSender == null) {
-                throw new IllegalStateException("Email provider smtp is enabled but no JavaMailSender bean is available");
+                javaMailSender = createJavaMailSender(smtpHost, smtpPort, smtpUsername, smtpPassword);
             }
             return new SmtpPollEmailSender(javaMailSender, fromAddress, subjectPrefix, publicBaseUrl);
         }
@@ -120,6 +124,10 @@ public class ApplicationConfig {
             @Value("${woodle.email.smtp.username:}") String username,
             @Value("${woodle.email.smtp.password:}") String password
     ) {
+        return createJavaMailSender(host, port, username, password);
+    }
+
+    private JavaMailSender createJavaMailSender(String host, int port, String username, String password) {
         if (host.isBlank()) {
             throw new IllegalStateException("Email provider smtp requires property woodle.email.smtp.host");
         }

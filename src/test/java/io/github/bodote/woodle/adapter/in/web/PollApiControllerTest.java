@@ -156,6 +156,17 @@ class PollApiControllerTest {
     }
 
     @Test
+    @DisplayName("returns zero active poll count when repository is temporarily unavailable")
+    void returnsZeroActivePollCountWhenRepositoryIsTemporarilyUnavailable() throws Exception {
+        when(pollRepository.countActivePolls()).thenThrow(new IllegalStateException("s3 unavailable"));
+
+        mockMvc.perform(get("/poll/active-count"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "text/plain;charset=UTF-8"))
+                .andExpect(content().string("0"));
+    }
+
+    @Test
     @DisplayName("defaults missing startTimes to empty list in create command")
     void defaultsMissingStartTimesToEmptyListInCreateCommand() throws Exception {
         when(createPollUseCase.create(any(CreatePollCommand.class)))
