@@ -2,6 +2,12 @@
 
 This document captures failures we hit with `DEPLOY_RUNTIME=native` and how to avoid them.
 
+## Agent usage
+
+- Agent policy entrypoint: `AGENTS.md` (section `Native Thymeleaf + GraalVM Guardrails (Agent Required)`).
+- Skill workflow: `.codex/skills/native-thymeleaf-graalvm/SKILL.md`.
+- Keep this document as the canonical source of native incident patterns and prevention rules.
+
 ## 1) Thymeleaf/SpEL reflective calls can fail in native
 
 ### Symptom
