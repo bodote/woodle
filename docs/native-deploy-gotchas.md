@@ -75,3 +75,46 @@ After `DEPLOY_RUNTIME=native ./aws-deploy.sh`:
   - `@Bean` method A calling `@Bean` method B for runtime fallback
 
 If these are needed, add explicit native runtime hints and tests first.
+
+## 6) Thymeleaf property access can fail when a model type is missing runtime hints
+
+### Symptom
+- Public poll URL returns `503` on CloudFront fallback page (`error-unavailable.html`).
+- Admin URL for the same poll can still work.
+- Lambda logs show:
+  - `Exception evaluating SpringEL expression: "group.span" (template: "poll/view" - line 42, col 21)`
+  - `EL1008E: Property or field 'span' cannot be found on type '...PollViewController$DateGroup'`
+
+### Root cause
+- Native image did not include reflection metadata for one Thymeleaf model type:
+  `PollViewController$DateGroup`.
+- `MonthGroup` was registered, `DateGroup` was missing.
+- Public page renders `dateGroups` (`group.span`), admin page does not, so behavior differs by route.
+
+### Prevention
+- Keep `ThymeleafRuntimeHints` in sync with every template-facing model/record.
+- Add/maintain a test that fails if `DateGroup` (and similar model types) are not registered.
+- When a CloudFront `503` appears, always check API Gateway URL directly to distinguish cache/routing from backend template errors.
+
+## 7) Native deploy can reuse stale image layers unless cache is bypassed
+
+### Symptom
+- Deploy reports success, Lambda image tag changes, but runtime behavior/log signature stays unchanged.
+- CloudWatch still shows old stack traces after deploy.
+
+### Root cause
+- `docker buildx build` in deploy path uses cache by default.
+- For native builds, stale builder cache can keep an old compiled binary path alive across tags.
+
+### Prevention
+- For incident recovery deploys, force fresh native build:
+
+```bash
+docker buildx build --no-cache --platform linux/arm64 --provenance=false --sbom=false \
+  -f Dockerfile.lambda.native -t <image-uri:new-tag> --push .
+aws lambda update-function-code --function-name <function-name> --region eu-central-1 --image-uri <image-uri:new-tag>
+```
+
+- Verify rollout with both:
+  - Lambda code hash changed (`aws lambda get-function-configuration ... --query CodeSha256`)
+  - Live request to API Gateway URL (not only CloudFront URL)
