@@ -141,6 +141,47 @@ class PollVoteControllerTest {
     }
 
     @Test
+    @DisplayName("renders out-of-band summary update for htmx edit submit")
+    void rendersOutOfBandSummaryUpdateForHtmxEditSubmit() throws Exception {
+        UUID pollId = UUID.fromString(POLL_ID);
+        UUID optionId = UUID.fromString("56565656-5656-5656-5656-565656565656");
+        UUID responseId = UUID.fromString("67676767-6767-6767-6767-676767676767");
+        UUID otherResponseId = UUID.fromString("68686868-6868-6868-6868-686868686868");
+
+        PollOption option = TestFixtures.option(optionId, LocalDate.of(2026, 2, 10));
+        PollResponse editedResponse = TestFixtures.response(
+                responseId,
+                "Alice",
+                List.of(new PollVote(optionId, PollVoteValue.YES))
+        );
+        PollResponse otherResponse = TestFixtures.response(
+                otherResponseId,
+                "Bob",
+                List.of(new PollVote(optionId, PollVoteValue.YES))
+        );
+        Poll poll = TestFixtures.poll(
+                pollId,
+                "secret",
+                EventType.ALL_DAY,
+                null,
+                List.of(option),
+                List.of(editedResponse, otherResponse)
+        );
+
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(post("/poll/" + POLL_ID + "/vote")
+                        .header("HX-Request", "true")
+                        .param("participantName", "Alice")
+                        .param("responseId", responseId.toString())
+                        .param("vote_edit_" + optionId, "YES"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"summary-row\"")))
+                .andExpect(content().string(containsString("hx-swap-oob=\"true\"")))
+                .andExpect(content().string(containsString(">2<")));
+    }
+
+    @Test
     @DisplayName("renders symbols for IF_NEEDED and NO in htmx edit row")
     void rendersSymbolsForIfNeededAndNoInHtmxEditRow() throws Exception {
         UUID pollId = UUID.fromString(POLL_ID);

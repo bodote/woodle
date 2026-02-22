@@ -1,0 +1,17 @@
+<tr th:fragment="row" id="summary-row" class="summary-row">
+    <th scope="row" class="votes-table__summary-label">Summe</th>
+    <td th:each="cell : ${summaryCells}" class="votes-table__summary">
+        <span th:text="${cell.count}">0</span>
+        <span th:if="${cell.best}" class="votes-table__best">★</span>
+    </td>
+    <td> </td>
+</tr>
+
+<tr th:fragment="rowOob" id="summary-row" class="summary-row" hx-swap-oob="true">
+    <th scope="row" class="votes-table__summary-label">Summe</th>
+    <td th:each="cell : ${summaryCells}" class="votes-table__summary">
+        <span th:text="${cell.count}">0</span>
+        <span th:if="${cell.best}" class="votes-table__best">★</span>
+    </td>
+    <td> </td>
+</tr>

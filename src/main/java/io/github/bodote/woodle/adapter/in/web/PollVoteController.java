@@ -72,7 +72,8 @@ public class PollVoteController {
                     response.participantName(),
                     buildVoteCells(options, response.votes())
             ));
-            return "poll/participant-row :: row";
+            model.addAttribute("summaryCells", buildSummaryCells(options, poll.responses()));
+            return "poll/participant-row-update :: payload";
         }
         return "redirect:/poll/" + pollId;
     }
@@ -97,6 +98,20 @@ public class PollVoteController {
         for (PollOption option : options) {
             PollVoteValue value = byOptionId.get(option.optionId());
             cells.add(new VoteCell(option.optionId(), value, symbolFor(value)));
+        }
+        return cells;
+    }
+
+    private List<SummaryCell> buildSummaryCells(List<PollOption> options, List<PollResponse> responses) {
+        Map<UUID, Long> yesCounts = responses.stream()
+                .flatMap(response -> response.votes().stream())
+                .filter(vote -> vote.value() == PollVoteValue.YES)
+                .collect(Collectors.groupingBy(PollVote::optionId, Collectors.counting()));
+        long max = yesCounts.values().stream().mapToLong(Long::longValue).max().orElse(0);
+        List<SummaryCell> cells = new ArrayList<>();
+        for (PollOption option : options) {
+            long count = yesCounts.getOrDefault(option.optionId(), 0L);
+            cells.add(new SummaryCell(option.optionId(), (int) count, count == max && count > 0));
         }
         return cells;
     }
@@ -137,6 +152,20 @@ public class PollVoteController {
 
         public String getSymbol() {
             return symbol;
+        }
+    }
+
+    record SummaryCell(UUID optionId, int count, boolean best) {
+        public UUID getOptionId() {
+            return optionId;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public boolean isBest() {
+            return best;
         }
     }
 }
