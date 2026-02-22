@@ -36,5 +36,10 @@ class ThymeleafRuntimeHintsTest {
                 TypeReference.of("io.github.bodote.woodle.adapter.in.web.PollViewController$DateGroup"));
         assertNotNull(dateGroupHint);
         assertTrue(dateGroupHint.getMemberCategories().contains(MemberCategory.INVOKE_DECLARED_METHODS));
+
+        var voteSummaryHint = hints.reflection().getTypeHint(
+                TypeReference.of("io.github.bodote.woodle.adapter.in.web.PollVoteController$SummaryCell"));
+        assertNotNull(voteSummaryHint);
+        assertTrue(voteSummaryHint.getMemberCategories().contains(MemberCategory.INVOKE_DECLARED_METHODS));
     }
 }

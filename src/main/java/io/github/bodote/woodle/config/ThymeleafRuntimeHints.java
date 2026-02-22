@@ -20,6 +20,7 @@ public class ThymeleafRuntimeHints implements RuntimeHintsRegistrar {
         registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollViewController$SummaryCell");
         registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollVoteController$ParticipantRow");
         registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollVoteController$VoteCell");
+        registerType(hints, "io.github.bodote.woodle.adapter.in.web.PollVoteController$SummaryCell");
         registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.PollDAO");
         registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.PollDAO$Author");
         registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.PollDAO$Access");

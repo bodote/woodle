@@ -92,14 +92,7 @@
             </tr>
             </tbody>
             <tfoot>
-            <tr class="summary-row">
-                <th scope="row" class="votes-table__summary-label">Summe</th>
-                <td th:each="cell : ${summaryCells}" class="votes-table__summary">
-                    <span th:text="${cell.count}">0</span>
-                    <span th:if="${cell.best}" class="votes-table__best">★</span>
-                </td>
-                <td> </td>
-            </tr>
+            <tr th:replace="poll/summary-row :: row"></tr>
             </tfoot>
         </table>
 
