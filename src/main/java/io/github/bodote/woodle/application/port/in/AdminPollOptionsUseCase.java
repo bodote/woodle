@@ -6,7 +6,7 @@ import java.util.UUID;
 
 public interface AdminPollOptionsUseCase {
 
-    void addDate(UUID pollId, String adminSecret, LocalDate date);
+    void addDate(UUID pollId, String adminSecret, LocalDate date, LocalTime startTime);
 
     void removeOption(UUID pollId, String adminSecret, LocalDate date, LocalTime startTime);
 }

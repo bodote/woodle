@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.ui.Model;
+import org.springframework.http.HttpStatus;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -59,7 +61,7 @@ public class PollVoteController {
             PollResponse response = poll.responses().stream()
                     .filter(candidate -> candidate.responseId().equals(responseId))
                     .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Response not found"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Response not found"));
             List<PollOption> options = poll.options().stream()
                     .sorted(Comparator.comparing(PollOption::date)
                             .thenComparing(PollOption::startTime, Comparator.nullsFirst(Comparator.naturalOrder())))

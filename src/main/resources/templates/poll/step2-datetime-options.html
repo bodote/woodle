@@ -1,23 +1,20 @@
 <div id="date-options" th:fragment="dateTimeOptions" class="option-grid">
     <div th:each="dayIndex : ${#numbers.sequence(1, dateCount)}"
-         th:with="timeCount=${timeCountByDay != null and #lists.size(timeCountByDay) >= dayIndex ? timeCountByDay[dayIndex - 1] : 1}"
+         th:with="timeCount=${timeCountByDay[dayIndex - 1]}"
          class="option-item stack">
         <label th:for="${'date-option-' + dayIndex}" th:text="|Tag ${dayIndex}|">Tag 1</label>
         <div class="form-row">
             <input th:id="${'date-option-' + dayIndex}"
                    th:name="${'dateOption' + dayIndex}"
                    type="date"
-                   th:value="${dateValues != null and #lists.size(dateValues) >= dayIndex ? dateValues[dayIndex - 1] : ''}"
+                   th:value="${dateValues[dayIndex - 1]}"
                    placeholder="yyyy-mm-dd">
         </div>
         <div th:each="timeIndex : ${#numbers.sequence(1, timeCount)}" class="form-row">
             <label th:for="${'start-time-' + dayIndex + '-' + timeIndex}" th:text="|Uhrzeit ${timeIndex}|">Uhrzeit</label>
             <input th:id="${'start-time-' + dayIndex + '-' + timeIndex}"
                    th:name="${'startTime' + dayIndex + '_' + timeIndex}"
-                   th:value="${startTimeValuesByDay != null
-                       and #lists.size(startTimeValuesByDay) >= dayIndex
-                       and #lists.size(startTimeValuesByDay[dayIndex - 1]) >= timeIndex
-                       ? startTimeValuesByDay[dayIndex - 1][timeIndex - 1] : ''}"
+                   th:value="${startTimeValuesByDay[dayIndex - 1][timeIndex - 1]}"
                    type="time">
         </div>
         <div class="actions">

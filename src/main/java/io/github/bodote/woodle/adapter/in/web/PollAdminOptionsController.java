@@ -2,12 +2,15 @@ package io.github.bodote.woodle.adapter.in.web;
 
 import io.github.bodote.woodle.application.port.in.AdminPollOptionsUseCase;
 import io.github.bodote.woodle.application.port.in.ReadPollUseCase;
+import io.github.bodote.woodle.domain.model.EventType;
 import io.github.bodote.woodle.domain.model.Poll;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -29,9 +32,14 @@ public class PollAdminOptionsController {
             @PathVariable UUID pollId,
             @PathVariable String adminSecret,
             @RequestParam("date") LocalDate date,
+            @RequestParam(value = "startTime", required = false) LocalTime startTime,
             Model model
     ) {
-        adminPollOptionsUseCase.addDate(pollId, adminSecret, date);
+        Poll existingPoll = readPollUseCase.getAdmin(pollId, adminSecret);
+        if (existingPoll.eventType() == EventType.INTRADAY && startTime == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start time is required for intraday polls");
+        }
+        adminPollOptionsUseCase.addDate(pollId, adminSecret, date, startTime);
         Poll poll = readPollUseCase.getAdmin(pollId, adminSecret);
         model.addAttribute("poll", poll);
         model.addAttribute("adminView", true);

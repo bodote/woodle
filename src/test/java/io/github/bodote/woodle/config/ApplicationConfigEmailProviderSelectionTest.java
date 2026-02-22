@@ -67,6 +67,10 @@ class ApplicationConfigEmailProviderSelectionTest {
                 "no-reply@woodle.click",
                 "[Woodle]",
                 "https://woodle.click",
+                "smtp.ionos.de",
+                587,
+                "woodle@funknstein.de",
+                "dummy",
                 sesProvider,
                 smtpProvider
         );
@@ -89,12 +93,16 @@ class ApplicationConfigEmailProviderSelectionTest {
                         "woodle@funknstein.de",
                         "[Woodle]",
                         "https://woodle.click",
+                        "",
+                        587,
+                        "woodle@funknstein.de",
+                        "dummy",
                         sesProvider,
                         smtpProvider
                 )
         );
 
-        assertEquals("Email provider smtp is enabled but no JavaMailSender bean is available", exception.getMessage());
+        assertEquals("Email provider smtp requires property woodle.email.smtp.host", exception.getMessage());
     }
 
     @Test
@@ -109,6 +117,10 @@ class ApplicationConfigEmailProviderSelectionTest {
                 "woodle@funknstein.de",
                 "[Woodle]",
                 "https://woodle.click",
+                "smtp.ionos.de",
+                587,
+                "woodle@funknstein.de",
+                "dummy",
                 sesProvider,
                 smtpProvider
         );
@@ -146,6 +158,10 @@ class ApplicationConfigEmailProviderSelectionTest {
                         "no-reply@woodle.click",
                         "[Woodle]",
                         "https://woodle.click",
+                        "smtp.ionos.de",
+                        587,
+                        "woodle@funknstein.de",
+                        "dummy",
                         sesProvider,
                         smtpProvider
                 )
@@ -168,6 +184,10 @@ class ApplicationConfigEmailProviderSelectionTest {
                         "no-reply@woodle.click",
                         "[Woodle]",
                         "https://woodle.click",
+                        "smtp.ionos.de",
+                        587,
+                        "woodle@funknstein.de",
+                        "dummy",
                         sesProvider,
                         smtpProvider
                 )
