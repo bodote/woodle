@@ -1,4 +1,4 @@
-package io.github.bodote.woodle.adapter.in.web;
+package io.github.bodote.woodle.application.model;
 
 import io.github.bodote.woodle.domain.model.EventType;
 

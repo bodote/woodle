@@ -1,6 +1,6 @@
 package io.github.bodote.woodle.application.port.out;
 
-import io.github.bodote.woodle.adapter.in.web.WizardState;
+import io.github.bodote.woodle.application.model.WizardState;
 
 import java.util.Optional;
 import java.util.UUID;

@@ -1,5 +1,6 @@
 package io.github.bodote.woodle.adapter.in.web;
 
+import io.github.bodote.woodle.application.model.WizardState;
 import io.github.bodote.woodle.domain.model.EventType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class WizardStateTest {
         WizardState state = new WizardState();
         state.setEventType(EventType.INTRADAY);
 
-        Class<?> dayOptionClass = Class.forName("io.github.bodote.woodle.adapter.in.web.WizardState$DayOption");
+        Class<?> dayOptionClass = Class.forName("io.github.bodote.woodle.application.model.WizardState$DayOption");
         Object firstDay = dayOptionClass
                 .getDeclaredConstructor(LocalDate.class, List.class)
                 .newInstance(LocalDate.of(2026, 2, 1), List.of(LocalTime.of(10, 50), LocalTime.of(13, 50)));

@@ -3,7 +3,7 @@ package io.github.bodote.woodle.adapter.out.persistence;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import io.github.bodote.woodle.adapter.in.web.WizardState;
+import io.github.bodote.woodle.application.model.WizardState;
 import io.github.bodote.woodle.domain.model.EventType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -1,5 +1,6 @@
 package io.github.bodote.woodle.adapter.in.web;
 
+import io.github.bodote.woodle.application.model.WizardState;
 import io.github.bodote.woodle.application.port.in.CreatePollResult;
 import io.github.bodote.woodle.application.port.in.CreatePollUseCase;
 import io.github.bodote.woodle.application.port.in.command.CreatePollCommand;

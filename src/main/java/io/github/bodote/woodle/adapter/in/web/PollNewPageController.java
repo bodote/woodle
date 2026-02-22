@@ -1,5 +1,6 @@
 package io.github.bodote.woodle.adapter.in.web;
 
+import io.github.bodote.woodle.application.model.WizardState;
 import io.github.bodote.woodle.application.port.out.WizardStateRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;

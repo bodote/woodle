@@ -2,7 +2,7 @@ package io.github.bodote.woodle.adapter.out.persistence;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.bodote.woodle.adapter.in.web.WizardState;
+import io.github.bodote.woodle.application.model.WizardState;
 import io.github.bodote.woodle.application.port.out.WizardStateRepository;
 import io.github.bodote.woodle.domain.model.EventType;
 import software.amazon.awssdk.core.ResponseInputStream;
