@@ -8,10 +8,12 @@ import io.github.bodote.woodle.domain.model.PollVote;
 import io.github.bodote.woodle.domain.model.PollVoteValue;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
+import org.springframework.http.HttpStatus;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.LocalDate;
@@ -42,7 +44,7 @@ public class PollViewController {
 
     @GetMapping("/poll/{pollId:[0-9a-fA-F\\-]{36}}")
     public String viewPoll(@PathVariable UUID pollId, Model model) {
-        Poll poll = readPollUseCase.getPublic(pollId);
+        Poll poll = loadPublicPoll(pollId);
         model.addAttribute("poll", poll);
         model.addAttribute("adminView", false);
         model.addAttribute("pollId", pollId);
@@ -57,7 +59,7 @@ public class PollViewController {
                                 @RequestParam(value = "emailDisabled", defaultValue = "false") boolean emailDisabled,
                                 Model model,
                                 HttpServletRequest request) {
-        Poll poll = readPollUseCase.getAdmin(pollId, adminSecret);
+        Poll poll = loadAdminPoll(pollId, adminSecret);
         model.addAttribute("poll", poll);
         model.addAttribute("adminView", true);
         model.addAttribute("pollId", pollId);
@@ -72,7 +74,7 @@ public class PollViewController {
 
     @GetMapping("/poll/{pollId:[0-9a-fA-F\\-]{36}}/responses/{responseId:[0-9a-fA-F\\-]{36}}/edit")
     public String editResponseRow(@PathVariable UUID pollId, @PathVariable UUID responseId, Model model) {
-        Poll poll = readPollUseCase.getPublic(pollId);
+        Poll poll = loadPublicPoll(pollId);
         PollResponse response = poll.responses().stream()
                 .filter(candidate -> candidate.responseId().equals(responseId))
                 .findFirst()
@@ -93,6 +95,22 @@ public class PollViewController {
                 buildVoteCells(options, response.votes())
         ));
         return "poll/participant-row-edit :: row";
+    }
+
+    private Poll loadPublicPoll(UUID pollId) {
+        try {
+            return readPollUseCase.getPublic(pollId);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Poll not found", exception);
+        }
+    }
+
+    private Poll loadAdminPoll(UUID pollId, String adminSecret) {
+        try {
+            return readPollUseCase.getAdmin(pollId, adminSecret);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Poll not found", exception);
+        }
     }
 
     private void applyParticipantView(Model model, Poll poll) {
@@ -334,7 +352,7 @@ public class PollViewController {
         }
     }
 
-    record MonthGroup(String label, int startIndex, int span) {
+    public record MonthGroup(String label, int startIndex, int span) {
         public String getLabel() {
             return label;
         }
@@ -344,7 +362,7 @@ public class PollViewController {
         }
     }
 
-    record DateGroup(String label, int startIndex, int span) {
+    public record DateGroup(String label, int startIndex, int span) {
         public String getLabel() {
             return label;
         }
@@ -354,7 +372,7 @@ public class PollViewController {
         }
     }
 
-    record OptionHeader(PollOption option, String label) {
+    public record OptionHeader(PollOption option, String label) {
         public PollOption getOption() {
             return option;
         }
@@ -364,7 +382,7 @@ public class PollViewController {
         }
     }
 
-    record ParticipantRow(UUID responseId, String name, List<VoteCell> cells) {
+    public record ParticipantRow(UUID responseId, String name, List<VoteCell> cells) {
         public UUID getResponseId() {
             return responseId;
         }
@@ -378,7 +396,7 @@ public class PollViewController {
         }
     }
 
-    record EditableRow(UUID responseId, String name, List<VoteCell> cells) {
+    public record EditableRow(UUID responseId, String name, List<VoteCell> cells) {
         public UUID getResponseId() {
             return responseId;
         }
@@ -392,7 +410,7 @@ public class PollViewController {
         }
     }
 
-    record VoteCell(UUID optionId, PollVoteValue value, String symbol) {
+    public record VoteCell(UUID optionId, PollVoteValue value, String symbol) {
         public UUID getOptionId() {
             return optionId;
         }
@@ -406,7 +424,7 @@ public class PollViewController {
         }
     }
 
-    record SummaryCell(UUID optionId, int count, boolean best) {
+    public record SummaryCell(UUID optionId, int count, boolean best) {
         public UUID getOptionId() {
             return optionId;
         }

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -61,6 +62,18 @@ class PollViewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Referrer-Policy", "no-referrer"))
                 .andExpect(content().string(containsString("Team Meeting")));
+    }
+
+    @Test
+    @DisplayName("returns not found when poll does not exist")
+    void returnsNotFoundWhenPollDoesNotExist() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000049");
+        doThrow(new IllegalArgumentException("Poll not found"))
+                .when(readPollUseCase)
+                .getPublic(pollId);
+
+        mockMvc.perform(get("/poll/" + pollId))
+                .andExpect(status().isNotFound());
     }
 
     @Test
