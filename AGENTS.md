@@ -280,3 +280,28 @@ When changing AWS-native deployment (`DEPLOY_RUNTIME=native`, `Dockerfile.lambda
     - participant `Speichern`
     - row `Bearbeiten`
     - edit and `Speichern` again
+
+## Native Thymeleaf + GraalVM Guardrails (Agent Required)
+
+For any change that touches Thymeleaf templates, runtime hints, Spring bean wiring, or native deploy behavior:
+
+1. Read `docs/native-deploy-gotchas.md` first and treat it as mandatory context.
+2. Treat the following as forbidden unless explicitly justified and covered by tests/hints:
+    - SpEL method invocations in templates (for example `.size()` and `#lists.size(...)`).
+    - `@Bean` method self-invocation for fallback construction.
+3. Keep templates "dumb":
+    - Precompute booleans/counts/padded data in controllers/services.
+    - Use property/index access only in templates.
+4. Keep `ThymeleafRuntimeHints` aligned with every template-facing model/record.
+5. For native incident recovery deploys, prefer no-cache build and verify both Lambda code hash and API Gateway behavior.
+
+## Project Skills
+
+### Available skills
+
+- native-thymeleaf-graalvm: Native deployment playbook for Spring Boot + Thymeleaf + HTMX on GraalVM/AWS Lambda. Use when changing templates, runtime hints, native bean wiring, or native deploy/triage behavior. (file: .codex/skills/native-thymeleaf-graalvm/SKILL.md)
+
+### How to use project skills
+
+- If a request matches a skill description, load its `SKILL.md` and follow it.
+- Treat skill instructions as implementation workflow; keep `docs/native-deploy-gotchas.md` as source of truth for native incidents.
