@@ -180,7 +180,7 @@ class PollVoteControllerTest {
     }
 
     @Test
-    @DisplayName("returns server error when htmx edit references unknown response id")
+    @DisplayName("returns bad request when htmx edit references unknown response id")
     void returnsValidationErrorWhenHtmxEditReferencesUnknownResponseId() throws Exception {
         UUID pollId = UUID.fromString(POLL_ID);
         UUID optionId = UUID.fromString("88888888-8888-8888-8888-888888888881");
@@ -193,15 +193,12 @@ class PollVoteControllerTest {
         );
         when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
 
-        jakarta.servlet.ServletException exception = assertThrows(
-                jakarta.servlet.ServletException.class,
-                () -> mockMvc.perform(post("/poll/" + POLL_ID + "/vote")
+        mockMvc.perform(post("/poll/" + POLL_ID + "/vote")
                         .header("HX-Request", "true")
                         .param("participantName", "Alice")
                         .param("responseId", missingResponseId.toString())
                         .param("vote_edit_" + optionId, "YES"))
-        );
-        org.junit.jupiter.api.Assertions.assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
