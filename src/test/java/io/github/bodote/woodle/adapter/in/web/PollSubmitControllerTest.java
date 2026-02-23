@@ -64,7 +64,7 @@ class PollSubmitControllerTest {
         mockMvc.perform(post("/poll/submit")
                         .session(session))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+                .andExpect(header().string("Location", "/poll/static/" + pollId + "-" + adminSecret));
 
         verify(createPollUseCase).create(any(CreatePollCommand.class));
     }
@@ -87,7 +87,7 @@ class PollSubmitControllerTest {
         mockMvc.perform(post("/poll/submit")
                         .session(session))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret + "?emailFailed=true"));
+                .andExpect(header().string("Location", "/poll/static/" + pollId + "-" + adminSecret + "?emailFailed=true"));
     }
 
     @Test
@@ -108,7 +108,7 @@ class PollSubmitControllerTest {
         mockMvc.perform(post("/poll/submit")
                         .session(session))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret + "?emailDisabled=true"));
+                .andExpect(header().string("Location", "/poll/static/" + pollId + "-" + adminSecret + "?emailDisabled=true"));
     }
 
     @Test
@@ -132,7 +132,7 @@ class PollSubmitControllerTest {
         mockMvc.perform(post("/poll/submit")
                         .param("draftId", draftId.toString()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+                .andExpect(header().string("Location", "/poll/static/" + pollId + "-" + adminSecret));
 
         verify(wizardStateRepository).delete(draftId);
         verify(createPollUseCase).create(any(CreatePollCommand.class));
@@ -173,7 +173,7 @@ class PollSubmitControllerTest {
                         .param("dateOption1", "2026-03-01")
                         .param("dateOption2", "2026-03-02"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+                .andExpect(header().string("Location", "/poll/static/" + pollId + "-" + adminSecret));
 
         verify(createPollUseCase, times(1)).create(any(CreatePollCommand.class));
         verify(wizardStateRepository, times(1)).delete(draftId);
@@ -199,7 +199,7 @@ class PollSubmitControllerTest {
                         .param("dateOption1", "2026-03-01")
                         .param("dateOption2", "2026-03-02"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+                .andExpect(header().string("Location", "/poll/static/" + pollId + "-" + adminSecret));
 
         verify(createPollUseCase, times(1)).create(any(CreatePollCommand.class));
         verify(wizardStateRepository, times(1)).delete(draftId);
@@ -225,7 +225,7 @@ class PollSubmitControllerTest {
                         .param("startTime1", "09:00")
                         .param("startTime2", "14:30"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+                .andExpect(header().string("Location", "/poll/static/" + pollId + "-" + adminSecret));
 
         org.mockito.ArgumentCaptor<CreatePollCommand> captor =
                 org.mockito.ArgumentCaptor.forClass(CreatePollCommand.class);
@@ -273,7 +273,7 @@ class PollSubmitControllerTest {
                         .param("durationMinutes", "15")
                         .param("startTime1", "18:00"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+                .andExpect(header().string("Location", "/poll/static/" + pollId + "-" + adminSecret));
 
         org.mockito.ArgumentCaptor<CreatePollCommand> captor =
                 org.mockito.ArgumentCaptor.forClass(CreatePollCommand.class);
@@ -304,7 +304,7 @@ class PollSubmitControllerTest {
                         .param("startTime1", "")
                         .param("startTime2", "14:30"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+                .andExpect(header().string("Location", "/poll/static/" + pollId + "-" + adminSecret));
 
         org.mockito.ArgumentCaptor<CreatePollCommand> captor =
                 org.mockito.ArgumentCaptor.forClass(CreatePollCommand.class);
@@ -419,7 +419,7 @@ class PollSubmitControllerTest {
                         .param("startTime1", "")
                         .param("startTime2", "10:15"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "/poll/" + pollId + "-" + adminSecret));
+                .andExpect(header().string("Location", "/poll/static/" + pollId + "-" + adminSecret));
 
         org.mockito.ArgumentCaptor<CreatePollCommand> captor =
                 org.mockito.ArgumentCaptor.forClass(CreatePollCommand.class);

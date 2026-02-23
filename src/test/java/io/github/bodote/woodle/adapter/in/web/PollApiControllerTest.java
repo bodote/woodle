@@ -78,8 +78,8 @@ class PollApiControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/v1/polls/" + POLL_ID))
                 .andExpect(jsonPath("$.id").value(POLL_ID.toString()))
-                .andExpect(jsonPath("$.adminUrl").value("/poll/" + POLL_ID + "-" + ADMIN_SECRET))
-                .andExpect(jsonPath("$.voteUrl").value("/poll/" + POLL_ID))
+                .andExpect(jsonPath("$.adminUrl").value("/poll/static/" + POLL_ID + "-" + ADMIN_SECRET))
+                .andExpect(jsonPath("$.voteUrl").value("/poll/static/" + POLL_ID))
                 .andExpect(jsonPath("$.notificationQueued").value(true));
     }
 

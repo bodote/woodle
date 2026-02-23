@@ -14,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DisplayName("Playwright E2E")
@@ -61,7 +62,7 @@ class PollE2EIT {
             page.getByRole(AriaRole.ROW, rowOptions)
                     .getByRole(AriaRole.BUTTON, new com.microsoft.playwright.Locator.GetByRoleOptions().setName("Speichern"))
                     .click();
-            page.waitForURL(participantUrl);
+            page.getByRole(AriaRole.ROW, editRowOptions).waitFor();
 
             page.getByRole(AriaRole.ROW, editRowOptions)
                     .getByRole(AriaRole.BUTTON, new com.microsoft.playwright.Locator.GetByRoleOptions().setName("Zeile bearbeiten: Alice"))
@@ -206,11 +207,61 @@ class PollE2EIT {
         }
     }
 
+    @Test
+    @DisplayName("admin static page copy button copies participant link to clipboard")
+    void adminStaticPageCopyButtonCopiesParticipantLinkToClipboard() {
+        String baseUrl = "http://localhost:" + port;
+
+        try (Playwright playwright = Playwright.create()) {
+            Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+            Page page = browser.newPage();
+
+            page.navigate(baseUrl + "/poll/new");
+            page.getByLabel("Ihr Name").fill("Max");
+            page.getByLabel("Ihre E-Mail-Adresse").fill("max@example.com");
+            page.getByLabel("Titel der Umfrage").fill("Copy Test Poll");
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Weiter zum 2. Schritt")).click();
+
+            page.locator("input[name='dateOption1']").fill("2026-04-10");
+            page.locator("input[name='dateOption2']").fill("2026-04-11");
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Weiter")).click();
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Umfrage erstellen")).click();
+
+            page.waitForSelector("button[data-copy-target='participant-link']");
+            page.evaluate("""
+                    () => {
+                        window.__copiedText = null;
+                        Object.defineProperty(navigator, 'clipboard', {
+                            configurable: true,
+                            value: {
+                                writeText: (text) => {
+                                    window.__copiedText = text;
+                                    return Promise.resolve();
+                                }
+                            }
+                        });
+                    }
+                    """);
+            page.locator("button[data-copy-target='participant-link']").click();
+
+            String expectedParticipantLink = page.locator("#participant-link").innerText().trim();
+            String copiedText = page.evaluate("() => window.__copiedText").toString();
+            assertEquals(expectedParticipantLink, copiedText);
+            browser.close();
+        }
+    }
+
     private String toParticipantUrl(String adminUrl) {
-        int index = adminUrl.indexOf("/poll/");
-        String path = adminUrl.substring(index + "/poll/".length());
+        int staticIndex = adminUrl.indexOf("/poll/static/");
+        String prefix = "/poll/static/";
+        int index = staticIndex;
+        if (index < 0) {
+            index = adminUrl.indexOf("/poll/");
+            prefix = "/poll/";
+        }
+        String path = adminUrl.substring(index + prefix.length());
         int lastDash = path.lastIndexOf('-');
         String pollId = path.substring(0, lastDash);
-        return adminUrl.substring(0, index) + "/poll/" + pollId;
+        return adminUrl.substring(0, index) + prefix + pollId;
     }
 }

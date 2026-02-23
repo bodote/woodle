@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Umfrage wird geladen</title>
+    <script src="/js/vendor/htmx.min.js"></script>
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="page-shell" id="poll-content">
+    <header>
+        <h1>Woodle</h1>
+    </header>
+
+    <main class="panel-grid">
+        <section class="content-card loading-card">
+            <div class="loading-spinner" aria-hidden="true"></div>
+            <p id="loading-message">Bitte noch ein bischen Geduld, wir laden gerade die Umfrage</p>
+            <p id="loading-error" class="form-error" hidden>Die Umfrage wurde nicht gefunden oder ist derzeit nicht erreichbar.</p>
+            <div id="poll-ready-probe"
+                 hx-trigger="load, every 1.5s"
+                 hx-target="this"
+                 hx-swap="innerHTML"
+                 hidden></div>
+        </section>
+    </main>
+</div>
+<script>
+    (function () {
+        if (!window.copyHandlerBound) {
+            document.addEventListener('click', async function (event) {
+                const button = event.target.closest('[data-copy-target]');
+                if (!button) {
+                    return;
+                }
+                const targetId = button.getAttribute('data-copy-target');
+                const target = targetId ? document.getElementById(targetId) : null;
+                if (!target) {
+                    return;
+                }
+                const value = target.textContent || '';
+                try {
+                    await navigator.clipboard.writeText(value);
+                } catch (_) {
+                    const range = document.createRange();
+                    range.selectNodeContents(target);
+                    const selection = window.getSelection();
+                    if (!selection) {
+                        return;
+                    }
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    document.execCommand('copy');
+                    selection.removeAllRanges();
+                }
+            });
+            window.copyHandlerBound = true;
+        }
+
+        const probe = document.getElementById('poll-ready-probe');
+        if (!probe) {
+            return;
+        }
+
+        const currentPath = window.location.pathname;
+        const staticPrefix = '/poll/static/';
+        if (!currentPath.startsWith(staticPrefix)) {
+            return;
+        }
+
+        const pollReference = currentPath.substring(staticPrefix.length);
+        const query = window.location.search || '';
+        const dynamicBase = '/poll/dynamic/' + pollReference;
+        probe.setAttribute('hx-get', dynamicBase + '/ready');
+        probe.dataset.fragmentPath = dynamicBase + '/fragment' + query;
+
+        probe.addEventListener('htmx:afterSwap', function () {
+            if (probe.textContent.trim() !== 'ready') {
+                return;
+            }
+            probe.removeAttribute('hx-trigger');
+            const target = document.getElementById('poll-content');
+            if (!target) {
+                return;
+            }
+            htmx.ajax('GET', probe.dataset.fragmentPath, {target: target, swap: 'outerHTML'});
+        });
+
+        probe.addEventListener('htmx:responseError', function (event) {
+            if (event.detail.xhr.status !== 404) {
+                return;
+            }
+            probe.removeAttribute('hx-trigger');
+            const error = document.getElementById('loading-error');
+            if (error) {
+                error.hidden = false;
+            }
+        });
+    })();
+</script>
+</body>
+</html>

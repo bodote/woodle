@@ -83,7 +83,7 @@ public class PollSubmitController {
             wizardStateRepository.delete(draftId);
         }
         session.removeAttribute(WizardState.SESSION_KEY);
-        String target = "/poll/" + result.pollId() + "-" + result.adminSecret();
+        String target = "/poll/static/" + result.pollId() + "-" + result.adminSecret();
         if (result.notificationDisabled()) {
             target = target + "?emailDisabled=true";
         } else if (!result.notificationQueued()) {

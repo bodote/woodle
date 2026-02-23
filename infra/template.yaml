@@ -115,9 +115,27 @@ Resources:
         Name: !Sub woodle-no-referrer-${EnvironmentName}
         Comment: Enforce no-referrer on all viewer responses
         SecurityHeadersConfig:
-          ReferrerPolicy:
-            Override: true
-            ReferrerPolicy: no-referrer
+            ReferrerPolicy:
+              Override: true
+              ReferrerPolicy: no-referrer
+
+  StaticPollLoaderRewriteFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub woodle-static-loader-rewrite-${EnvironmentName}
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Rewrite /poll/static/{id} to static loader object
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri || '';
+          if (uri.indexOf('/poll/static/') === 0 && uri !== '/poll/static/loader.html') {
+            request.uri = '/poll/static/loader.html';
+          }
+          return request;
+        }
 
   WebDistribution:
     Type: AWS::CloudFront::Distribution
@@ -146,6 +164,18 @@ Resources:
           OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
           ResponseHeadersPolicyId: !Ref NoReferrerResponseHeadersPolicy
         CacheBehaviors:
+          - PathPattern: /poll/static/*
+            TargetOriginId: web-bucket-origin
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+            ResponseHeadersPolicyId: !Ref NoReferrerResponseHeadersPolicy
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt StaticPollLoaderRewriteFunction.FunctionMetadata.FunctionARN
           - PathPattern: /poll/new
             TargetOriginId: web-bucket-origin
             ViewerProtocolPolicy: redirect-to-https

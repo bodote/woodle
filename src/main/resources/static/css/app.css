@@ -259,6 +259,29 @@ legend {
   flex-wrap: wrap;
 }
 
+.loading-card {
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
+  padding: clamp(1.6rem, 1.2rem + 1.2vw, 2.2rem);
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 4px solid color-mix(in srgb, var(--accent) 25%, #ffffff);
+  border-top-color: var(--accent-strong);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 button {
   appearance: none;
   border: 0;

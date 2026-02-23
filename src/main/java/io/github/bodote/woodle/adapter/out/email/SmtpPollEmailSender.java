@@ -29,8 +29,8 @@ public class SmtpPollEmailSender implements PollEmailSender {
     @Override
     public boolean sendPollCreated(PollCreatedEmail pollCreatedEmail) {
         String pollId = pollCreatedEmail.pollId().toString();
-        String adminUrl = absoluteUrl("/poll/" + pollId + "-" + pollCreatedEmail.adminSecret());
-        String voteUrl = absoluteUrl("/poll/" + pollId);
+        String adminUrl = absoluteUrl("/poll/static/" + pollId + "-" + pollCreatedEmail.adminSecret());
+        String voteUrl = absoluteUrl("/poll/static/" + pollId);
 
         String subject = subjectPrefix.isBlank()
                 ? "Umfrage erstellt: " + pollCreatedEmail.pollTitle()

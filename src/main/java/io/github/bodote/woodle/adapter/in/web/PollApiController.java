@@ -55,8 +55,8 @@ public class PollApiController {
 
         CreatePollResponseDTO responseDTO = new CreatePollResponseDTO(
                 pollId,
-                "/poll/" + pollId + "-" + result.adminSecret(),
-                "/poll/" + pollId,
+                "/poll/static/" + pollId + "-" + result.adminSecret(),
+                "/poll/static/" + pollId,
                 result.notificationQueued()
         );
 
