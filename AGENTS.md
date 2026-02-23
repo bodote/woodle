@@ -29,6 +29,20 @@ If you need to install a python package always use a virtual environment for tha
 All Data Transfer classes/records must use the `DTO` suffix in their name.
 The `DTO` suffix is reserved for public API transfer types only; internal/domain/application types must not use `DTO`.
 
-
 When moving a Java class to a new package, **never** delete and recreate it; use `git mv` instead.
+
+## Tooling Notes
+
+- If Playwright/Chrome hangs with the message “Wird in einer aktuellen Browsersitzung geöffnet”, fully quit Chrome and restart it. This usually unblocks the Playwright launch.
+
+## AWS Native Deployment Guardrails
+
+When changing AWS-native deployment (`DEPLOY_RUNTIME=native`, `Dockerfile.lambda.native`, Lambda runtime behavior), 
+
+always run post-deploy AWS smoke checks (Playwright/manual) for poll edit lifecycle:
+    - create poll through step 3
+    - publish poll
+    - participant `Speichern`
+    - row `Bearbeiten`
+    - edit and `Speichern` again
 
