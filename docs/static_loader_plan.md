@@ -26,6 +26,18 @@ Für den neuen Flow brauchen wir eine saubere Trennung zwischen statischem Einst
 
 ## Umsetzungsplan
 
+## Pflicht-Reihenfolge (muss exakt so erfolgen)
+
+1. Automatisierte Tests erstellen (zuerst, inklusive erstem failenden Test).
+2. Funktionalität implementieren.
+3. Test-Coverage prüfen.
+4. Falls nötig: Tests/Code nachbessern, bis Coverage und Qualität passen.
+5. Lokalen Server starten und mit Playwright verifizieren.
+6. Bei Fehlern lokal fixen und erneut mit Playwright prüfen, bis es funktioniert.
+7. Mit Native Image deployen.
+8. Erneut mit Playwright gegen die deployed AWS-URL testen.
+9. Bei Fehlern fixen und redeployen, bis es funktioniert.
+
 ## 1. URL-Design und Routing festlegen
 
 1. Öffentliche Einstieg-URL: `/poll/static/{pollId}`.
@@ -125,6 +137,20 @@ Reihenfolge strikt klein und inkrementell:
 
 Hinweis: Für diese Änderung primär API-/WebMvc-Tests und Infra-Template-Tests priorisieren.
 
+## 6.1 Verbindlicher Delivery-Workflow
+
+Die Umsetzung erfolgt in dieser festen Reihenfolge:
+
+1. Automatisierte Tests zuerst erstellen (mindestens erster failender API-Test gemäß TDD-Gate).
+2. Implementierung der Funktionalität.
+3. Gesamte Tests ausführen und Coverage prüfen.
+4. Falls Coverage/Qualität nicht ausreicht: gezielt Tests ergänzen und Code nachschärfen.
+5. Lokalen Server starten und mit Playwright den End-to-End-Flow prüfen.
+6. Bei Problemen lokal iterativ fixen, bis Playwright lokal stabil grün ist.
+7. Native Image deployen (`DEPLOY_RUNTIME=native` Pfad).
+8. Nach Deployment erneut mit Playwright gegen die AWS-URL prüfen.
+9. Bei Problemen erneut fixen und redeployen, bis der Flow in AWS stabil funktioniert.
+
 ## 7. CloudFront URL-Rewrite für statische ID-Route
 
 Da `/poll/static/{id}` immer dieselbe Datei liefern soll, braucht es einen Rewrite am Edge.
@@ -157,21 +183,36 @@ Betroffene Stelle prüfen:
 
 ## 9. Deployment- und Smoke-Checks
 
-Nach Deployment in AWS:
+Vor Deployment (lokal):
 
-1. Aufruf `https://qs.woodle.click/poll/static/<bestehende-id>`:
+1. `./gradlew test` und `./gradlew check` ausführen.
+2. Coverage prüfen und bei Bedarf verbessern (`./gradlew jacocoTestReport`).
+3. Lokalen Server starten.
+4. Playwright-Szenario lokal ausführen:
+   - `/poll/static/{id}` rendert sofort Loader.
+   - Wartetext sichtbar.
+   - Bei Readiness wird Inhalt per HTMX ersetzt.
+   - Keine Redirect-URL auf `/poll/dynamic/...` im Browser.
+5. Bei Fehlschlag: fixen und Playwright lokal erneut ausführen, bis grün.
+
+Nach Deployment in AWS (native):
+
+1. Native Deployment durchführen.
+2. Aufruf `https://qs.woodle.click/poll/static/<bestehende-id>`:
    - Loader erscheint sofort.
-2. Während kaltem Start:
+3. Während kaltem Start:
    - Loader bleibt sichtbar, kein leerer Browser-Tab.
-3. Sobald App warm ist:
+4. Sobald App warm ist:
    - HTMX ersetzt Loader-Inhalt durch dynamischen Poll-Inhalt auf derselben URL.
-4. Nicht existierende Poll-ID:
+5. Nicht existierende Poll-ID:
    - sauberer Fehlerpfad (kein endloser Spinner).
-5. Links zum Teilen:
+6. Links zum Teilen:
    - `Admin-Link` zeigt `/poll/static/{id}`.
    - `Link für Teilnehmende` zeigt `/poll/static/{id}`.
-6. Admin-E-Mail:
+7. Admin-E-Mail:
    - Enthält den statischen Link `/poll/static/{id}`.
+8. Playwright-Szenario gegen AWS ausführen.
+9. Bei Fehlschlag: fixen, redeployen, Playwright erneut ausführen, bis grün.
 
 Zusätzlich bestehende Guardrail-Smoke-Checks für Poll-Bearbeitung weiter ausführen.
 
@@ -189,6 +230,9 @@ Die Umsetzung gilt als fertig, wenn:
 7. CloudFront-Routing ist testabgedeckt (`CloudFrontSingleDomainRoutingTest`).
 8. Web/API-Verhalten ist testabgedeckt (WebMvc + ggf. E2E-Smoke).
 9. `./gradlew check` läuft grün.
+10. Coverage ist geprüft und bei Bedarf durch zusätzliche Tests verbessert.
+11. Playwright lokal grün.
+12. Playwright nach Native-Deployment in AWS grün.
 
 ## Geplante Dateiänderungen (bei Umsetzung)
 
