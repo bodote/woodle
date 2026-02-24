@@ -77,6 +77,126 @@ class PollViewControllerTest {
     }
 
     @Test
+    @DisplayName("returns ready when dynamic participant poll is available")
+    void returnsReadyWhenDynamicParticipantPollIsAvailable() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000052");
+        Poll poll = TestFixtures.poll(pollId, List.of(), List.of());
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/dynamic/" + pollId + "/ready"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("ready"));
+    }
+
+    @Test
+    @DisplayName("returns not found when dynamic participant poll is unavailable")
+    void returnsNotFoundWhenDynamicParticipantPollIsUnavailable() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000055");
+        doThrow(new IllegalArgumentException("Poll not found"))
+                .when(readPollUseCase)
+                .getPublic(pollId);
+
+        mockMvc.perform(get("/poll/dynamic/" + pollId + "/ready"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("returns ready when dynamic admin poll is available")
+    void returnsReadyWhenDynamicAdminPollIsAvailable() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000056");
+        String adminSecret = "ReadyAdmin001";
+        Poll poll = TestFixtures.poll(
+                pollId,
+                adminSecret,
+                EventType.ALL_DAY,
+                null,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+        when(readPollUseCase.getAdmin(pollId, adminSecret)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/dynamic/" + pollId + "-" + adminSecret + "/ready"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("ready"));
+    }
+
+    @Test
+    @DisplayName("returns not found when dynamic admin poll is unavailable")
+    void returnsNotFoundWhenDynamicAdminPollIsUnavailable() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000057");
+        String adminSecret = "ReadyAdmin002";
+        doThrow(new IllegalArgumentException("Poll not found"))
+                .when(readPollUseCase)
+                .getAdmin(pollId, adminSecret);
+
+        mockMvc.perform(get("/poll/dynamic/" + pollId + "-" + adminSecret + "/ready"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("renders static loader page for participant URL")
+    void rendersStaticLoaderPageForParticipantUrl() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000053");
+
+        mockMvc.perform(get("/poll/static/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Bitte noch ein bischen Geduld, wir laden gerade die Umfrage")))
+                .andExpect(content().string(containsString("hx-trigger=\"load, every 1.5s\"")))
+                .andExpect(content().string(containsString("/poll/dynamic/" + pollId + "/ready")))
+                .andExpect(content().string(containsString("/poll/dynamic/" + pollId + "/fragment")));
+    }
+
+    @Test
+    @DisplayName("static loader contains copy button handler for swapped admin links")
+    void staticLoaderContainsCopyButtonHandlerForSwappedAdminLinks() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000060");
+
+        mockMvc.perform(get("/poll/static/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("copyHandlerBound")))
+                .andExpect(content().string(containsString("[data-copy-target]")));
+    }
+
+    @Test
+    @DisplayName("renders dynamic fragment with poll content")
+    void rendersDynamicFragmentWithPollContent() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000054");
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10))),
+                List.of()
+        );
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/dynamic/" + pollId + "/fragment"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"poll-content\"")))
+                .andExpect(content().string(containsString("Team Meeting")));
+    }
+
+    @Test
+    @DisplayName("renders static admin loader with email failed query on fragment path")
+    void rendersStaticAdminLoaderWithEmailFailedQueryOnFragmentPath() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000058");
+        String adminSecret = "AdminLoad001";
+
+        mockMvc.perform(get("/poll/static/" + pollId + "-" + adminSecret + "?emailFailed=true"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/poll/dynamic/" + pollId + "-" + adminSecret + "/fragment?emailFailed=true")));
+    }
+
+    @Test
+    @DisplayName("renders static admin loader with email disabled query on fragment path")
+    void rendersStaticAdminLoaderWithEmailDisabledQueryOnFragmentPath() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000059");
+        String adminSecret = "AdminLoad002";
+
+        mockMvc.perform(get("/poll/static/" + pollId + "-" + adminSecret + "?emailDisabled=true"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/poll/dynamic/" + pollId + "-" + adminSecret + "/fragment?emailDisabled=true")));
+    }
+
+    @Test
     @DisplayName("renders participant view when no options exist")
     void rendersParticipantViewWhenNoOptionsExist() throws Exception {
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000044");
@@ -205,8 +325,8 @@ class PollViewControllerTest {
                             return request;
                         }))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("http://localhost:8088/poll/" + pollId)))
-                .andExpect(content().string(containsString("http://localhost:8088/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("http://localhost:8088/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("http://localhost:8088/poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -236,8 +356,8 @@ class PollViewControllerTest {
                             return request;
                         }))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
-                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("https://woodle.click/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click/poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -261,8 +381,8 @@ class PollViewControllerTest {
                         .header("X-Forwarded-Host", "woodle.click")
                         .header("X-Forwarded-Port", "abc"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
-                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("https://woodle.click/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click/poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -286,8 +406,8 @@ class PollViewControllerTest {
                         .header("X-Forwarded-Host", "woodle.click")
                         .header("X-Forwarded-Port", "70000"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
-                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("https://woodle.click/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click/poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -311,8 +431,8 @@ class PollViewControllerTest {
                         .header("X-Forwarded-Host", "woodle.click")
                         .header("X-Forwarded-Port", "0"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
-                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("https://woodle.click/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click/poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -335,8 +455,8 @@ class PollViewControllerTest {
                         .header("Forwarded", "for=203.0.113.10;invalid;proto=https")
                         .header("X-Forwarded-Host", "fallback.woodle.click"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("https://fallback.woodle.click/poll/" + pollId)))
-                .andExpect(content().string(containsString("https://fallback.woodle.click/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("https://fallback.woodle.click/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("https://fallback.woodle.click/poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -384,8 +504,8 @@ class PollViewControllerTest {
                             return request;
                         }))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
-                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("https://woodle.click/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click/poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -407,8 +527,8 @@ class PollViewControllerTest {
         mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
                         .header("Forwarded", "for=203.0.113.10;proto=\"https\";host=\"quoted.woodle.click\""))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("https://quoted.woodle.click/poll/" + pollId)))
-                .andExpect(content().string(containsString("https://quoted.woodle.click/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("https://quoted.woodle.click/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("https://quoted.woodle.click/poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -430,8 +550,8 @@ class PollViewControllerTest {
         mockMvc.perform(get("/poll/" + pollId + "-" + adminSecret)
                         .header("Forwarded", "for=203.0.113.10;proto=https;host=woodle.click:8443"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("https://woodle.click:8443/poll/" + pollId)))
-                .andExpect(content().string(containsString("https://woodle.click:8443/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("https://woodle.click:8443/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click:8443/poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -460,8 +580,8 @@ class PollViewControllerTest {
                             return request;
                         }))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("http://proxy.woodle.click/poll/" + pollId)))
-                .andExpect(content().string(containsString("http://proxy.woodle.click/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("http://proxy.woodle.click/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("http://proxy.woodle.click/poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -612,8 +732,8 @@ class PollViewControllerTest {
                             return request;
                         }))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("https://fallback.woodle.click/poll/" + pollId)))
-                .andExpect(content().string(containsString("https://fallback.woodle.click/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("https://fallback.woodle.click/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("https://fallback.woodle.click/poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -640,8 +760,8 @@ class PollViewControllerTest {
                             return request;
                         }))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("https:///poll/" + pollId)))
-                .andExpect(content().string(containsString("https:///poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("https:///poll/static/" + pollId)))
+                .andExpect(content().string(containsString("https:///poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -669,8 +789,8 @@ class PollViewControllerTest {
                             return request;
                         }))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("https://forwarded.woodle.click/poll/" + pollId)))
-                .andExpect(content().string(containsString("https://forwarded.woodle.click/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("https://forwarded.woodle.click/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("https://forwarded.woodle.click/poll/static/" + pollId + "-" + adminSecret)));
     }
 
     @Test
@@ -698,8 +818,8 @@ class PollViewControllerTest {
         String view = controller.viewPollAdmin(pollId, adminSecret, false, false, model, request);
 
         assertEquals("poll/view", view);
-        assertEquals("https://null-base.woodle.click/poll/" + pollId, model.getAttribute("participantShareUrl"));
-        assertEquals("https://null-base.woodle.click/poll/" + pollId + "-" + adminSecret, model.getAttribute("adminShareUrl"));
+        assertEquals("https://null-base.woodle.click/poll/static/" + pollId, model.getAttribute("participantShareUrl"));
+        assertEquals("https://null-base.woodle.click/poll/static/" + pollId + "-" + adminSecret, model.getAttribute("adminShareUrl"));
     }
 
     @Test
@@ -727,7 +847,7 @@ class PollViewControllerTest {
                             return request;
                         }))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("http://fallback-forwarded.woodle.click:8080/poll/" + pollId)))
-                .andExpect(content().string(containsString("http://fallback-forwarded.woodle.click:8080/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("http://fallback-forwarded.woodle.click:8080/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("http://fallback-forwarded.woodle.click:8080/poll/static/" + pollId + "-" + adminSecret)));
     }
 }

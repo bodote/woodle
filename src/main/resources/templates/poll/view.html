@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
-<div class="page-shell">
+<div class="page-shell" id="poll-content" th:fragment="pollContent">
     <header>
         <h1 th:text="${poll.title}">Umfrage</h1>
         <p class="badge badge--admin" th:if="${adminView}">Admin</p>

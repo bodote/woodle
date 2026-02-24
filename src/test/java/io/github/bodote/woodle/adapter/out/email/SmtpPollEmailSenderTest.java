@@ -45,8 +45,8 @@ class SmtpPollEmailSenderTest {
         assertEquals("woodle@funknstein.de", message.getFrom());
         assertEquals("alice@example.com", message.getTo()[0]);
         assertTrue(message.getSubject().contains("Umfrage erstellt"));
-        assertTrue(message.getText().contains("https://woodle.click/poll/00000000-0000-0000-0000-000000000211"));
-        assertTrue(message.getText().contains("https://woodle.click/poll/00000000-0000-0000-0000-000000000211-Abc123XyZ789"));
+        assertTrue(message.getText().contains("https://woodle.click/poll/static/00000000-0000-0000-0000-000000000211"));
+        assertTrue(message.getText().contains("https://woodle.click/poll/static/00000000-0000-0000-0000-000000000211-Abc123XyZ789"));
     }
 
     @Test
@@ -96,8 +96,8 @@ class SmtpPollEmailSenderTest {
         verify(javaMailSender).send(messageCaptor.capture());
         SimpleMailMessage message = messageCaptor.getValue();
         assertEquals("Umfrage erstellt: Board meeting", message.getSubject());
-        assertTrue(message.getText().contains("/poll/00000000-0000-0000-0000-000000000213"));
-        assertTrue(message.getText().contains("/poll/00000000-0000-0000-0000-000000000213-Secret113ABC"));
+        assertTrue(message.getText().contains("/poll/static/00000000-0000-0000-0000-000000000213"));
+        assertTrue(message.getText().contains("/poll/static/00000000-0000-0000-0000-000000000213-Secret113ABC"));
     }
 
     @Test
@@ -123,8 +123,8 @@ class SmtpPollEmailSenderTest {
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(javaMailSender).send(messageCaptor.capture());
         String body = messageCaptor.getValue().getText();
-        assertTrue(body.contains("https://woodle.click/poll/00000000-0000-0000-0000-000000000214"));
-        assertFalse(body.contains("https://woodle.click//poll/00000000-0000-0000-0000-000000000214"));
+        assertTrue(body.contains("https://woodle.click/poll/static/00000000-0000-0000-0000-000000000214"));
+        assertFalse(body.contains("https://woodle.click//poll/static/00000000-0000-0000-0000-000000000214"));
     }
 
     @Test
@@ -150,7 +150,7 @@ class SmtpPollEmailSenderTest {
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(javaMailSender).send(messageCaptor.capture());
         String body = messageCaptor.getValue().getText();
-        assertTrue(body.contains("/poll/00000000-0000-0000-0000-000000000215"));
+        assertTrue(body.contains("/poll/static/00000000-0000-0000-0000-000000000215"));
         assertFalse(body.contains("https://"));
     }
 }

@@ -51,8 +51,8 @@ class SesPollEmailSenderTest {
         String body = request.content().simple().body().text().data();
         assertTrue(subject.contains("Umfrage erstellt"));
         assertTrue(subject.contains("Team lunch"));
-        assertTrue(body.contains("https://woodle.click/poll/00000000-0000-0000-0000-000000000111"));
-        assertTrue(body.contains("https://woodle.click/poll/00000000-0000-0000-0000-000000000111-Abc123XyZ789"));
+        assertTrue(body.contains("https://woodle.click/poll/static/00000000-0000-0000-0000-000000000111"));
+        assertTrue(body.contains("https://woodle.click/poll/static/00000000-0000-0000-0000-000000000111-Abc123XyZ789"));
     }
 
     @Test
@@ -104,8 +104,8 @@ class SesPollEmailSenderTest {
         String subject = requestCaptor.getValue().content().simple().subject().data();
         String body = requestCaptor.getValue().content().simple().body().text().data();
         assertEquals("Umfrage erstellt: Board meeting", subject);
-        assertTrue(body.contains("/poll/00000000-0000-0000-0000-000000000113"));
-        assertTrue(body.contains("/poll/00000000-0000-0000-0000-000000000113-Secret113ABC"));
+        assertTrue(body.contains("/poll/static/00000000-0000-0000-0000-000000000113"));
+        assertTrue(body.contains("/poll/static/00000000-0000-0000-0000-000000000113-Secret113ABC"));
     }
 
     @Test
@@ -132,7 +132,7 @@ class SesPollEmailSenderTest {
         ArgumentCaptor<SendEmailRequest> requestCaptor = ArgumentCaptor.forClass(SendEmailRequest.class);
         verify(sesV2Client).sendEmail(requestCaptor.capture());
         String body = requestCaptor.getValue().content().simple().body().text().data();
-        assertTrue(body.contains("https://woodle.click/poll/00000000-0000-0000-0000-000000000114"));
-        assertFalse(body.contains("https://woodle.click//poll/00000000-0000-0000-0000-000000000114"));
+        assertTrue(body.contains("https://woodle.click/poll/static/00000000-0000-0000-0000-000000000114"));
+        assertFalse(body.contains("https://woodle.click//poll/static/00000000-0000-0000-0000-000000000114"));
     }
 }

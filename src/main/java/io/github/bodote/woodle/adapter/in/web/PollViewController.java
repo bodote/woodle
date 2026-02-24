@@ -9,10 +9,12 @@ import io.github.bodote.woodle.domain.model.PollVoteValue;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -45,10 +47,14 @@ public class PollViewController {
     @GetMapping("/poll/{pollId:[0-9a-fA-F\\-]{36}}")
     public String viewPoll(@PathVariable UUID pollId, Model model) {
         Poll poll = loadPublicPoll(pollId);
-        model.addAttribute("poll", poll);
-        model.addAttribute("adminView", false);
-        model.addAttribute("pollId", pollId);
-        applyParticipantView(model, poll);
+        applyParticipantModel(model, pollId, poll);
+        return "poll/view";
+    }
+
+    @GetMapping("/poll/dynamic/{pollId:[0-9a-fA-F\\-]{36}}")
+    public String viewPollDynamic(@PathVariable UUID pollId, Model model) {
+        Poll poll = loadPublicPoll(pollId);
+        applyParticipantModel(model, pollId, poll);
         return "poll/view";
     }
 
@@ -60,16 +66,89 @@ public class PollViewController {
                                 Model model,
                                 HttpServletRequest request) {
         Poll poll = loadAdminPoll(pollId, adminSecret);
-        model.addAttribute("poll", poll);
-        model.addAttribute("adminView", true);
-        model.addAttribute("pollId", pollId);
-        model.addAttribute("adminSecret", adminSecret);
         String origin = resolveOrigin(request);
-        model.addAttribute("participantShareUrl", origin + "/poll/" + pollId);
-        model.addAttribute("adminShareUrl", origin + "/poll/" + pollId + "-" + adminSecret);
+        applyAdminModel(model, pollId, adminSecret, poll, origin);
         model.addAttribute("emailFailed", emailFailed);
         model.addAttribute("emailDisabled", emailDisabled);
         return "poll/view";
+    }
+
+    @GetMapping("/poll/dynamic/{pollId:[0-9a-fA-F\\-]{36}}-{adminSecret}")
+    public String viewPollAdminDynamic(@PathVariable UUID pollId,
+                                       @PathVariable String adminSecret,
+                                       @RequestParam(value = "emailFailed", defaultValue = "false") boolean emailFailed,
+                                       @RequestParam(value = "emailDisabled", defaultValue = "false") boolean emailDisabled,
+                                       Model model,
+                                       HttpServletRequest request) {
+        return viewPollAdmin(pollId, adminSecret, emailFailed, emailDisabled, model, request);
+    }
+
+    @GetMapping("/poll/static/{pollId:[0-9a-fA-F\\-]{36}}")
+    public String staticPollLoader(@PathVariable UUID pollId, Model model) {
+        model.addAttribute("dynamicPollPath", "/poll/dynamic/" + pollId);
+        model.addAttribute("readyPath", "/poll/dynamic/" + pollId + "/ready");
+        model.addAttribute("fragmentPath", "/poll/dynamic/" + pollId + "/fragment");
+        return "poll/static-loader";
+    }
+
+    @GetMapping("/poll/static/{pollId:[0-9a-fA-F\\-]{36}}-{adminSecret}")
+    public String staticAdminPollLoader(@PathVariable UUID pollId,
+                                        @PathVariable String adminSecret,
+                                        @RequestParam(value = "emailFailed", defaultValue = "false") boolean emailFailed,
+                                        @RequestParam(value = "emailDisabled", defaultValue = "false") boolean emailDisabled,
+                                        Model model) {
+        String basePath = "/poll/dynamic/" + pollId + "-" + adminSecret;
+        String query = buildEmailQuery(emailFailed, emailDisabled);
+        model.addAttribute("dynamicPollPath", basePath);
+        model.addAttribute("readyPath", basePath + "/ready");
+        model.addAttribute("fragmentPath", basePath + "/fragment" + query);
+        model.addAttribute("emailFailed", emailFailed);
+        model.addAttribute("emailDisabled", emailDisabled);
+        return "poll/static-loader";
+    }
+
+    @GetMapping("/poll/dynamic/{pollId:[0-9a-fA-F\\-]{36}}/ready")
+    @ResponseBody
+    public ResponseEntity<String> participantReady(@PathVariable UUID pollId) {
+        try {
+            readPollUseCase.getPublic(pollId);
+            return ResponseEntity.ok("ready");
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/poll/dynamic/{pollId:[0-9a-fA-F\\-]{36}}-{adminSecret}/ready")
+    @ResponseBody
+    public ResponseEntity<String> adminReady(@PathVariable UUID pollId, @PathVariable String adminSecret) {
+        try {
+            readPollUseCase.getAdmin(pollId, adminSecret);
+            return ResponseEntity.ok("ready");
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/poll/dynamic/{pollId:[0-9a-fA-F\\-]{36}}/fragment")
+    public String participantFragment(@PathVariable UUID pollId, Model model) {
+        Poll poll = loadPublicPoll(pollId);
+        applyParticipantModel(model, pollId, poll);
+        return "poll/view :: pollContent";
+    }
+
+    @GetMapping("/poll/dynamic/{pollId:[0-9a-fA-F\\-]{36}}-{adminSecret}/fragment")
+    public String adminFragment(@PathVariable UUID pollId,
+                                @PathVariable String adminSecret,
+                                @RequestParam(value = "emailFailed", defaultValue = "false") boolean emailFailed,
+                                @RequestParam(value = "emailDisabled", defaultValue = "false") boolean emailDisabled,
+                                Model model,
+                                HttpServletRequest request) {
+        Poll poll = loadAdminPoll(pollId, adminSecret);
+        String origin = resolveOrigin(request);
+        applyAdminModel(model, pollId, adminSecret, poll, origin);
+        model.addAttribute("emailFailed", emailFailed);
+        model.addAttribute("emailDisabled", emailDisabled);
+        return "poll/view :: pollContent";
     }
 
     @GetMapping("/poll/{pollId:[0-9a-fA-F\\-]{36}}/responses/{responseId:[0-9a-fA-F\\-]{36}}/edit")
@@ -125,6 +204,32 @@ public class PollViewController {
         model.addAttribute("dateGroups", buildDateGroups(options));
         model.addAttribute("participantRows", buildParticipantRows(options, poll.responses()));
         model.addAttribute("summaryCells", buildSummaryCells(options, poll.responses()));
+    }
+
+    private void applyParticipantModel(Model model, UUID pollId, Poll poll) {
+        model.addAttribute("poll", poll);
+        model.addAttribute("adminView", false);
+        model.addAttribute("pollId", pollId);
+        applyParticipantView(model, poll);
+    }
+
+    private void applyAdminModel(Model model, UUID pollId, String adminSecret, Poll poll, String origin) {
+        model.addAttribute("poll", poll);
+        model.addAttribute("adminView", true);
+        model.addAttribute("pollId", pollId);
+        model.addAttribute("adminSecret", adminSecret);
+        model.addAttribute("participantShareUrl", origin + "/poll/static/" + pollId);
+        model.addAttribute("adminShareUrl", origin + "/poll/static/" + pollId + "-" + adminSecret);
+    }
+
+    private String buildEmailQuery(boolean emailFailed, boolean emailDisabled) {
+        if (emailFailed) {
+            return "?emailFailed=true";
+        }
+        if (emailDisabled) {
+            return "?emailDisabled=true";
+        }
+        return "";
     }
 
     private List<MonthGroup> buildMonthGroups(List<LocalDate> dates) {
