@@ -59,7 +59,7 @@
                 th:id="${'row-' + row.responseId}">
                 <th scope="row" class="votes-table__name" th:text="${row.name}">Name</th>
                 <td th:each="cell : ${row.cells}" class="votes-table__cell">
-                    <span class="votes-table__marker" th:text="${cell.symbol}">✓</span>
+                    <span class="votes-table__marker" th:classappend="${cell.markerClass}" th:text="${cell.symbol}">✓</span>
                 </td>
                 <td class="votes-table__edit">
                     <button type="button"
@@ -81,9 +81,9 @@
                     <select th:id="${'vote-new-' + header.option.optionId}"
                             th:name="${'vote_new_' + header.option.optionId}"
                             form="add-vote-form">
-                        <option value="YES">Ja</option>
-                        <option value="IF_NEEDED">Wenn nötig</option>
-                        <option value="NO">Nein</option>
+                        <option value="YES">✅</option>
+                        <option value="IF_NEEDED">(✔️)</option>
+                        <option value="NO">❌</option>
                     </select>
                 </td>
                 <td class="votes-table__edit">
@@ -161,86 +161,6 @@
         </section>
     </main>
 </div>
-<script>
-    document.querySelectorAll("[data-copy-target]").forEach((button) => {
-        button.addEventListener("click", async () => {
-            const targetId = button.getAttribute("data-copy-target");
-            const target = document.getElementById(targetId);
-            if (!target) {
-                return;
-            }
-            try {
-                await navigator.clipboard.writeText(target.textContent || "");
-            } catch (error) {
-                const range = document.createRange();
-                range.selectNodeContents(target);
-                const selection = window.getSelection();
-                selection.removeAllRanges();
-                selection.addRange(range);
-                document.execCommand("copy");
-                selection.removeAllRanges();
-            }
-        });
-    });
-
-    const optionsForm = document.getElementById("admin-options-form");
-    const startTimes = document.getElementById("admin-start-times");
-    const addTimeButton = document.getElementById("admin-add-time");
-    const removeTimeButton = document.getElementById("admin-remove-time");
-
-    if (optionsForm && startTimes && addTimeButton && removeTimeButton) {
-        const rowCount = () => startTimes.querySelectorAll("[data-time-row]").length;
-        const updateRemoveState = () => {
-            removeTimeButton.disabled = rowCount() <= 1;
-        };
-
-        const createTimeRow = () => {
-            const row = document.createElement("div");
-            row.className = "form-row";
-            row.setAttribute("data-time-row", "true");
-
-            const label = document.createElement("label");
-            label.textContent = "Startzeit";
-
-            const input = document.createElement("input");
-            input.name = "startTime";
-            input.type = "time";
-            input.required = true;
-
-            row.appendChild(label);
-            row.appendChild(input);
-            return row;
-        };
-
-        const resetToSingleTimeRow = () => {
-            const rows = startTimes.querySelectorAll("[data-time-row]");
-            for (let i = 1; i < rows.length; i++) {
-                rows[i].remove();
-            }
-            updateRemoveState();
-        };
-
-        addTimeButton.addEventListener("click", () => {
-            startTimes.appendChild(createTimeRow());
-            updateRemoveState();
-        });
-
-        removeTimeButton.addEventListener("click", () => {
-            const rows = startTimes.querySelectorAll("[data-time-row]");
-            if (rows.length > 1) {
-                rows[rows.length - 1].remove();
-            }
-            updateRemoveState();
-        });
-
-        optionsForm.addEventListener("htmx:afterRequest", (event) => {
-            if (event.detail && event.detail.successful) {
-                resetToSingleTimeRow();
-            }
-        });
-
-        updateRemoveState();
-    }
-</script>
+<script src="/js/woodle-ui.js"></script>
 </body>
 </html>

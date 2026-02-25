@@ -466,6 +466,18 @@ input[type="radio"] {
   font-size: 1.02rem;
 }
 
+.votes-table__marker--yes {
+  color: #16a34a;
+}
+
+.votes-table__marker--if-needed {
+  color: #111827;
+}
+
+.votes-table__marker--no {
+  color: #dc2626;
+}
+
 .votes-table__summary-label {
   text-align: left;
   color: var(--ink-700);

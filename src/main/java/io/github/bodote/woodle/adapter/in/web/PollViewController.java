@@ -319,7 +319,7 @@ public class PollViewController {
         List<VoteCell> cells = new ArrayList<>();
         for (PollOption option : options) {
             PollVoteValue value = byOptionId.get(option.optionId());
-            cells.add(new VoteCell(option.optionId(), value, symbolFor(value)));
+            cells.add(new VoteCell(option.optionId(), value, symbolFor(value), markerClassFor(value)));
         }
         return cells;
     }
@@ -346,6 +346,17 @@ public class PollViewController {
             case YES -> "✓";
             case IF_NEEDED -> "(✓)";
             case NO -> "✗";
+        };
+    }
+
+    private String markerClassFor(PollVoteValue value) {
+        if (value == null) {
+            return "";
+        }
+        return switch (value) {
+            case YES -> "votes-table__marker--yes";
+            case IF_NEEDED -> "votes-table__marker--if-needed";
+            case NO -> "votes-table__marker--no";
         };
     }
 
@@ -515,7 +526,7 @@ public class PollViewController {
         }
     }
 
-    public record VoteCell(UUID optionId, PollVoteValue value, String symbol) {
+    public record VoteCell(UUID optionId, PollVoteValue value, String symbol, String markerClass) {
         public UUID getOptionId() {
             return optionId;
         }
@@ -526,6 +537,10 @@ public class PollViewController {
 
         public String getSymbol() {
             return symbol;
+        }
+
+        public String getMarkerClass() {
+            return markerClass;
         }
     }
 
