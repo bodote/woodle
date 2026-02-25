@@ -23,6 +23,7 @@
                 <h2>Stimmabgaben zur Umfrage</h2>
                 <p>Tragen Sie Ihre Verfügbarkeit ein oder bearbeiten Sie bestehende Einträge.</p>
             </div>
+            <div class="votes-table-wrap">
             <table id="poll-votes-table" class="votes-table">
             <thead>
             <tr>
@@ -95,6 +96,7 @@
             <tr th:replace="poll/summary-row :: row"></tr>
             </tfoot>
         </table>
+            </div>
 
         <form id="add-vote-form" th:action="@{/poll/{pollId}/vote(pollId=${pollId})}" method="post"></form>
         </section>
