@@ -23,6 +23,7 @@
                 <h2>Stimmabgaben zur Umfrage</h2>
                 <p>Tragen Sie Ihre Verfügbarkeit ein oder bearbeiten Sie bestehende Einträge.</p>
             </div>
+            <div class="votes-table-wrap">
             <table id="poll-votes-table" class="votes-table">
             <thead>
             <tr>
@@ -59,7 +60,7 @@
                 th:id="${'row-' + row.responseId}">
                 <th scope="row" class="votes-table__name" th:text="${row.name}">Name</th>
                 <td th:each="cell : ${row.cells}" class="votes-table__cell">
-                    <span class="votes-table__marker" th:text="${cell.symbol}">✓</span>
+                    <span class="votes-table__marker" th:classappend="${cell.markerClass}" th:text="${cell.symbol}">✓</span>
                 </td>
                 <td class="votes-table__edit">
                     <button type="button"
@@ -81,9 +82,9 @@
                     <select th:id="${'vote-new-' + header.option.optionId}"
                             th:name="${'vote_new_' + header.option.optionId}"
                             form="add-vote-form">
-                        <option value="YES">Ja</option>
-                        <option value="IF_NEEDED">Wenn nötig</option>
-                        <option value="NO">Nein</option>
+                        <option value="YES">✅</option>
+                        <option value="IF_NEEDED">(✔️)</option>
+                        <option value="NO">❌</option>
                     </select>
                 </td>
                 <td class="votes-table__edit">
@@ -95,6 +96,7 @@
             <tr th:replace="poll/summary-row :: row"></tr>
             </tfoot>
         </table>
+            </div>
 
         <form id="add-vote-form" th:action="@{/poll/{pollId}/vote(pollId=${pollId})}" method="post"></form>
         </section>
@@ -109,6 +111,7 @@
                     <h2>Optionen bearbeiten</h2>
                     <form th:action="@{/poll/{pollId}-{adminSecret}/options/add(pollId=${pollId},adminSecret=${adminSecret})}"
                           th:attr="hx-post=@{/poll/{pollId}-{adminSecret}/options/add(pollId=${pollId},adminSecret=${adminSecret})}"
+                          id="admin-options-form"
                           method="post"
                           hx-target="#options-list"
                           hx-swap="outerHTML"
@@ -117,12 +120,17 @@
                             <label for="new-date">Neues Datum</label>
                             <input id="new-date" name="date" type="date" required>
                         </div>
-                        <div class="form-row" th:if="${poll.eventType.name() == 'INTRADAY'}">
-                            <label for="new-start-time">Startzeit</label>
-                            <input id="new-start-time" name="startTime" type="time" required>
+                        <div id="admin-start-times" th:if="${poll.eventType.name() == 'INTRADAY'}">
+                            <div class="form-row" data-time-row>
+                                <label for="new-start-time">Startzeit</label>
+                                <input id="new-start-time" name="startTime" type="time" required>
+                            </div>
                         </div>
                         <div class="actions">
-                            <button type="submit" hx-indicator=".htmx-indicator">Datum hinzufügen</button>
+                            <button th:if="${poll.eventType.name() == 'INTRADAY'}" id="admin-add-time" type="button">Uhrzeit hinzufügen</button>
+                            <button th:if="${poll.eventType.name() == 'INTRADAY'}" id="admin-remove-time" type="button">Uhrzeit entfernen</button>
+                            <button type="submit" hx-indicator=".htmx-indicator"
+                                    th:text="${poll.eventType.name() == 'INTRADAY'} ? 'Tag hinzufügen' : 'Datum hinzufügen'">Datum hinzufügen</button>
                             <span class="htmx-indicator" aria-live="polite">Lade…</span>
                         </div>
                     </form>
@@ -155,27 +163,6 @@
         </section>
     </main>
 </div>
-<script>
-    document.querySelectorAll("[data-copy-target]").forEach((button) => {
-        button.addEventListener("click", async () => {
-            const targetId = button.getAttribute("data-copy-target");
-            const target = document.getElementById(targetId);
-            if (!target) {
-                return;
-            }
-            try {
-                await navigator.clipboard.writeText(target.textContent || "");
-            } catch (error) {
-                const range = document.createRange();
-                range.selectNodeContents(target);
-                const selection = window.getSelection();
-                selection.removeAllRanges();
-                selection.addRange(range);
-                document.execCommand("copy");
-                selection.removeAllRanges();
-            }
-        });
-    });
-</script>
+<script src="/js/woodle-ui.js"></script>
 </body>
 </html>

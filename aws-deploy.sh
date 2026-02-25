@@ -338,3 +338,6 @@ aws cloudformation describe-stacks \
   --region "${AWS_REGION}" \
   --query "Stacks[0].Outputs" \
   --output table
+
+DEPLOYED_AT="$(date '+%Y-%m-%d %H:%M:%S %Z')"
+echo "Deployment erfolgreich am: ${DEPLOYED_AT}"

@@ -408,7 +408,8 @@ input[type="radio"] {
 }
 
 .votes-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   border: 1px solid var(--line);
@@ -417,10 +418,16 @@ input[type="radio"] {
   background: var(--surface-solid);
 }
 
+.votes-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 .votes-table th,
 .votes-table td {
   text-align: center;
-  padding: 0.56rem 0.6rem;
+  padding: 0.42rem 0.46rem;
   border-bottom: 1px solid #e6edf4;
   border-right: 1px solid #ecf2f8;
 }
@@ -442,6 +449,14 @@ input[type="radio"] {
   background: #f6fbff;
   color: var(--ink-900);
   font-weight: 700;
+  min-width: 10.8rem;
+}
+
+.votes-table__cell select {
+  min-width: 4.5rem;
+  padding: 0.38rem 1.35rem 0.38rem 0.5rem;
+  line-height: 1.1;
+  font-size: 1.08rem;
 }
 
 .votes-table__month {
@@ -466,6 +481,18 @@ input[type="radio"] {
   font-size: 1.02rem;
 }
 
+.votes-table__marker--yes {
+  color: #16a34a;
+}
+
+.votes-table__marker--if-needed {
+  color: #111827;
+}
+
+.votes-table__marker--no {
+  color: #dc2626;
+}
+
 .votes-table__summary-label {
   text-align: left;
   color: var(--ink-700);
@@ -477,6 +504,10 @@ input[type="radio"] {
   background: #e7f3ff;
   color: #0d4f8f;
   font-weight: 800;
+}
+
+.votes-table__edit {
+  min-width: 6.8rem;
 }
 
 .votes-table__best {

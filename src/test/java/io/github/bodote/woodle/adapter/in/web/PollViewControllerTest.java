@@ -147,14 +147,13 @@ class PollViewControllerTest {
     }
 
     @Test
-    @DisplayName("static loader contains copy button handler for swapped admin links")
-    void staticLoaderContainsCopyButtonHandlerForSwappedAdminLinks() throws Exception {
+    @DisplayName("static loader includes shared ui script for swapped admin links")
+    void staticLoaderIncludesSharedUiScriptForSwappedAdminLinks() throws Exception {
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000060");
 
         mockMvc.perform(get("/poll/static/" + pollId))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("copyHandlerBound")))
-                .andExpect(content().string(containsString("[data-copy-target]")));
+                .andExpect(content().string(containsString("<script src=\"/js/woodle-ui.js\"></script>")));
     }
 
     @Test
@@ -684,7 +683,10 @@ class PollViewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("name=\"startTime\"")))
                 .andExpect(content().string(containsString("id=\"new-start-time\"")))
-                .andExpect(content().string(containsString("type=\"time\"")));
+                .andExpect(content().string(containsString("type=\"time\"")))
+                .andExpect(content().string(containsString("Tag hinzufügen")))
+                .andExpect(content().string(containsString("Uhrzeit hinzufügen")))
+                .andExpect(content().string(containsString("Uhrzeit entfernen")));
     }
 
     @Test

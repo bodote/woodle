@@ -217,7 +217,9 @@ class PollVoteControllerTest {
                         .param("vote_edit_" + optionTwo, "NO"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("(✓)")))
-                .andExpect(content().string(containsString("✗")));
+                .andExpect(content().string(containsString("✗")))
+                .andExpect(content().string(containsString("votes-table__marker--if-needed")))
+                .andExpect(content().string(containsString("votes-table__marker--no")));
     }
 
     @Test

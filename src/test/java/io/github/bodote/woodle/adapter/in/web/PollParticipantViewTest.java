@@ -100,6 +100,12 @@ class PollParticipantViewTest {
                 .andExpect(content().string(containsString("value=\"YES\"")))
                 .andExpect(content().string(containsString("value=\"IF_NEEDED\"")))
                 .andExpect(content().string(containsString("value=\"NO\"")))
+                .andExpect(content().string(containsString("✅")))
+                .andExpect(content().string(containsString("(✔️)")))
+                .andExpect(content().string(containsString("❌")))
+                .andExpect(content().string(containsString("votes-table__marker--yes")))
+                .andExpect(content().string(containsString("votes-table__marker--if-needed")))
+                .andExpect(content().string(containsString("votes-table__marker--no")))
                 .andExpect(content().string(containsString("class=\"summary-row\"")))
                 .andExpect(content().string(containsString("Speichern")));
     }

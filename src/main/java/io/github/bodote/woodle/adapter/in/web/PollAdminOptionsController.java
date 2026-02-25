@@ -14,6 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 @Controller
@@ -32,14 +33,20 @@ public class PollAdminOptionsController {
             @PathVariable UUID pollId,
             @PathVariable String adminSecret,
             @RequestParam("date") LocalDate date,
-            @RequestParam(value = "startTime", required = false) LocalTime startTime,
+            @RequestParam(value = "startTime", required = false) List<LocalTime> startTimes,
             Model model
     ) {
         Poll existingPoll = readPollUseCase.getAdmin(pollId, adminSecret);
-        if (existingPoll.eventType() == EventType.INTRADAY && startTime == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start time is required for intraday polls");
+        if (existingPoll.eventType() == EventType.INTRADAY) {
+            if (startTimes == null || startTimes.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start time is required for intraday polls");
+            }
+            for (LocalTime startTime : startTimes) {
+                adminPollOptionsUseCase.addDate(pollId, adminSecret, date, startTime);
+            }
+        } else {
+            adminPollOptionsUseCase.addDate(pollId, adminSecret, date, null);
         }
-        adminPollOptionsUseCase.addDate(pollId, adminSecret, date, startTime);
         Poll poll = readPollUseCase.getAdmin(pollId, adminSecret);
         model.addAttribute("poll", poll);
         model.addAttribute("adminView", true);

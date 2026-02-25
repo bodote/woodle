@@ -251,6 +251,44 @@ class PollE2EIT {
         }
     }
 
+    @Test
+    @DisplayName("admin intraday edit adds and removes time inputs")
+    void adminIntradayEditAddsAndRemovesTimeInputs() {
+        String baseUrl = "http://localhost:" + port;
+
+        try (Playwright playwright = Playwright.create()) {
+            Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+            Page page = browser.newPage();
+
+            page.navigate(baseUrl + "/poll/new");
+            page.getByLabel("Ihr Name").fill("Max");
+            page.getByLabel("Ihre E-Mail-Adresse").fill("max@example.com");
+            page.getByLabel("Titel der Umfrage").fill("Intraday Admin Edit");
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Weiter zum 2. Schritt")).click();
+
+            page.getByLabel("Untertägig").check();
+            page.waitForSelector("input[name='startTime1_1']");
+            page.locator("input[name='dateOption1']").fill("2026-05-10");
+            page.locator("input[name='dateOption2']").fill("2026-05-11");
+            page.locator("input[name='startTime1_1']").fill("09:00");
+            page.locator("input[name='startTime2_1']").fill("10:00");
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Weiter")).click();
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Umfrage erstellen")).click();
+            page.waitForSelector("form#admin-options-form");
+
+            assertEquals(1, page.locator("#admin-start-times input[name='startTime']").count());
+
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Uhrzeit hinzufügen")).click();
+            assertEquals(2, page.locator("#admin-start-times input[name='startTime']").count());
+
+            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Uhrzeit entfernen")).click();
+            assertEquals(1, page.locator("#admin-start-times input[name='startTime']").count());
+            assertTrue(page.locator("#admin-remove-time").isDisabled());
+            assertEquals(1, page.locator("#admin-start-times input[name='startTime']").count());
+            browser.close();
+        }
+    }
+
     private String toParticipantUrl(String adminUrl) {
         int staticIndex = adminUrl.indexOf("/poll/static/");
         String prefix = "/poll/static/";
