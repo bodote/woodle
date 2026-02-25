@@ -684,7 +684,10 @@ class PollViewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("name=\"startTime\"")))
                 .andExpect(content().string(containsString("id=\"new-start-time\"")))
-                .andExpect(content().string(containsString("type=\"time\"")));
+                .andExpect(content().string(containsString("type=\"time\"")))
+                .andExpect(content().string(containsString("Tag hinzufügen")))
+                .andExpect(content().string(containsString("Uhrzeit hinzufügen")))
+                .andExpect(content().string(containsString("Uhrzeit entfernen")));
     }
 
     @Test

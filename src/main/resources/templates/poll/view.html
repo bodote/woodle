@@ -109,6 +109,7 @@
                     <h2>Optionen bearbeiten</h2>
                     <form th:action="@{/poll/{pollId}-{adminSecret}/options/add(pollId=${pollId},adminSecret=${adminSecret})}"
                           th:attr="hx-post=@{/poll/{pollId}-{adminSecret}/options/add(pollId=${pollId},adminSecret=${adminSecret})}"
+                          id="admin-options-form"
                           method="post"
                           hx-target="#options-list"
                           hx-swap="outerHTML"
@@ -117,12 +118,17 @@
                             <label for="new-date">Neues Datum</label>
                             <input id="new-date" name="date" type="date" required>
                         </div>
-                        <div class="form-row" th:if="${poll.eventType.name() == 'INTRADAY'}">
-                            <label for="new-start-time">Startzeit</label>
-                            <input id="new-start-time" name="startTime" type="time" required>
+                        <div id="admin-start-times" th:if="${poll.eventType.name() == 'INTRADAY'}">
+                            <div class="form-row" data-time-row>
+                                <label for="new-start-time">Startzeit</label>
+                                <input id="new-start-time" name="startTime" type="time" required>
+                            </div>
                         </div>
                         <div class="actions">
-                            <button type="submit" hx-indicator=".htmx-indicator">Datum hinzufügen</button>
+                            <button th:if="${poll.eventType.name() == 'INTRADAY'}" id="admin-add-time" type="button">Uhrzeit hinzufügen</button>
+                            <button th:if="${poll.eventType.name() == 'INTRADAY'}" id="admin-remove-time" type="button">Uhrzeit entfernen</button>
+                            <button type="submit" hx-indicator=".htmx-indicator"
+                                    th:text="${poll.eventType.name() == 'INTRADAY'} ? 'Tag hinzufügen' : 'Datum hinzufügen'">Datum hinzufügen</button>
                             <span class="htmx-indicator" aria-live="polite">Lade…</span>
                         </div>
                     </form>
@@ -176,6 +182,65 @@
             }
         });
     });
+
+    const optionsForm = document.getElementById("admin-options-form");
+    const startTimes = document.getElementById("admin-start-times");
+    const addTimeButton = document.getElementById("admin-add-time");
+    const removeTimeButton = document.getElementById("admin-remove-time");
+
+    if (optionsForm && startTimes && addTimeButton && removeTimeButton) {
+        const rowCount = () => startTimes.querySelectorAll("[data-time-row]").length;
+        const updateRemoveState = () => {
+            removeTimeButton.disabled = rowCount() <= 1;
+        };
+
+        const createTimeRow = () => {
+            const row = document.createElement("div");
+            row.className = "form-row";
+            row.setAttribute("data-time-row", "true");
+
+            const label = document.createElement("label");
+            label.textContent = "Startzeit";
+
+            const input = document.createElement("input");
+            input.name = "startTime";
+            input.type = "time";
+            input.required = true;
+
+            row.appendChild(label);
+            row.appendChild(input);
+            return row;
+        };
+
+        const resetToSingleTimeRow = () => {
+            const rows = startTimes.querySelectorAll("[data-time-row]");
+            for (let i = 1; i < rows.length; i++) {
+                rows[i].remove();
+            }
+            updateRemoveState();
+        };
+
+        addTimeButton.addEventListener("click", () => {
+            startTimes.appendChild(createTimeRow());
+            updateRemoveState();
+        });
+
+        removeTimeButton.addEventListener("click", () => {
+            const rows = startTimes.querySelectorAll("[data-time-row]");
+            if (rows.length > 1) {
+                rows[rows.length - 1].remove();
+            }
+            updateRemoveState();
+        });
+
+        optionsForm.addEventListener("htmx:afterRequest", (event) => {
+            if (event.detail && event.detail.successful) {
+                resetToSingleTimeRow();
+            }
+        });
+
+        updateRemoveState();
+    }
 </script>
 </body>
 </html>

@@ -100,6 +100,44 @@ class PollAdminOptionsControllerTest {
     }
 
     @Test
+    @DisplayName("adds multiple intraday options for the same day")
+    void addsMultipleIntradayOptionsForSameDay() throws Exception {
+        Poll poll = TestFixtures.poll(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                EventType.INTRADAY,
+                90,
+                List.of(TestFixtures.option(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 2, 12),
+                        LocalTime.of(14, 30),
+                        LocalTime.of(16, 0))),
+                List.of()
+        );
+        when(readPollUseCase.getAdmin(UUID.fromString(POLL_ID), ADMIN_SECRET)).thenReturn(poll);
+
+        mockMvc.perform(post("/poll/" + POLL_ID + "-" + ADMIN_SECRET + "/options/add")
+                        .param("date", "2026-02-12")
+                        .param("startTime", "09:00", "11:00"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("2026-02-12")))
+                .andExpect(content().string(containsString("Termin löschen")));
+
+        verify(adminPollOptionsUseCase).addDate(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                LocalDate.of(2026, 2, 12),
+                LocalTime.of(9, 0)
+        );
+        verify(adminPollOptionsUseCase).addDate(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                LocalDate.of(2026, 2, 12),
+                LocalTime.of(11, 0)
+        );
+    }
+
+    @Test
     @DisplayName("rejects intraday option add without start time")
     void rejectsIntradayOptionAddWithoutStartTime() throws Exception {
         Poll poll = TestFixtures.poll(
