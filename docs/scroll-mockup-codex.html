@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Woodle Scroll Mockup</title>
+  <style>
+    :root {
+      --bg-1: #f3f8ff;
+      --bg-2: #f7fff6;
+      --ink-900: #142237;
+      --ink-700: #2c435f;
+      --ink-500: #5d738f;
+      --line: #d5e2ef;
+      --line-strong: #bfd4ea;
+      --surface: rgba(255, 255, 255, 0.88);
+      --surface-solid: #ffffff;
+      --accent: #0b71d6;
+      --accent-strong: #0859ad;
+      --accent-soft: #e6f2ff;
+      --shadow-lg: 0 26px 52px -30px rgba(18, 44, 81, 0.4);
+      --shadow-sm: 0 8px 18px -12px rgba(17, 46, 84, 0.35);
+      --radius-xl: 22px;
+      --radius-md: 12px;
+      --sticky-name-width: 250px;
+      --sticky-action-width: 138px;
+      --option-width: 132px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink-900);
+      font-family: "Sora", "Avenir Next", "Segoe UI", sans-serif;
+      line-height: 1.5;
+      background:
+        radial-gradient(1100px 600px at -6% -14%, #65d7ff 0%, #3aa6ff 30%, transparent 65%),
+        radial-gradient(700px 460px at 110% -10%, #4ce59c 0%, #26c7ce 34%, transparent 65%),
+        radial-gradient(900px 600px at 70% 110%, #ffe29b 0%, #ffd3b8 30%, transparent 60%),
+        linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    }
+
+    .page-shell {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 2.2rem 1rem 3.6rem;
+    }
+
+    header {
+      position: relative;
+      margin-bottom: 1.1rem;
+      padding: 0.4rem 0.2rem;
+      text-align: center;
+    }
+
+    header::before {
+      content: "";
+      position: absolute;
+      right: 0.2rem;
+      top: -0.4rem;
+      width: 68px;
+      height: 68px;
+      border-radius: 14px;
+      opacity: 0.18;
+      background-image: radial-gradient(circle, #0b71d6 2.2px, transparent 2.5px);
+      background-size: 14px 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.9rem, 1.2rem + 1.8vw, 3rem);
+      line-height: 1.16;
+      letter-spacing: -0.03em;
+    }
+
+    .content-card,
+    .votes-panel {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid color-mix(in srgb, var(--line) 72%, #ffffff);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(6px);
+    }
+
+    .content-card {
+      margin-bottom: 1rem;
+      padding: 1.35rem 1.45rem;
+    }
+
+    .votes-panel {
+      padding: 1rem 1rem 1.15rem;
+      overflow: hidden;
+    }
+
+    .section-heading {
+      display: grid;
+      gap: 0.2rem;
+      margin-bottom: 0.8rem;
+      text-align: center;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      font-size: 1.9rem;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+
+    .section-heading p {
+      margin: 0;
+      color: var(--ink-500);
+    }
+
+    .scroll-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      width: calc(100% - var(--sticky-name-width) - var(--sticky-action-width));
+      max-width: calc(100% - var(--sticky-name-width) - var(--sticky-action-width));
+      min-height: 2.25rem;
+      padding: 0.1rem 0.5rem;
+      color: #0a4f95;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      font-size: 0.98rem;
+      font-weight: 800;
+      text-align: center;
+      transition: transform 220ms ease;
+      animation: hintPulse 1.55s ease-in-out infinite, hintWiggle 3.8s ease-in-out infinite;
+      transform-origin: center;
+      position: absolute;
+      left: var(--sticky-name-width);
+      top: 0.55rem;
+      z-index: 6;
+      transform: none;
+      pointer-events: none;
+    }
+
+    .scroll-hint__icon {
+      flex: 0 0 auto;
+      font-size: 1rem;
+    }
+
+    .scroll-hint.is-dismissed {
+      animation: hintPulse 1.55s ease-in-out infinite, hintWiggle 3.8s ease-in-out infinite;
+    }
+
+    .mockup-stage {
+      position: relative;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      background: rgba(255, 255, 255, 0.64);
+      padding-top: 0;
+    }
+
+    .votes-table-wrap {
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(11, 113, 214, 0.45) rgba(230, 242, 255, 0.6);
+      scroll-behavior: smooth;
+      overscroll-behavior-x: contain;
+      position: relative;
+    }
+
+    .votes-table-wrap::-webkit-scrollbar {
+      height: 12px;
+    }
+
+    .votes-table-wrap::-webkit-scrollbar-thumb {
+      background: rgba(11, 113, 214, 0.45);
+      border-radius: 999px;
+    }
+
+    .votes-table-wrap::after {
+      content: "";
+      position: sticky;
+      right: 0;
+      top: 0;
+      float: right;
+      width: 62px;
+      height: 100%;
+      pointer-events: none;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(233, 243, 255, 0.95));
+      opacity: 1;
+      transition: opacity 180ms ease;
+    }
+
+    .votes-table-wrap.is-at-end::after {
+      opacity: 0;
+    }
+
+    table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.86);
+      text-align: center;
+      vertical-align: middle;
+      padding: 0.75rem 0.55rem;
+      min-width: var(--option-width);
+      white-space: nowrap;
+    }
+
+    thead th {
+      background: #edf6ff;
+      font-weight: 800;
+    }
+
+    .month {
+      color: var(--ink-700);
+      font-size: 1rem;
+    }
+
+    .date-group,
+    .date {
+      color: var(--ink-700);
+    }
+
+    .name-col,
+    .action-col {
+      position: sticky;
+      z-index: 3;
+      background: rgba(255, 255, 255, 0.98);
+    }
+
+    thead .name-col,
+    thead .action-col {
+      z-index: 4;
+      background: #edf6ff;
+    }
+
+    .name-col {
+      left: 0;
+      min-width: var(--sticky-name-width);
+      width: var(--sticky-name-width);
+      box-shadow: 10px 0 14px -14px rgba(20, 34, 55, 0.32);
+    }
+
+    .action-col {
+      right: 0;
+      min-width: var(--sticky-action-width);
+      width: var(--sticky-action-width);
+      box-shadow: -10px 0 14px -14px rgba(20, 34, 55, 0.32);
+    }
+
+    .name-cell {
+      text-align: left;
+    }
+
+    .name-cell strong,
+    .summary-cell strong {
+      display: block;
+      text-align: center;
+    }
+
+    .name-field {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .name-field input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.72rem 0.8rem;
+      background: #ffffff;
+      color: var(--ink-900);
+      font: inherit;
+    }
+
+    .vote-select {
+      width: 92px;
+      margin: 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.48rem 0.6rem;
+      background: #ffffff;
+      color: var(--ink-900);
+      font: inherit;
+      text-align: center;
+    }
+
+    .save-button {
+      border: 0;
+      border-radius: 12px;
+      padding: 0.7rem 1rem;
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--accent), #0f89de);
+      font: inherit;
+      font-weight: 700;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .action-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink-700);
+      box-shadow: none;
+      cursor: pointer;
+      transition: transform 130ms ease, border-color 130ms ease, background-color 130ms ease, color 130ms ease;
+      font-size: 1.05rem;
+      line-height: 1;
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .icon-button:hover {
+      transform: translateY(-1px);
+      border-color: var(--line-strong);
+      background: #ffffff;
+    }
+
+    .icon-button--save {
+      color: #0f5ea8;
+    }
+
+    .icon-button--delete {
+      color: #9a4251;
+    }
+
+    .summary-row th,
+    .summary-row td {
+      background: #e6f0fb;
+      font-weight: 800;
+      color: #14467c;
+    }
+
+    .mockup-notes {
+      margin-top: 0.9rem;
+      color: var(--ink-500);
+      font-size: 0.92rem;
+      text-align: center;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 820px) {
+      .page-shell {
+        padding-inline: 0.7rem;
+      }
+
+      .section-heading h2 {
+        font-size: 1.55rem;
+      }
+
+      .scroll-hint {
+        width: 100%;
+        border-radius: 18px;
+        justify-content: flex-start;
+        text-align: left;
+      }
+    }
+
+    @keyframes hintPulse {
+      0%, 100% {
+        text-shadow: 0 0 0 rgba(11, 113, 214, 0);
+        transform: scale(1);
+      }
+
+      50% {
+        text-shadow: 0 0 16px rgba(11, 113, 214, 0.14);
+        transform: scale(1.018);
+      }
+    }
+
+    @keyframes hintWiggle {
+      0%, 82%, 100% {
+        translate: 0 0;
+      }
+
+      85% {
+        translate: -3px 0;
+      }
+
+      89% {
+        translate: 4px 0;
+      }
+
+      93% {
+        translate: -2px 0;
+      }
+
+      97% {
+        translate: 2px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header>
+      <h1>März 2026 mit 30 Tagen</h1>
+    </header>
+
+    <section class="content-card" aria-label="Umfragebeschreibung">
+      <p>Automatisch erzeugte Ganztags-Umfrage mit 30 Einträgen.</p>
+    </section>
+
+    <section class="votes-panel">
+      <div class="section-heading">
+        <h2>Stimmabgaben zur Umfrage</h2>
+        <p>Tragen Sie Ihre Verfügbarkeit ein oder bearbeiten Sie bestehende Einträge.</p>
+      </div>
+
+      <div class="mockup-stage">
+        <div class="scroll-hint" id="scroll-hint" role="status" aria-live="polite">
+          <span class="scroll-hint__icon" aria-hidden="true">↔</span>
+          <span>Weitere Termine: rechts/links scrollen</span>
+          <span class="scroll-hint__icon" aria-hidden="true">↔</span>
+        </div>
+        <div class="votes-table-wrap" id="votes-table-wrap" aria-describedby="scroll-mockup-note">
+          <table aria-label="Teilnehmertabelle mit horizontal scrollbaren Terminspalten">
+            <thead>
+              <tr>
+                <th class="name-col" scope="col">Teilnehmende</th>
+                <th class="month" scope="colgroup" colspan="12">März 2026</th>
+                <th class="action-col" scope="col">Bearbeiten</th>
+              </tr>
+              <tr>
+                <th class="name-col" scope="col"> </th>
+                <th class="date-group" scope="colgroup" colspan="4">Woche 13</th>
+                <th class="date-group" scope="colgroup" colspan="4">Woche 14</th>
+                <th class="date-group" scope="colgroup" colspan="4">Woche 15</th>
+                <th class="action-col" scope="col"> </th>
+              </tr>
+              <tr>
+                <th class="name-col" scope="col"> </th>
+                <th class="date" scope="col">Do., 26.03.</th>
+                <th class="date" scope="col">Fr., 27.03.</th>
+                <th class="date" scope="col">Sa., 28.03.</th>
+                <th class="date" scope="col">So., 29.03.</th>
+                <th class="date" scope="col">Mo., 30.03.</th>
+                <th class="date" scope="col">Di., 31.03.</th>
+                <th class="date" scope="col">Mi., 01.04.</th>
+                <th class="date" scope="col">Do., 02.04.</th>
+                <th class="date" scope="col">Fr., 03.04.</th>
+                <th class="date" scope="col">Sa., 04.04.</th>
+                <th class="date" scope="col">So., 05.04.</th>
+                <th class="date" scope="col">Mo., 06.04.</th>
+                <th class="action-col" scope="col"> </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th class="name-col name-cell" scope="row">
+                  <div class="name-field">
+                    <label for="mockup-name"><strong>Ihr Name</strong></label>
+                    <input id="mockup-name" type="text" value="">
+                  </div>
+                </th>
+                <td><select class="vote-select" aria-label="Do, 26.03."><option>✅</option></select></td>
+                <td><select class="vote-select" aria-label="Fr, 27.03."><option>✅</option></select></td>
+                <td><select class="vote-select" aria-label="Sa, 28.03."><option>✅</option></select></td>
+                <td><select class="vote-select" aria-label="So, 29.03."><option>✅</option></select></td>
+                <td><select class="vote-select" aria-label="Mo, 30.03."><option>✅</option></select></td>
+                <td><select class="vote-select" aria-label="Di, 31.03."><option>✅</option></select></td>
+                <td><select class="vote-select" aria-label="Mi, 01.04."><option>✅</option></select></td>
+                <td><select class="vote-select" aria-label="Do, 02.04."><option>✅</option></select></td>
+                <td><select class="vote-select" aria-label="Fr, 03.04."><option>✅</option></select></td>
+                <td><select class="vote-select" aria-label="Sa, 04.04."><option>✅</option></select></td>
+                <td><select class="vote-select" aria-label="So, 05.04."><option>✅</option></select></td>
+                <td><select class="vote-select" aria-label="Mo, 06.04."><option>✅</option></select></td>
+                <td class="action-col">
+                  <div class="action-buttons">
+                    <button class="icon-button icon-button--save" type="button" title="Speichern" aria-label="Speichern">💾</button>
+                    <button class="icon-button icon-button--delete" type="button" title="Löschen" aria-label="Löschen">🗑</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="summary-row">
+                <th class="name-col summary-cell" scope="row"><strong>Summe</strong></th>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td class="action-col"> </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <p class="mockup-notes" id="scroll-mockup-note">
+        Mockup: Fester Scroll-Hinweis ohne automatische Tabellenbewegung.
+      </p>
+    </section>
+  </div>
+
+  <script>
+    const wrap = document.getElementById("votes-table-wrap");
+    const hint = document.getElementById("scroll-hint");
+    const syncEdgeState = () => {
+      const maxScroll = wrap.scrollWidth - wrap.clientWidth;
+      wrap.classList.toggle("is-at-end", wrap.scrollLeft >= maxScroll - 2);
+    };
+
+    const dismissHintIfInteracted = () => {
+      syncEdgeState();
+    };
+
+    wrap.addEventListener("scroll", dismissHintIfInteracted, { passive: true });
+    window.addEventListener("resize", syncEdgeState);
+    window.addEventListener("load", () => {
+      syncEdgeState();
+    });
+  </script>
+</body>
+</html>

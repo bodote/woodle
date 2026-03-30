@@ -58,6 +58,44 @@
         });
     };
 
+    const syncParticipantScrollEdge = function (wrap) {
+        if (!wrap) {
+            return;
+        }
+        const maxScroll = wrap.scrollWidth - wrap.clientWidth;
+        wrap.classList.toggle("is-at-end", wrap.scrollLeft >= maxScroll - 2);
+    };
+
+    const bindParticipantScrollHint = function () {
+        document.querySelectorAll(".votes-table-wrap--participant").forEach(function (wrap) {
+            if (wrap.dataset.scrollHintBound === "true") {
+                syncParticipantScrollEdge(wrap);
+                return;
+            }
+            wrap.dataset.scrollHintBound = "true";
+            wrap.addEventListener("scroll", function () {
+                syncParticipantScrollEdge(wrap);
+            }, {passive: true});
+            syncParticipantScrollEdge(wrap);
+        });
+    };
+
+    const updateParticipantHintLayout = function () {
+        document.querySelectorAll(".votes-table-wrap--participant").forEach(function (wrap) {
+            const hint = wrap.querySelector(".scroll-hint--participant");
+            const leftSticky = wrap.querySelector(".votes-table__sticky-left");
+            const rightSticky = wrap.querySelector(".votes-table__sticky-right");
+            if (!hint || !leftSticky || !rightSticky) {
+                return;
+            }
+            const leftWidth = leftSticky.getBoundingClientRect().width;
+            const rightWidth = rightSticky.getBoundingClientRect().width;
+            hint.style.left = leftWidth + "px";
+            hint.style.width = "calc(100% - " + leftWidth + "px - " + rightWidth + "px)";
+            hint.style.maxWidth = "calc(100% - " + leftWidth + "px - " + rightWidth + "px)";
+        });
+    };
+
     document.addEventListener("click", async function (event) {
         const copyButton = event.target.closest("[data-copy-target]");
         if (copyButton) {
@@ -83,7 +121,7 @@
             }
             return;
         }
-
+        
         const addButton = event.target.closest("#admin-add-time");
         if (addButton) {
             const form = addButton.closest("form#admin-options-form");
@@ -128,11 +166,23 @@
 
     document.body.addEventListener("htmx:afterSwap", function () {
         refreshAdminTimeControls();
+        bindParticipantScrollHint();
+        updateParticipantHintLayout();
     });
 
     window.WoodleUi = {
-        refreshAdminTimeControls: refreshAdminTimeControls
+        refreshAdminTimeControls: refreshAdminTimeControls,
+        bindParticipantScrollHint: bindParticipantScrollHint,
+        updateParticipantHintLayout: updateParticipantHintLayout
     };
     window.woodleUiBound = true;
     refreshAdminTimeControls();
+    bindParticipantScrollHint();
+    updateParticipantHintLayout();
+    window.addEventListener("resize", function () {
+        document.querySelectorAll(".votes-table-wrap--participant").forEach(function (wrap) {
+            syncParticipantScrollEdge(wrap);
+        });
+        updateParticipantHintLayout();
+    });
 })();

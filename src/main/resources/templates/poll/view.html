@@ -23,7 +23,15 @@
                 <h2>Stimmabgaben zur Umfrage</h2>
                 <p>Tragen Sie Ihre Verfügbarkeit ein oder bearbeiten Sie bestehende Einträge.</p>
             </div>
-            <div class="votes-table-wrap votes-table-wrap--participant">
+            <div class="votes-table-wrap votes-table-wrap--participant votes-table-wrap--participant-hint">
+            <div id="participant-scroll-hint"
+                 class="scroll-hint scroll-hint--participant"
+                 role="status"
+                 aria-live="polite">
+                <span class="scroll-hint__icon" aria-hidden="true">↔</span>
+                <span>Weitere Termine: rechts/links scrollen</span>
+                <span class="scroll-hint__icon" aria-hidden="true">↔</span>
+            </div>
             <table id="poll-votes-table" class="votes-table">
             <thead>
             <tr>
@@ -88,7 +96,13 @@
                     </select>
                 </td>
                 <td class="votes-table__edit votes-table__sticky-right">
-                    <button type="submit" form="add-vote-form">Speichern</button>
+                    <div class="votes-table__actions">
+                        <button type="submit"
+                                form="add-vote-form"
+                                class="icon-button votes-table__action-button"
+                                title="Speichern"
+                                aria-label="Speichern">💾</button>
+                    </div>
                 </td>
             </tr>
             </tbody>

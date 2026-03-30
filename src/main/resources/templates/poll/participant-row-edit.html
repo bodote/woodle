@@ -6,6 +6,7 @@
         <form th:id="${'edit-form-' + editRow.responseId}"
               th:action="@{/poll/{pollId}/vote(pollId=${pollId})}"
               th:attr="hx-post=@{/poll/{pollId}/vote(pollId=${pollId})}"
+              hx-include="closest tr"
               hx-target="closest tr"
               hx-swap="outerHTML"
               method="post"></form>
@@ -25,6 +26,17 @@
         </select>
     </td>
     <td class="votes-table__edit votes-table__sticky-right">
-        <button type="submit" th:attr="form=${'edit-form-' + editRow.responseId}">Speichern</button>
+        <div class="votes-table__actions">
+            <button type="submit"
+                    th:attr="form=${'edit-form-' + editRow.responseId}"
+                    class="icon-button votes-table__action-button"
+                    title="Speichern"
+                    aria-label="Speichern">💾</button>
+            <button type="reset"
+                    th:attr="form=${'edit-form-' + editRow.responseId}"
+                    class="icon-button votes-table__action-button votes-table__action-button--danger"
+                    title="Löschen"
+                    aria-label="Löschen">🗑</button>
+        </div>
     </td>
 </tr>

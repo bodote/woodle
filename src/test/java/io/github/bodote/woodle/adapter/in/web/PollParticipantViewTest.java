@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -137,8 +138,11 @@ class PollParticipantViewTest {
                 .andExpect(content().string(containsString("value=\"" + responseId + "\"")))
                 .andExpect(content().string(containsString("name=\"participantName\"")))
                 .andExpect(content().string(containsString("value=\"Alice\"")))
+                .andExpect(content().string(containsString("hx-include=\"closest tr\"")))
                 .andExpect(content().string(containsString("name=\"vote_edit_" + option.optionId() + "\"")))
-                .andExpect(content().string(containsString("value=\"YES\"")));
+                .andExpect(content().string(containsString("value=\"YES\"")))
+                .andExpect(content().string(containsString("title=\"Speichern\"")))
+                .andExpect(content().string(containsString("title=\"Löschen\"")));
     }
 
     @Test
@@ -207,11 +211,36 @@ class PollParticipantViewTest {
 
         mockMvc.perform(get("/poll/" + pollId))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("class=\"votes-table-wrap votes-table-wrap--participant\"")))
+                .andExpect(content().string(containsString("votes-table-wrap--participant")))
                 .andExpect(content().string(containsString("class=\"votes-table__name votes-table__sticky-left\"")))
                 .andExpect(content().string(containsString("class=\"votes-table__edit votes-table__sticky-right\"")))
                 .andExpect(content().string(containsString("class=\"votes-table__sticky-left votes-table__corner\"")))
                 .andExpect(content().string(containsString("class=\"votes-table__sticky-right votes-table__corner\"")))
                 .andExpect(content().string(containsString("class=\"votes-table__summary-label votes-table__sticky-left\"")));
+    }
+
+    @Test
+    @DisplayName("renders scroll hint and icon actions for wide participant tables")
+    void rendersScrollHintAndIconActionsForWideParticipantTables() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000214");
+        PollOption option = TestFixtures.option(
+                UUID.fromString("00000000-0000-0000-0000-000000000131"),
+                LocalDate.of(2026, 3, 26)
+        );
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(option),
+                List.of()
+        );
+
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"participant-scroll-hint\"")))
+                .andExpect(content().string(containsString("Weitere Termine: rechts/links scrollen")))
+                .andExpect(content().string(containsString("class=\"votes-table-wrap votes-table-wrap--participant votes-table-wrap--participant-hint\"")))
+                .andExpect(content().string(containsString("title=\"Speichern\"")))
+                .andExpect(content().string(not(containsString("title=\"Löschen\""))));
     }
 }

@@ -255,6 +255,49 @@ legend {
   text-align: center;
 }
 
+.scroll-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin: 0 auto 0.85rem;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 2.25rem;
+  padding: 0.1rem 0.5rem;
+  color: #0a4f95;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 0.98rem;
+  font-weight: 800;
+  text-align: center;
+  transition: transform 220ms ease;
+  animation: scroll-hint-pulse 1.55s ease-in-out infinite, scroll-hint-wiggle 3.8s ease-in-out infinite;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.scroll-hint__icon {
+  flex: 0 0 auto;
+}
+
+.scroll-hint--participant {
+  position: absolute;
+  top: 0.1rem;
+  left: 10.8rem;
+  z-index: 6;
+  width: calc(100% - 10.8rem - 6.8rem);
+  max-width: calc(100% - 10.8rem - 6.8rem);
+  margin: 0;
+  color: #ffffff;
+}
+
+.scroll-hint.is-dismissed {
+  animation: scroll-hint-pulse 1.55s ease-in-out infinite, scroll-hint-wiggle 3.8s ease-in-out infinite;
+}
+
 .actions {
   display: flex;
   align-items: center;
@@ -434,7 +477,26 @@ input[type="radio"] {
 }
 
 .votes-table-wrap--participant {
+  position: relative;
   scrollbar-gutter: stable both-edges;
+}
+
+.votes-table-wrap--participant::after {
+  content: "";
+  position: sticky;
+  right: 0;
+  top: 0;
+  float: right;
+  width: 3.8rem;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(233, 243, 255, 0.95));
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+
+.votes-table-wrap--participant.is-at-end::after {
+  opacity: 0;
 }
 
 .votes-table th,
@@ -551,6 +613,21 @@ input[type="radio"] {
   background: #ffffff;
 }
 
+.votes-table__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.votes-table__action-button {
+  color: #0f5ea8;
+}
+
+.votes-table__action-button--danger {
+  color: #9a4251;
+}
+
 .votes-table__corner {
   background: #ffffff;
 }
@@ -562,6 +639,40 @@ input[type="radio"] {
 .votes-table__best {
   margin-left: 0.22rem;
   color: #f97316;
+}
+
+@keyframes scroll-hint-pulse {
+  0%, 100% {
+    text-shadow: 0 0 0 rgba(11, 113, 214, 0);
+    transform: scale(1);
+  }
+
+  50% {
+    text-shadow: 0 0 16px rgba(11, 113, 214, 0.14);
+    transform: scale(1.018);
+  }
+}
+
+@keyframes scroll-hint-wiggle {
+  0%, 82%, 100% {
+    translate: 0 0;
+  }
+
+  85% {
+    translate: -3px 0;
+  }
+
+  89% {
+    translate: 4px 0;
+  }
+
+  93% {
+    translate: -2px 0;
+  }
+
+  97% {
+    translate: 2px 0;
+  }
 }
 
 .votes-table code,
