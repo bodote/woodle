@@ -1,7 +1,7 @@
 <tr th:fragment="row"
     th:id="${'row-' + editRow.responseId}"
     th:attr="data-edit-row=${editRow.name}">
-    <th scope="row" class="votes-table__name">
+    <th scope="row" class="votes-table__name votes-table__sticky-left">
         <span th:text="${editRow.name}">Name</span>
         <form th:id="${'edit-form-' + editRow.responseId}"
               th:action="@{/poll/{pollId}/vote(pollId=${pollId})}"
@@ -24,7 +24,7 @@
             <option value="NO" th:selected="${cell.value != null and cell.value.name() == 'NO'}">❌</option>
         </select>
     </td>
-    <td class="votes-table__edit">
+    <td class="votes-table__edit votes-table__sticky-right">
         <button type="submit" th:attr="form=${'edit-form-' + editRow.responseId}">Speichern</button>
     </td>
 </tr>

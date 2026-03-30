@@ -27,7 +27,7 @@ public class PollNewPageController {
     private static final String STEP2_TIME_COUNT_BY_DAY = "step2TimeCountByDay";
     private static final int STEP2_MIN_DATES = 1;
     private static final int STEP2_DEFAULT_DATES = 2;
-    private static final int STEP2_MAX_DATES = 10;
+    private static final int STEP2_MAX_DATES = 30;
     private static final int STEP2_MIN_TIMES_PER_DAY = 1;
     private static final int STEP2_MAX_TIMES_PER_DAY = 10;
     private static final String EMAIL_ERROR_MESSAGE = "Bitte eine gültige E-Mail-Adresse eingeben";

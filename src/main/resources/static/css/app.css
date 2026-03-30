@@ -65,6 +65,8 @@ header::before {
 }
 
 main {
+  width: 100%;
+  min-width: 0;
   max-width: 980px;
   margin: 0 auto;
 }
@@ -118,6 +120,7 @@ h2 {
 
 .votes-panel {
   padding: clamp(0.8rem, 0.5rem + 0.9vw, 1.2rem);
+  min-width: 0;
 }
 
 .admin-layout {
@@ -405,6 +408,11 @@ input[type="radio"] {
 .panel-grid {
   display: grid;
   gap: 1rem;
+  min-width: 0;
+}
+
+.panel-grid > * {
+  min-width: 0;
 }
 
 .votes-table {
@@ -412,16 +420,21 @@ input[type="radio"] {
   min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  overflow: hidden;
   background: var(--surface-solid);
 }
 
 .votes-table-wrap {
   width: 100%;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-solid);
   overflow-x: auto;
   overflow-y: hidden;
+}
+
+.votes-table-wrap--participant {
+  scrollbar-gutter: stable both-edges;
 }
 
 .votes-table th,
@@ -450,6 +463,33 @@ input[type="radio"] {
   color: var(--ink-900);
   font-weight: 700;
   min-width: 10.8rem;
+}
+
+.votes-table__sticky-left,
+.votes-table__sticky-right {
+  position: sticky;
+  z-index: 2;
+}
+
+.votes-table__sticky-left {
+  left: 0;
+}
+
+.votes-table__sticky-right {
+  right: 0;
+}
+
+.votes-table thead .votes-table__sticky-left,
+.votes-table thead .votes-table__sticky-right {
+  z-index: 4;
+}
+
+.votes-table__sticky-left {
+  box-shadow: 1px 0 0 #ecf2f8, 10px 0 12px -14px rgba(15, 31, 50, 0.45);
+}
+
+.votes-table__sticky-right {
+  box-shadow: -1px 0 0 #ecf2f8, -10px 0 12px -14px rgba(15, 31, 50, 0.45);
 }
 
 .votes-table__cell select {
@@ -508,6 +548,15 @@ input[type="radio"] {
 
 .votes-table__edit {
   min-width: 6.8rem;
+  background: #ffffff;
+}
+
+.votes-table__corner {
+  background: #ffffff;
+}
+
+.votes-table__sticky-left.votes-table__corner {
+  background: #f6fbff;
 }
 
 .votes-table__best {
@@ -600,10 +649,12 @@ input[type="radio"] {
     border-radius: 16px;
   }
 
-  .votes-table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
+  .votes-table__name {
+    min-width: 9.5rem;
+  }
+
+  .votes-table__edit {
+    min-width: 6rem;
   }
 }
 

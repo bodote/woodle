@@ -178,4 +178,40 @@ class PollParticipantViewTest {
                 .andExpect(content().string(containsString("09:00")))
                 .andExpect(content().string(containsString("11:30")));
     }
+
+    @Test
+    @DisplayName("keeps participant and edit columns sticky when many date columns exist")
+    void keepsParticipantAndEditColumnsStickyWhenManyDateColumnsExist() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000213");
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000111"), LocalDate.of(2026, 2, 28)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000112"), LocalDate.of(2026, 3, 4)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000113"), LocalDate.of(2026, 3, 6)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000114"), LocalDate.of(2026, 3, 7)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000115"), LocalDate.of(2026, 3, 12)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000116"), LocalDate.of(2026, 3, 13)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000117"), LocalDate.of(2026, 3, 14)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000118"), LocalDate.of(2026, 3, 15)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000119"), LocalDate.of(2026, 3, 16)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000120"), LocalDate.of(2026, 3, 17)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000121"), LocalDate.of(2026, 3, 18)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000122"), LocalDate.of(2026, 4, 1)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000123"), LocalDate.of(2026, 4, 24))
+                ),
+                List.of()
+        );
+
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("class=\"votes-table-wrap votes-table-wrap--participant\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__name votes-table__sticky-left\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__edit votes-table__sticky-right\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__sticky-left votes-table__corner\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__sticky-right votes-table__corner\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__summary-label votes-table__sticky-left\"")));
+    }
 }

@@ -23,46 +23,46 @@
                 <h2>Stimmabgaben zur Umfrage</h2>
                 <p>Tragen Sie Ihre Verfügbarkeit ein oder bearbeiten Sie bestehende Einträge.</p>
             </div>
-            <div class="votes-table-wrap">
+            <div class="votes-table-wrap votes-table-wrap--participant">
             <table id="poll-votes-table" class="votes-table">
             <thead>
             <tr>
-                <th scope="col" class="votes-table__name">Teilnehmende</th>
+                <th scope="col" class="votes-table__name votes-table__sticky-left">Teilnehmende</th>
                 <th th:each="group : ${monthGroups}"
                     scope="colgroup"
                     class="votes-table__month"
                     th:colspan="${group.span}"
                     th:text="${group.label}">Monat</th>
-                <th scope="col" class="votes-table__edit">Bearbeiten</th>
+                <th scope="col" class="votes-table__edit votes-table__sticky-right">Bearbeiten</th>
             </tr>
             <tr>
-                <th scope="col"> </th>
+                <th scope="col" class="votes-table__sticky-left votes-table__corner"> </th>
                 <th th:each="group : ${dateGroups}"
                     scope="colgroup"
                     class="votes-table__date-group"
                     th:colspan="${group.span}"
                     th:text="${group.label}">Datum</th>
-                <th scope="col"> </th>
+                <th scope="col" class="votes-table__sticky-right votes-table__corner"> </th>
             </tr>
             <tr>
-                <th scope="col"> </th>
+                <th scope="col" class="votes-table__sticky-left votes-table__corner"> </th>
                 <th th:each="header : ${voteOptionHeaders}"
                     scope="col"
                     class="votes-table__date"
                     th:attr="data-date=${header.option.date}"
                     th:text="${header.label}">Datum</th>
-                <th scope="col"> </th>
+                <th scope="col" class="votes-table__sticky-right votes-table__corner"> </th>
             </tr>
             </thead>
             <tbody>
             <tr th:each="row : ${participantRows}"
                 th:attr="data-edit-row=${row.name}"
                 th:id="${'row-' + row.responseId}">
-                <th scope="row" class="votes-table__name" th:text="${row.name}">Name</th>
+                <th scope="row" class="votes-table__name votes-table__sticky-left" th:text="${row.name}">Name</th>
                 <td th:each="cell : ${row.cells}" class="votes-table__cell">
                     <span class="votes-table__marker" th:classappend="${cell.markerClass}" th:text="${cell.symbol}">✓</span>
                 </td>
-                <td class="votes-table__edit">
+                <td class="votes-table__edit votes-table__sticky-right">
                     <button type="button"
                             class="icon-button"
                             th:attr="aria-label=${'Zeile bearbeiten: ' + row.name},
@@ -74,7 +74,7 @@
                 </td>
             </tr>
             <tr data-add-row="true" class="votes-table__add-row">
-                <th scope="row" class="votes-table__name">
+                <th scope="row" class="votes-table__name votes-table__sticky-left">
                     <label for="participant-name">Ihr Name</label>
                     <input id="participant-name" name="participantName" type="text" required form="add-vote-form">
                 </th>
@@ -87,7 +87,7 @@
                         <option value="NO">❌</option>
                     </select>
                 </td>
-                <td class="votes-table__edit">
+                <td class="votes-table__edit votes-table__sticky-right">
                     <button type="submit" form="add-vote-form">Speichern</button>
                 </td>
             </tr>
