@@ -248,10 +248,20 @@ Resources:
               StringEquals:
                 AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebDistribution}
 
+  ApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/apigateway/woodle-${EnvironmentName}
+      RetentionInDays: 14
+
   Api:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: "$default"
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+        Format: >-
+          {"requestId":"$context.requestId","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","path":"$context.path","status":"$context.status","responseLatency":"$context.responseLatency","integrationLatency":"$context.integrationLatency","integrationRequestId":"$context.integration.requestId","sourceIp":"$context.identity.sourceIp"}
       CorsConfiguration:
         AllowOrigins:
           - !If
@@ -287,6 +297,7 @@ Resources:
       MemorySize: 1024
       Architectures:
         - arm64
+      Tracing: Active
       Environment:
         Variables:
           WOODLE_PUBLIC_BASE_URL: !If
@@ -325,6 +336,12 @@ Resources:
               Action:
                 - s3:ListBucket
               Resource: !GetAtt PollsBucket.Arn
+            - Sid: XRayWriteAccess
+              Effect: Allow
+              Action:
+                - xray:PutTraceSegments
+                - xray:PutTelemetryRecords
+              Resource: "*"
             - !If
               - UseSesEmailPolicy
               - Sid: PollEmailSesSend
