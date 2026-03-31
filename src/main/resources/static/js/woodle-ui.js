@@ -58,41 +58,79 @@
         });
     };
 
+    const measureParticipantOverflow = function (wrap) {
+        const table = wrap ? wrap.querySelector(".votes-table") : null;
+        if (!wrap || !table) {
+            return false;
+        }
+        const tableWidth = Math.ceil(table.getBoundingClientRect().width);
+        const wrapWidth = Math.floor(wrap.getBoundingClientRect().width);
+        return tableWidth > wrapWidth + 1 || (wrap.scrollWidth - wrap.clientWidth) > 1;
+    };
+
     const syncParticipantScrollEdge = function (wrap) {
         if (!wrap) {
             return;
         }
         const maxScroll = wrap.scrollWidth - wrap.clientWidth;
+        const hint = wrap.parentElement ? wrap.parentElement.querySelector(".scroll-hint--participant") : null;
+        const hasHorizontalOverflow = measureParticipantOverflow(wrap);
+        if (hint) {
+            hint.hidden = !hasHorizontalOverflow;
+        }
         wrap.classList.toggle("is-at-end", wrap.scrollLeft >= maxScroll - 2);
+    };
+
+    const syncParticipantHintState = function (wrap) {
+        syncParticipantScrollEdge(wrap);
+        updateParticipantHintLayout();
     };
 
     const bindParticipantScrollHint = function () {
         document.querySelectorAll(".votes-table-wrap--participant").forEach(function (wrap) {
             if (wrap.dataset.scrollHintBound === "true") {
-                syncParticipantScrollEdge(wrap);
+                syncParticipantHintState(wrap);
                 return;
             }
             wrap.dataset.scrollHintBound = "true";
             wrap.addEventListener("scroll", function () {
                 syncParticipantScrollEdge(wrap);
             }, {passive: true});
-            syncParticipantScrollEdge(wrap);
+            const scheduleSync = function () {
+                window.requestAnimationFrame(function () {
+                    syncParticipantHintState(wrap);
+                });
+            };
+            if (typeof ResizeObserver !== "undefined") {
+                const observer = new ResizeObserver(function () {
+                    scheduleSync();
+                });
+                observer.observe(wrap);
+                const table = wrap.querySelector(".votes-table");
+                if (table) {
+                    observer.observe(table);
+                }
+            }
+            scheduleSync();
+            window.setTimeout(scheduleSync, 120);
         });
     };
 
     const updateParticipantHintLayout = function () {
         document.querySelectorAll(".votes-table-wrap--participant").forEach(function (wrap) {
-            const hint = wrap.querySelector(".scroll-hint--participant");
-            const leftSticky = wrap.querySelector(".votes-table__sticky-left");
-            const rightSticky = wrap.querySelector(".votes-table__sticky-right");
+            const hint = wrap.parentElement ? wrap.parentElement.querySelector(".scroll-hint--participant") : null;
+            const leftSticky = wrap.querySelector("thead .votes-table__sticky-left");
+            const rightSticky = wrap.querySelector("thead .votes-table__sticky-right");
             if (!hint || !leftSticky || !rightSticky) {
                 return;
             }
+            const wrapWidth = wrap.getBoundingClientRect().width;
             const leftWidth = leftSticky.getBoundingClientRect().width;
             const rightWidth = rightSticky.getBoundingClientRect().width;
-            hint.style.left = leftWidth + "px";
-            hint.style.width = "calc(100% - " + leftWidth + "px - " + rightWidth + "px)";
-            hint.style.maxWidth = "calc(100% - " + leftWidth + "px - " + rightWidth + "px)";
+            const availableWidth = Math.max(wrapWidth - leftWidth - rightWidth, 0);
+            hint.style.marginLeft = leftWidth + "px";
+            hint.style.width = availableWidth + "px";
+            hint.style.maxWidth = availableWidth + "px";
         });
     };
 

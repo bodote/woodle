@@ -23,15 +23,16 @@
                 <h2>Stimmabgaben zur Umfrage</h2>
                 <p>Tragen Sie Ihre Verfügbarkeit ein oder bearbeiten Sie bestehende Einträge.</p>
             </div>
-            <div class="votes-table-wrap votes-table-wrap--participant votes-table-wrap--participant-hint">
             <div id="participant-scroll-hint"
                  class="scroll-hint scroll-hint--participant"
                  role="status"
-                 aria-live="polite">
+                 aria-live="polite"
+                 hidden>
                 <span class="scroll-hint__icon" aria-hidden="true">↔</span>
                 <span>Weitere Termine: rechts/links scrollen</span>
                 <span class="scroll-hint__icon" aria-hidden="true">↔</span>
             </div>
+            <div class="votes-table-wrap votes-table-wrap--participant votes-table-wrap--participant-hint">
             <table id="poll-votes-table" class="votes-table">
             <thead>
             <tr>
@@ -83,7 +84,7 @@
             </tr>
             <tr data-add-row="true" class="votes-table__add-row">
                 <th scope="row" class="votes-table__name votes-table__sticky-left">
-                    <label for="participant-name">Ihr Name</label>
+                    <label for="participant-name">Dein Name</label>
                     <input id="participant-name" name="participantName" type="text" required form="add-vote-form">
                 </th>
                 <td th:each="header : ${voteOptionHeaders}" class="votes-table__cell">

@@ -220,8 +220,8 @@ class PollParticipantViewTest {
     }
 
     @Test
-    @DisplayName("renders scroll hint and icon actions for wide participant tables")
-    void rendersScrollHintAndIconActionsForWideParticipantTables() throws Exception {
+    @DisplayName("renders participant scroll hint hidden until overflow is detected")
+    void rendersParticipantScrollHintHiddenUntilOverflowIsDetected() throws Exception {
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000214");
         PollOption option = TestFixtures.option(
                 UUID.fromString("00000000-0000-0000-0000-000000000131"),
@@ -238,6 +238,7 @@ class PollParticipantViewTest {
         mockMvc.perform(get("/poll/" + pollId))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("id=\"participant-scroll-hint\"")))
+                .andExpect(content().string(containsString("id=\"participant-scroll-hint\"\n                 class=\"scroll-hint scroll-hint--participant\"\n                 role=\"status\"\n                 aria-live=\"polite\"\n                 hidden")))
                 .andExpect(content().string(containsString("Weitere Termine: rechts/links scrollen")))
                 .andExpect(content().string(containsString("class=\"votes-table-wrap votes-table-wrap--participant votes-table-wrap--participant-hint\"")))
                 .andExpect(content().string(containsString("title=\"Speichern\"")))

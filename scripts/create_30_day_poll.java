@@ -8,6 +8,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import picocli.CommandLine;
@@ -17,7 +18,7 @@ import picocli.CommandLine.Option;
 @Command(
         name = "create_30_day_poll",
         mixinStandardHelpOptions = true,
-        description = "Creates a March 2026 all-day poll with 30 date options."
+        description = "Creates a poll with configurable upcoming day and optional intraday time options."
 )
 class create_30_day_poll implements Runnable {
 
@@ -34,6 +35,19 @@ class create_30_day_poll implements Runnable {
     )
     private String baseUrlOverride;
 
+    @Option(
+            names = "--tage",
+            defaultValue = "30",
+            description = "Number of day options to create starting from tomorrow (default: ${DEFAULT-VALUE})."
+    )
+    private int days;
+
+    @Option(
+            names = {"--untertaegig", "-u"},
+            description = "Create an intraday poll with this many one-hour time slots per day, starting at 08:00."
+    )
+    private Integer intradaySlotsPerDay;
+
     public static void main(String[] args) {
         int exitCode = new CommandLine(new create_30_day_poll()).execute(args);
         System.exit(exitCode);
@@ -42,7 +56,15 @@ class create_30_day_poll implements Runnable {
     @Override
     public void run() {
         try {
-            String payload = buildPayload();
+            if (days < 1) {
+                throw new CommandLine.ParameterException(new CommandLine(this), "--tage must be at least 1");
+            }
+            if (intradaySlotsPerDay != null && intradaySlotsPerDay < 1) {
+                throw new CommandLine.ParameterException(
+                        new CommandLine(this), "--untertaegig must be at least 1");
+            }
+
+            String payload = buildPayload(days, intradaySlotsPerDay);
             String baseUrl = baseUrlOverride != null && !baseUrlOverride.isBlank()
                     ? baseUrlOverride.trim()
                     : target.baseUrl;
@@ -105,28 +127,58 @@ class create_30_day_poll implements Runnable {
         return baseUrl + path;
     }
 
-    private static String buildPayload() {
-        StringBuilder dates = new StringBuilder();
-        for (int day = 1; day <= 30; day++) {
-            if (day > 1) {
-                dates.append(',');
-            }
-            dates.append('"').append(LocalDate.of(2026, 3, day)).append('"');
-        }
+    private static String buildPayload(int days, Integer intradaySlotsPerDay) {
+        String dates = buildDates(days);
+        boolean intraday = intradaySlotsPerDay != null;
+        String eventType = intraday ? "INTRADAY" : "ALL_DAY";
+        String durationMinutes = intraday ? "60" : "null";
+        String startTimes = intraday ? buildStartTimes(intradaySlotsPerDay) : "";
+        String title = intraday
+                ? "Test-Poll mit %d Tagen und %d Terminen je Tag".formatted(days, intradaySlotsPerDay)
+                : "Test-Poll mit %d Tagen".formatted(days);
+        String description = intraday
+                ? "Automatisch erzeugte untertägige Umfrage mit %d Tagen und %d einstündigen Terminen je Tag ab morgen."
+                .formatted(days, intradaySlotsPerDay)
+                : "Automatisch erzeugte Ganztags-Umfrage mit %d aufeinanderfolgenden Tagen ab morgen."
+                .formatted(days);
 
         return """
                 {
                   "authorName": "Codex Script",
                   "authorEmail": "codex@example.com",
-                  "title": "März 2026 mit 30 Tagen",
-                  "description": "Automatisch erzeugte Ganztags-Umfrage mit 30 Einträgen.",
-                  "eventType": "ALL_DAY",
-                  "durationMinutes": null,
+                  "title": "%s",
+                  "description": "%s",
+                  "eventType": "%s",
+                  "durationMinutes": %s,
                   "dates": [%s],
-                  "startTimes": [],
+                  "startTimes": [%s],
                   "expiresAtOverride": null
                 }
-                """.formatted(dates);
+                """.formatted(title, description, eventType, durationMinutes, dates, startTimes);
+    }
+
+    private static String buildDates(int days) {
+        StringBuilder dates = new StringBuilder();
+        LocalDate startDate = LocalDate.now().plusDays(1);
+        for (int offset = 0; offset < days; offset++) {
+            if (offset > 0) {
+                dates.append(',');
+            }
+            dates.append('"').append(startDate.plusDays(offset)).append('"');
+        }
+        return dates.toString();
+    }
+
+    private static String buildStartTimes(int intradaySlotsPerDay) {
+        StringBuilder startTimes = new StringBuilder();
+        LocalTime firstSlot = LocalTime.of(8, 0);
+        for (int offset = 0; offset < intradaySlotsPerDay; offset++) {
+            if (offset > 0) {
+                startTimes.append(',');
+            }
+            startTimes.append('"').append(firstSlot.plusHours(offset)).append('"');
+        }
+        return startTimes.toString();
     }
 
     enum Target {
