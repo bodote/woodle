@@ -128,11 +128,12 @@ class create_30_day_poll implements Runnable {
     }
 
     private static String buildPayload(int days, Integer intradaySlotsPerDay) {
-        String dates = buildDates(days);
         boolean intraday = intradaySlotsPerDay != null;
+        PayloadOptions payloadOptions = intraday
+                ? buildIntradayOptions(days, intradaySlotsPerDay)
+                : new PayloadOptions(buildDates(days), "");
         String eventType = intraday ? "INTRADAY" : "ALL_DAY";
         String durationMinutes = intraday ? "60" : "null";
-        String startTimes = intraday ? buildStartTimes(intradaySlotsPerDay) : "";
         String title = intraday
                 ? "Test-Poll mit %d Tagen und %d Terminen je Tag".formatted(days, intradaySlotsPerDay)
                 : "Test-Poll mit %d Tagen".formatted(days);
@@ -154,7 +155,14 @@ class create_30_day_poll implements Runnable {
                   "startTimes": [%s],
                   "expiresAtOverride": null
                 }
-                """.formatted(title, description, eventType, durationMinutes, dates, startTimes);
+                """.formatted(
+                title,
+                description,
+                eventType,
+                durationMinutes,
+                payloadOptions.dates(),
+                payloadOptions.startTimes()
+        );
     }
 
     private static String buildDates(int days) {
@@ -169,16 +177,26 @@ class create_30_day_poll implements Runnable {
         return dates.toString();
     }
 
-    private static String buildStartTimes(int intradaySlotsPerDay) {
+    private static PayloadOptions buildIntradayOptions(int days, int intradaySlotsPerDay) {
+        StringBuilder dates = new StringBuilder();
         StringBuilder startTimes = new StringBuilder();
+        LocalDate startDate = LocalDate.now().plusDays(1);
         LocalTime firstSlot = LocalTime.of(8, 0);
-        for (int offset = 0; offset < intradaySlotsPerDay; offset++) {
-            if (offset > 0) {
-                startTimes.append(',');
+        for (int dayOffset = 0; dayOffset < days; dayOffset++) {
+            LocalDate currentDate = startDate.plusDays(dayOffset);
+            for (int slotOffset = 0; slotOffset < intradaySlotsPerDay; slotOffset++) {
+                if (!dates.isEmpty()) {
+                    dates.append(',');
+                    startTimes.append(',');
+                }
+                dates.append('"').append(currentDate).append('"');
+                startTimes.append('"').append(firstSlot.plusHours(slotOffset)).append('"');
             }
-            startTimes.append('"').append(firstSlot.plusHours(offset)).append('"');
         }
-        return startTimes.toString();
+        return new PayloadOptions(dates.toString(), startTimes.toString());
+    }
+
+    private record PayloadOptions(String dates, String startTimes) {
     }
 
     enum Target {

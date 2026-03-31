@@ -146,6 +146,32 @@ class PollParticipantViewTest {
     }
 
     @Test
+    @DisplayName("renders delete action with confirmation for editable participant row")
+    void rendersDeleteActionWithConfirmationForEditableParticipantRow() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000216");
+        UUID responseId = UUID.fromString("00000000-0000-0000-0000-000000000316");
+        PollOption option = TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000026"),
+                LocalDate.of(2026, 2, 21));
+        PollResponse response = TestFixtures.response(
+                responseId,
+                "Alice",
+                List.of(new PollVote(option.optionId(), PollVoteValue.YES))
+        );
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(option),
+                List.of(response)
+        );
+
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "/responses/" + responseId + "/edit"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("hx-delete=\"/poll/" + pollId + "/responses/" + responseId + "\"")))
+                .andExpect(content().string(containsString("hx-confirm=\"Eintrag von Alice wirklich löschen?\"")));
+    }
+
+    @Test
     @DisplayName("groups intraday time options by date in voting header")
     void groupsIntradayTimeOptionsByDateInVotingHeader() throws Exception {
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000212");
@@ -181,6 +207,44 @@ class PollParticipantViewTest {
                 .andExpect(content().string(containsString("20.02.")))
                 .andExpect(content().string(containsString("09:00")))
                 .andExpect(content().string(containsString("11:30")));
+    }
+
+    @Test
+    @DisplayName("marks day boundaries separately from hourly separators in intraday tables")
+    void marksDayBoundariesSeparatelyFromHourlySeparatorsInIntradayTables() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000215");
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(
+                        TestFixtures.option(
+                                UUID.fromString("00000000-0000-0000-0000-000000000141"),
+                                LocalDate.of(2026, 4, 1),
+                                LocalTime.of(8, 0),
+                                LocalTime.of(9, 0)
+                        ),
+                        TestFixtures.option(
+                                UUID.fromString("00000000-0000-0000-0000-000000000142"),
+                                LocalDate.of(2026, 4, 1),
+                                LocalTime.of(9, 0),
+                                LocalTime.of(10, 0)
+                        ),
+                        TestFixtures.option(
+                                UUID.fromString("00000000-0000-0000-0000-000000000143"),
+                                LocalDate.of(2026, 4, 2),
+                                LocalTime.of(8, 0),
+                                LocalTime.of(9, 0)
+                        )
+                ),
+                List.of()
+        );
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("class=\"votes-table__date-group  votes-table__day-boundary\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__date  votes-table__day-boundary\"\n                    data-date=\"2026-04-01\">09:00</th>")))
+                .andExpect(content().string(containsString("class=\"votes-table__cell  votes-table__day-boundary\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__summary  votes-table__day-boundary\"")));
     }
 
     @Test

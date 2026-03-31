@@ -49,6 +49,7 @@
                 <th th:each="group : ${dateGroups}"
                     scope="colgroup"
                     class="votes-table__date-group"
+                    th:classappend="${group.dayBoundary} ? ' votes-table__day-boundary' : ''"
                     th:colspan="${group.span}"
                     th:text="${group.label}">Datum</th>
                 <th scope="col" class="votes-table__sticky-right votes-table__corner"> </th>
@@ -58,6 +59,7 @@
                 <th th:each="header : ${voteOptionHeaders}"
                     scope="col"
                     class="votes-table__date"
+                    th:classappend="${header.dayBoundary} ? ' votes-table__day-boundary' : ''"
                     th:attr="data-date=${header.option.date}"
                     th:text="${header.label}">Datum</th>
                 <th scope="col" class="votes-table__sticky-right votes-table__corner"> </th>
@@ -68,7 +70,9 @@
                 th:attr="data-edit-row=${row.name}"
                 th:id="${'row-' + row.responseId}">
                 <th scope="row" class="votes-table__name votes-table__sticky-left" th:text="${row.name}">Name</th>
-                <td th:each="cell : ${row.cells}" class="votes-table__cell">
+                <td th:each="cell : ${row.cells}"
+                    class="votes-table__cell"
+                    th:classappend="${cell.dayBoundary} ? ' votes-table__day-boundary' : ''">
                     <span class="votes-table__marker" th:classappend="${cell.markerClass}" th:text="${cell.symbol}">✓</span>
                 </td>
                 <td class="votes-table__edit votes-table__sticky-right">
@@ -87,7 +91,9 @@
                     <label for="participant-name">Dein Name</label>
                     <input id="participant-name" name="participantName" type="text" required form="add-vote-form">
                 </th>
-                <td th:each="header : ${voteOptionHeaders}" class="votes-table__cell">
+                <td th:each="header : ${voteOptionHeaders}"
+                    class="votes-table__cell"
+                    th:classappend="${header.dayBoundary} ? ' votes-table__day-boundary' : ''">
                     <select th:id="${'vote-new-' + header.option.optionId}"
                             th:name="${'vote_new_' + header.option.optionId}"
                             form="add-vote-form">

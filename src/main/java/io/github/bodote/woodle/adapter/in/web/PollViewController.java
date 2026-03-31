@@ -272,13 +272,13 @@ public class PollViewController {
                 continue;
             }
             if (!date.equals(currentDate)) {
-                groups.add(new DateGroup(formatDateGroupLabel(currentDate), startIndex, i - startIndex));
+                groups.add(new DateGroup(formatDateGroupLabel(currentDate), startIndex, i - startIndex, true));
                 currentDate = date;
                 startIndex = i;
             }
         }
         if (currentDate != null) {
-            groups.add(new DateGroup(formatDateGroupLabel(currentDate), startIndex, options.size() - startIndex));
+            groups.add(new DateGroup(formatDateGroupLabel(currentDate), startIndex, options.size() - startIndex, false));
         }
         return groups;
     }
@@ -288,9 +288,12 @@ public class PollViewController {
     }
 
     private List<OptionHeader> buildOptionHeaders(List<PollOption> options) {
-        return options.stream()
-                .map(option -> new OptionHeader(option, formatOptionLabel(option)))
-                .toList();
+        List<OptionHeader> headers = new ArrayList<>();
+        for (int i = 0; i < options.size(); i++) {
+            PollOption option = options.get(i);
+            headers.add(new OptionHeader(option, formatOptionLabel(option), isDayBoundary(options, i)));
+        }
+        return headers;
     }
 
     private String formatOptionLabel(PollOption option) {
@@ -317,9 +320,10 @@ public class PollViewController {
         Map<UUID, PollVoteValue> byOptionId = votes.stream()
                 .collect(Collectors.toMap(PollVote::optionId, PollVote::value));
         List<VoteCell> cells = new ArrayList<>();
-        for (PollOption option : options) {
+        for (int i = 0; i < options.size(); i++) {
+            PollOption option = options.get(i);
             PollVoteValue value = byOptionId.get(option.optionId());
-            cells.add(new VoteCell(option.optionId(), value, symbolFor(value), markerClassFor(value)));
+            cells.add(new VoteCell(option.optionId(), value, symbolFor(value), markerClassFor(value), isDayBoundary(options, i)));
         }
         return cells;
     }
@@ -331,11 +335,19 @@ public class PollViewController {
                 .collect(Collectors.groupingBy(PollVote::optionId, Collectors.counting()));
         long max = yesCounts.values().stream().mapToLong(Long::longValue).max().orElse(0);
         List<SummaryCell> cells = new ArrayList<>();
-        for (PollOption option : options) {
+        for (int i = 0; i < options.size(); i++) {
+            PollOption option = options.get(i);
             long count = yesCounts.getOrDefault(option.optionId(), 0L);
-            cells.add(new SummaryCell(option.optionId(), (int) count, count == max && count > 0));
+            cells.add(new SummaryCell(option.optionId(), (int) count, count == max && count > 0, isDayBoundary(options, i)));
         }
         return cells;
+    }
+
+    private boolean isDayBoundary(List<PollOption> options, int index) {
+        if (index >= options.size() - 1) {
+            return false;
+        }
+        return !options.get(index).date().equals(options.get(index + 1).date());
     }
 
     private String symbolFor(PollVoteValue value) {
@@ -478,7 +490,7 @@ public class PollViewController {
         }
     }
 
-    public record DateGroup(String label, int startIndex, int span) {
+    public record DateGroup(String label, int startIndex, int span, boolean dayBoundary) {
         public String getLabel() {
             return label;
         }
@@ -486,15 +498,23 @@ public class PollViewController {
         public int getSpan() {
             return span;
         }
+
+        public boolean isDayBoundary() {
+            return dayBoundary;
+        }
     }
 
-    public record OptionHeader(PollOption option, String label) {
+    public record OptionHeader(PollOption option, String label, boolean dayBoundary) {
         public PollOption getOption() {
             return option;
         }
 
         public String getLabel() {
             return label;
+        }
+
+        public boolean isDayBoundary() {
+            return dayBoundary;
         }
     }
 
@@ -526,7 +546,7 @@ public class PollViewController {
         }
     }
 
-    public record VoteCell(UUID optionId, PollVoteValue value, String symbol, String markerClass) {
+    public record VoteCell(UUID optionId, PollVoteValue value, String symbol, String markerClass, boolean dayBoundary) {
         public UUID getOptionId() {
             return optionId;
         }
@@ -542,9 +562,13 @@ public class PollViewController {
         public String getMarkerClass() {
             return markerClass;
         }
+
+        public boolean isDayBoundary() {
+            return dayBoundary;
+        }
     }
 
-    public record SummaryCell(UUID optionId, int count, boolean best) {
+    public record SummaryCell(UUID optionId, int count, boolean best, boolean dayBoundary) {
         public UUID getOptionId() {
             return optionId;
         }
@@ -555,6 +579,10 @@ public class PollViewController {
 
         public boolean isBest() {
             return best;
+        }
+
+        public boolean isDayBoundary() {
+            return dayBoundary;
         }
     }
 }

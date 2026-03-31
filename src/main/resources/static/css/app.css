@@ -503,6 +503,10 @@ input[type="radio"] {
   border-right: 1px solid #ecf2f8;
 }
 
+.votes-table .votes-table__day-boundary {
+  border-right: 3px solid #d7e5f4;
+}
+
 .votes-table th:last-child,
 .votes-table td:last-child {
   border-right: 0;

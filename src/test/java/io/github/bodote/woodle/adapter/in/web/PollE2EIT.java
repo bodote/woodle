@@ -66,12 +66,12 @@ class PollE2EIT {
 
             String participantUrl = toParticipantUrl(adminUrl);
             page.navigate(participantUrl);
-            Page.GetByRoleOptions rowOptions = new Page.GetByRoleOptions().setName("Ihr Name");
+            page.waitForSelector("#participant-name");
             Page.GetByRoleOptions editRowOptions = new Page.GetByRoleOptions().setName("Alice");
-            page.getByRole(AriaRole.ROW, rowOptions).getByRole(AriaRole.TEXTBOX).fill("Alice");
-            page.getByRole(AriaRole.ROW, rowOptions).getByRole(AriaRole.COMBOBOX).nth(0).selectOption("YES");
-            page.getByRole(AriaRole.ROW, rowOptions).getByRole(AriaRole.COMBOBOX).nth(1).selectOption("IF_NEEDED");
-            page.getByRole(AriaRole.ROW, rowOptions)
+            page.locator("#participant-name").fill("Alice");
+            page.locator("select[name^='vote_new_']").nth(0).selectOption("YES");
+            page.locator("select[name^='vote_new_']").nth(1).selectOption("IF_NEEDED");
+            page.locator("tr[data-add-row='true']")
                     .getByRole(AriaRole.BUTTON, new com.microsoft.playwright.Locator.GetByRoleOptions().setName("Speichern"))
                     .click();
             page.getByRole(AriaRole.ROW, editRowOptions).waitFor();

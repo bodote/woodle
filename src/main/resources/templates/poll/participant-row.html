@@ -2,7 +2,9 @@
     th:id="${'row-' + row.responseId}"
     th:attr="data-edit-row=${row.name}">
     <th scope="row" class="votes-table__name votes-table__sticky-left" th:text="${row.name}">Name</th>
-    <td th:each="cell : ${row.cells}" class="votes-table__cell">
+    <td th:each="cell : ${row.cells}"
+        class="votes-table__cell"
+        th:classappend="${cell.dayBoundary} ? ' votes-table__day-boundary' : ''">
         <span class="votes-table__marker" th:classappend="${cell.markerClass}" th:text="${cell.symbol}">✓</span>
     </td>
     <td class="votes-table__edit votes-table__sticky-right">

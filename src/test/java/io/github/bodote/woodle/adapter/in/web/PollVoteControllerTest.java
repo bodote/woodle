@@ -29,9 +29,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -258,5 +260,75 @@ class PollVoteControllerTest {
 
         verify(submitVoteUseCase).submit(any(SubmitVoteCommand.class));
         verifyNoInteractions(readPollUseCase);
+    }
+
+    @Test
+    @DisplayName("deletes response and returns out-of-band summary update for htmx request")
+    void deletesResponseAndReturnsOutOfBandSummaryUpdateForHtmxRequest() throws Exception {
+        UUID pollId = UUID.fromString(POLL_ID);
+        UUID optionId = UUID.fromString("12121212-1212-1212-1212-121212121212");
+        UUID deletedResponseId = UUID.fromString("13131313-1313-1313-1313-131313131313");
+        UUID remainingResponseId = UUID.fromString("14141414-1414-1414-1414-141414141414");
+
+        PollOption option = TestFixtures.option(optionId, LocalDate.of(2026, 2, 10));
+        Poll pollAfterDelete = TestFixtures.poll(
+                pollId,
+                "secret",
+                EventType.ALL_DAY,
+                null,
+                List.of(option),
+                List.of(TestFixtures.response(
+                        remainingResponseId,
+                        "Bob",
+                        List.of(new PollVote(optionId, PollVoteValue.YES))
+                ))
+        );
+        when(readPollUseCase.getPublic(pollId)).thenReturn(pollAfterDelete);
+
+        mockMvc.perform(delete("/poll/" + POLL_ID + "/responses/" + deletedResponseId)
+                        .header("HX-Request", "true"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"summary-row\"")))
+                .andExpect(content().string(containsString("hx-swap-oob=\"true\"")))
+                .andExpect(content().string(containsString(">1<")));
+
+        verify(submitVoteUseCase).delete(pollId, deletedResponseId);
+    }
+
+    @Test
+    @DisplayName("redirects to poll after non htmx delete")
+    void redirectsToPollAfterNonHtmxDelete() throws Exception {
+        UUID deletedResponseId = UUID.fromString("15151515-1515-1515-1515-151515151515");
+
+        mockMvc.perform(delete("/poll/" + POLL_ID + "/responses/" + deletedResponseId))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/poll/" + POLL_ID));
+
+        verify(submitVoteUseCase).delete(UUID.fromString(POLL_ID), deletedResponseId);
+        verifyNoInteractions(readPollUseCase);
+    }
+
+    @Test
+    @DisplayName("returns bad request when delete references unknown response")
+    void returnsBadRequestWhenDeleteReferencesUnknownResponse() throws Exception {
+        UUID deletedResponseId = UUID.fromString("16161616-1616-1616-1616-161616161616");
+        doThrow(new IllegalArgumentException("Response not found"))
+                .when(submitVoteUseCase).delete(UUID.fromString(POLL_ID), deletedResponseId);
+
+        mockMvc.perform(delete("/poll/" + POLL_ID + "/responses/" + deletedResponseId)
+                        .header("HX-Request", "true"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("returns not found when delete references unknown poll")
+    void returnsNotFoundWhenDeleteReferencesUnknownPoll() throws Exception {
+        UUID deletedResponseId = UUID.fromString("17171717-1717-1717-1717-171717171717");
+        doThrow(new IllegalArgumentException("Poll not found"))
+                .when(submitVoteUseCase).delete(UUID.fromString(POLL_ID), deletedResponseId);
+
+        mockMvc.perform(delete("/poll/" + POLL_ID + "/responses/" + deletedResponseId)
+                        .header("HX-Request", "true"))
+                .andExpect(status().isNotFound());
     }
 }

@@ -156,6 +156,59 @@ class SubmitVoteServiceTest {
         assertEquals("Poll not found", exception.getMessage());
     }
 
+    @Test
+    @DisplayName("deletes existing response from poll")
+    void deletesExistingResponseFromPoll() {
+        UUID pollId = UUID.randomUUID();
+        UUID responseId = UUID.randomUUID();
+        PollOption option = TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10));
+        Poll poll = TestFixtures.poll(
+                pollId,
+                "secret",
+                EventType.ALL_DAY,
+                null,
+                List.of(option),
+                List.of(
+                        TestFixtures.response(responseId, "Alice", List.of(new PollVote(option.optionId(), PollVoteValue.YES))),
+                        TestFixtures.response(UUID.randomUUID(), "Bob", List.of(new PollVote(option.optionId(), PollVoteValue.NO)))
+                )
+        );
+
+        CapturingRepo repo = new CapturingRepo(poll);
+        SubmitVoteService service = new SubmitVoteService(repo);
+
+        service.delete(pollId, responseId);
+
+        assertEquals(1, repo.saved.responses().size());
+        assertEquals("Bob", repo.saved.responses().getFirst().participantName());
+    }
+
+    @Test
+    @DisplayName("throws when response to delete does not exist")
+    void throwsWhenResponseToDeleteDoesNotExist() {
+        UUID pollId = UUID.randomUUID();
+        UUID missingResponseId = UUID.randomUUID();
+        PollOption option = TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10));
+        Poll poll = TestFixtures.poll(
+                pollId,
+                "secret",
+                EventType.ALL_DAY,
+                null,
+                List.of(option),
+                List.of()
+        );
+
+        CapturingRepo repo = new CapturingRepo(poll);
+        SubmitVoteService service = new SubmitVoteService(repo);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.delete(pollId, missingResponseId)
+        );
+
+        assertEquals("Response not found", exception.getMessage());
+    }
+
     private static final class CapturingRepo implements PollRepository {
         private Poll saved;
         private final Poll existing;

@@ -17,7 +17,9 @@
                th:value="${editRow.responseId}"
                th:attr="form=${'edit-form-' + editRow.responseId}">
     </th>
-    <td th:each="cell : ${editRow.cells}" class="votes-table__cell">
+    <td th:each="cell : ${editRow.cells}"
+        class="votes-table__cell"
+        th:classappend="${cell.dayBoundary} ? ' votes-table__day-boundary' : ''">
         <select th:name="${'vote_edit_' + cell.optionId}"
                 th:attr="form=${'edit-form-' + editRow.responseId}">
             <option value="YES" th:selected="${cell.value != null and cell.value.name() == 'YES'}">✅</option>
@@ -32,8 +34,12 @@
                     class="icon-button votes-table__action-button"
                     title="Speichern"
                     aria-label="Speichern">💾</button>
-            <button type="reset"
-                    th:attr="form=${'edit-form-' + editRow.responseId}"
+            <button type="button"
+                    th:attr="form=${'edit-form-' + editRow.responseId},
+                             hx-delete=@{/poll/{pollId}/responses/{responseId}(pollId=${pollId},responseId=${editRow.responseId})},
+                             hx-confirm=${'Eintrag von ' + editRow.name + ' wirklich löschen?'}"
+                    hx-target="closest tr"
+                    hx-swap="delete"
                     class="icon-button votes-table__action-button votes-table__action-button--danger"
                     title="Löschen"
                     aria-label="Löschen">🗑</button>

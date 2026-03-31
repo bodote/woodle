@@ -33,9 +33,9 @@ class PollViewControllerSpelAccessTest {
         Class<?> dateGroupClass = Class.forName(
                 "io.github.bodote.woodle.adapter.in.web.PollViewController$DateGroup"
         );
-        Constructor<?> constructor = dateGroupClass.getDeclaredConstructor(String.class, int.class, int.class);
+        Constructor<?> constructor = dateGroupClass.getDeclaredConstructor(String.class, int.class, int.class, boolean.class);
         constructor.setAccessible(true);
-        Object dateGroup = constructor.newInstance("So., 22.02.", 0, 2);
+        Object dateGroup = constructor.newInstance("So., 22.02.", 0, 2, true);
 
         ExpressionParser parser = new SpelExpressionParser();
         StandardEvaluationContext context = new StandardEvaluationContext(dateGroup);
