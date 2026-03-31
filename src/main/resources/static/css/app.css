@@ -294,10 +294,6 @@ legend {
   display: none !important;
 }
 
-.scroll-hint.is-dismissed {
-  animation: scroll-hint-shake-x 1.35s ease-in-out infinite;
-}
-
 .actions {
   display: flex;
   align-items: center;

@@ -240,7 +240,7 @@ class PollParticipantViewTest {
                 .andExpect(content().string(containsString("id=\"participant-scroll-hint\"")))
                 .andExpect(content().string(containsString("id=\"participant-scroll-hint\"\n                 class=\"scroll-hint scroll-hint--participant\"\n                 role=\"status\"\n                 aria-live=\"polite\"\n                 hidden")))
                 .andExpect(content().string(containsString("Weitere Termine: rechts/links scrollen")))
-                .andExpect(content().string(containsString("class=\"votes-table-wrap votes-table-wrap--participant votes-table-wrap--participant-hint\"")))
+                .andExpect(content().string(containsString("class=\"votes-table-wrap votes-table-wrap--participant\"")))
                 .andExpect(content().string(containsString("title=\"Speichern\"")))
                 .andExpect(content().string(not(containsString("title=\"Löschen\""))));
     }
