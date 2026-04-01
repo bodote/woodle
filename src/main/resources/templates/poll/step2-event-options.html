@@ -1,13 +1,15 @@
 <div id="event-options" th:fragment="eventOptions" class="stack">
     <div th:if="${eventType == T(io.github.bodote.woodle.domain.model.EventType).INTRADAY}" class="form-row">
         <label for="duration-minutes">Dauer (Minuten)</label>
-        <input id="duration-minutes" name="durationMinutes" type="number" min="1">
+        <input id="duration-minutes" name="durationMinutes" type="number" min="1" th:value="${durationMinutes}">
         <p class="form-help">Nur relevant für untertägige Events.</p>
     </div>
 
-    <section class="stack">
-        <h2>Terminvorschläge</h2>
-        <p class="form-help">Mindestens zwei alternative Zeitpunkte.</p>
+    <section class="stack content-card">
+        <div class="section-heading">
+            <h2>Terminvorschläge</h2>
+            <p>Mindestens zwei alternative Zeitpunkte.</p>
+        </div>
         <div id="date-options"
              th:replace="${eventType == T(io.github.bodote.woodle.domain.model.EventType).INTRADAY}
                 ? ~{poll/step2-datetime-options :: dateTimeOptions}
@@ -16,19 +18,22 @@
         <div class="actions">
             <button type="button"
                     hx-get="/poll/step-2/options/add"
+                    hx-include="closest form"
                     hx-target="#date-options"
                     hx-swap="outerHTML"
                     hx-indicator=".htmx-indicator"
                     th:text="${eventType == T(io.github.bodote.woodle.domain.model.EventType).INTRADAY
-                        ? 'Termin hinzufügen'
+                        ? 'Tag hinzufügen'
                         : 'Einen Tag hinzufügen'}">Einen Tag hinzufügen</button>
             <button type="button"
                     hx-get="/poll/step-2/options/remove"
+                    hx-include="closest form"
                     hx-target="#date-options"
                     hx-swap="outerHTML"
                     hx-indicator=".htmx-indicator"
+                    th:disabled="${eventType == T(io.github.bodote.woodle.domain.model.EventType).INTRADAY and dateCount <= 1}"
                     th:text="${eventType == T(io.github.bodote.woodle.domain.model.EventType).INTRADAY
-                        ? 'Termin entfernen'
+                        ? 'Tag löschen'
                         : 'Einen Tag entfernen'}">Einen Tag entfernen</button>
             <span class="htmx-indicator" aria-live="polite">Lade…</span>
         </div>

@@ -56,6 +56,16 @@ public record Poll(
                 durationMinutes, options, java.util.List.copyOf(updated), createdAt, updatedAt, expiresAt);
     }
 
+    public Poll removeResponse(UUID responseId) {
+        List<PollResponse> updated = new java.util.ArrayList<>(responses);
+        boolean removed = updated.removeIf(response -> response.responseId().equals(responseId));
+        if (!removed) {
+            throw new IllegalArgumentException("Response not found");
+        }
+        return new Poll(pollId, adminSecret, title, description, authorName, authorEmail, eventType,
+                durationMinutes, options, java.util.List.copyOf(updated), createdAt, updatedAt, expiresAt);
+    }
+
     public Poll withOptions(List<PollOption> newOptions) {
         return new Poll(pollId, adminSecret, title, description, authorName, authorEmail, eventType,
                 durationMinutes, List.copyOf(newOptions), responses, createdAt, updatedAt, expiresAt);

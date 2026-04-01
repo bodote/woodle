@@ -15,10 +15,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -61,6 +63,133 @@ class PollAdminOptionsControllerTest {
                 .andExpect(content().string(containsString("2026-02-10")))
                 .andExpect(content().string(containsString("Termin löschen")));
 
-        verify(adminPollOptionsUseCase).addDate(any(UUID.class), any(String.class), any(LocalDate.class));
+        verify(adminPollOptionsUseCase).addDate(any(UUID.class), any(String.class), any(LocalDate.class), any());
+    }
+
+    @Test
+    @DisplayName("adds intraday option with start time and returns fragment")
+    void addsIntradayOptionWithStartTimeAndReturnsFragment() throws Exception {
+        Poll poll = TestFixtures.poll(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                EventType.INTRADAY,
+                90,
+                List.of(TestFixtures.option(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 2, 12),
+                        LocalTime.of(14, 30),
+                        LocalTime.of(16, 0))),
+                List.of()
+        );
+        when(readPollUseCase.getAdmin(UUID.fromString(POLL_ID), ADMIN_SECRET)).thenReturn(poll);
+
+        mockMvc.perform(post("/poll/" + POLL_ID + "-" + ADMIN_SECRET + "/options/add")
+                        .param("date", "2026-02-12")
+                        .param("startTime", "14:30"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("2026-02-12")))
+                .andExpect(content().string(containsString("14:30")))
+                .andExpect(content().string(containsString("Termin löschen")));
+
+        verify(adminPollOptionsUseCase).addDate(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                LocalDate.of(2026, 2, 12),
+                LocalTime.of(14, 30)
+        );
+    }
+
+    @Test
+    @DisplayName("adds multiple intraday options for the same day")
+    void addsMultipleIntradayOptionsForSameDay() throws Exception {
+        Poll poll = TestFixtures.poll(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                EventType.INTRADAY,
+                90,
+                List.of(TestFixtures.option(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 2, 12),
+                        LocalTime.of(14, 30),
+                        LocalTime.of(16, 0))),
+                List.of()
+        );
+        when(readPollUseCase.getAdmin(UUID.fromString(POLL_ID), ADMIN_SECRET)).thenReturn(poll);
+
+        mockMvc.perform(post("/poll/" + POLL_ID + "-" + ADMIN_SECRET + "/options/add")
+                        .param("date", "2026-02-12")
+                        .param("startTime", "09:00", "11:00"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("2026-02-12")))
+                .andExpect(content().string(containsString("Termin löschen")));
+
+        verify(adminPollOptionsUseCase).addDate(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                LocalDate.of(2026, 2, 12),
+                LocalTime.of(9, 0)
+        );
+        verify(adminPollOptionsUseCase).addDate(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                LocalDate.of(2026, 2, 12),
+                LocalTime.of(11, 0)
+        );
+    }
+
+    @Test
+    @DisplayName("rejects intraday option add without start time")
+    void rejectsIntradayOptionAddWithoutStartTime() throws Exception {
+        Poll poll = TestFixtures.poll(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                EventType.INTRADAY,
+                90,
+                List.of(TestFixtures.option(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 2, 12),
+                        LocalTime.of(14, 30),
+                        LocalTime.of(16, 0))),
+                List.of()
+        );
+        when(readPollUseCase.getAdmin(UUID.fromString(POLL_ID), ADMIN_SECRET)).thenReturn(poll);
+
+        mockMvc.perform(post("/poll/" + POLL_ID + "-" + ADMIN_SECRET + "/options/add")
+                        .param("date", "2026-02-13"))
+                .andExpect(status().isBadRequest());
+
+        verify(adminPollOptionsUseCase, never()).addDate(any(UUID.class), any(String.class), any(LocalDate.class), any());
+    }
+
+    @Test
+    @DisplayName("removes option and returns fragment")
+    void removesOptionAndReturnsFragment() throws Exception {
+        Poll poll = TestFixtures.poll(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                EventType.INTRADAY,
+                60,
+                List.of(TestFixtures.option(
+                        UUID.randomUUID(),
+                        LocalDate.of(2026, 2, 10),
+                        LocalTime.of(9, 0),
+                        LocalTime.of(10, 0))),
+                List.of()
+        );
+        when(readPollUseCase.getAdmin(UUID.fromString(POLL_ID), ADMIN_SECRET)).thenReturn(poll);
+
+        mockMvc.perform(post("/poll/" + POLL_ID + "-" + ADMIN_SECRET + "/options/remove")
+                        .param("date", "2026-02-10")
+                        .param("startTime", "09:00"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("2026-02-10")))
+                .andExpect(content().string(containsString("Termin löschen")));
+
+        verify(adminPollOptionsUseCase).removeOption(
+                UUID.fromString(POLL_ID),
+                ADMIN_SECRET,
+                LocalDate.of(2026, 2, 10),
+                LocalTime.of(9, 0)
+        );
     }
 }

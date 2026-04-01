@@ -3,38 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <title>Umfragedaten (2 von 3) - woodle</title>
-    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="/js/vendor/htmx.min.js"></script>
     <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
-<header>
-    <h1>Umfragedaten (2 von 3)</h1>
-    <p class="step-indicator">Schritt 2 von 3</p>
-</header>
+<div class="page-shell">
+    <header>
+        <h1>Umfragedaten</h1>
+        <p class="step-indicator">Schritt 2 von 3</p>
+    </header>
 
-<main>
-    <form action="/poll/step-3" method="post">
-        <fieldset>
+    <main>
+        <form class="wizard-card" action="/poll/step-3" method="post">
+            <input type="hidden" name="draftId" th:if="${draftId != null}" th:value="${draftId}">
+            <input type="hidden" name="authorName" th:value="${authorName}">
+            <input type="hidden" name="authorEmail" th:value="${authorEmail}">
+            <input type="hidden" name="pollTitle" th:value="${pollTitle}">
+            <input type="hidden" name="description" th:value="${description}">
+            <div class="section-heading">
+                <h2>Event-Typ und Terminoptionen</h2>
+                <p>Wählen Sie das Format Ihrer Veranstaltung und ergänzen Sie passende Vorschläge.</p>
+            </div>
+        <fieldset class="choice-grid">
             <legend>Handelt es sich um ein ganz- bzw. mehrtägiges Event?</legend>
-            <label>
+            <label class="choice-card">
                 <input name="eventType"
                        type="radio"
                        value="ALL_DAY"
                        th:checked="${eventType == T(io.github.bodote.woodle.domain.model.EventType).ALL_DAY}"
                        hx-get="/poll/step-2/event-type?eventType=ALL_DAY"
+                       hx-include="closest form"
                        hx-target="#event-options"
                        hx-swap="outerHTML">
-                Ganz-/Mehrtägig
+                <span class="choice-card__label">Ganz-/Mehrtägig</span>
             </label>
-            <label>
+            <label class="choice-card">
                 <input name="eventType"
                        type="radio"
                        value="INTRADAY"
                        th:checked="${eventType == T(io.github.bodote.woodle.domain.model.EventType).INTRADAY}"
                        hx-get="/poll/step-2/event-type?eventType=INTRADAY"
+                       hx-include="closest form"
                        hx-target="#event-options"
                        hx-swap="outerHTML">
-                Untertägig
+                <span class="choice-card__label">Untertägig</span>
             </label>
         </fieldset>
 
@@ -44,6 +56,7 @@
             <button type="submit">Weiter</button>
         </div>
     </form>
-</main>
+    </main>
+</div>
 </body>
 </html>

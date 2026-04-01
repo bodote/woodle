@@ -9,11 +9,14 @@ import io.github.bodote.woodle.domain.model.PollResponse;
 import io.github.bodote.woodle.domain.model.PollVote;
 import io.github.bodote.woodle.domain.model.PollVoteValue;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.ui.Model;
+import org.springframework.http.HttpStatus;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -59,7 +62,7 @@ public class PollVoteController {
             PollResponse response = poll.responses().stream()
                     .filter(candidate -> candidate.responseId().equals(responseId))
                     .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Response not found"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Response not found"));
             List<PollOption> options = poll.options().stream()
                     .sorted(Comparator.comparing(PollOption::date)
                             .thenComparing(PollOption::startTime, Comparator.nullsFirst(Comparator.naturalOrder())))
@@ -70,7 +73,36 @@ public class PollVoteController {
                     response.participantName(),
                     buildVoteCells(options, response.votes())
             ));
-            return "poll/participant-row :: row";
+            model.addAttribute("summaryCells", buildSummaryCells(options, poll.responses()));
+            return "poll/participant-row-update :: payload";
+        }
+        return "redirect:/poll/" + pollId;
+    }
+
+    @DeleteMapping("/poll/{pollId}/responses/{responseId}")
+    public String deleteResponse(
+            @PathVariable UUID pollId,
+            @PathVariable UUID responseId,
+            @RequestHeader(value = "HX-Request", required = false) String hxRequest,
+            Model model
+    ) {
+        try {
+            submitVoteUseCase.delete(pollId, responseId);
+        } catch (IllegalArgumentException exception) {
+            HttpStatus status = "Poll not found".equals(exception.getMessage())
+                    ? HttpStatus.NOT_FOUND
+                    : HttpStatus.BAD_REQUEST;
+            throw new ResponseStatusException(status, exception.getMessage(), exception);
+        }
+
+        if ("true".equalsIgnoreCase(hxRequest)) {
+            Poll poll = readPollUseCase.getPublic(pollId);
+            List<PollOption> options = poll.options().stream()
+                    .sorted(Comparator.comparing(PollOption::date)
+                            .thenComparing(PollOption::startTime, Comparator.nullsFirst(Comparator.naturalOrder())))
+                    .toList();
+            model.addAttribute("summaryCells", buildSummaryCells(options, poll.responses()));
+            return "poll/summary-row :: rowOob";
         }
         return "redirect:/poll/" + pollId;
     }
@@ -92,11 +124,34 @@ public class PollVoteController {
         Map<UUID, PollVoteValue> byOptionId = votes.stream()
                 .collect(Collectors.toMap(PollVote::optionId, PollVote::value));
         List<VoteCell> cells = new ArrayList<>();
-        for (PollOption option : options) {
+        for (int i = 0; i < options.size(); i++) {
+            PollOption option = options.get(i);
             PollVoteValue value = byOptionId.get(option.optionId());
-            cells.add(new VoteCell(option.optionId(), value, symbolFor(value)));
+            cells.add(new VoteCell(option.optionId(), value, symbolFor(value), markerClassFor(value), isDayBoundary(options, i)));
         }
         return cells;
+    }
+
+    private List<SummaryCell> buildSummaryCells(List<PollOption> options, List<PollResponse> responses) {
+        Map<UUID, Long> yesCounts = responses.stream()
+                .flatMap(response -> response.votes().stream())
+                .filter(vote -> vote.value() == PollVoteValue.YES)
+                .collect(Collectors.groupingBy(PollVote::optionId, Collectors.counting()));
+        long max = yesCounts.values().stream().mapToLong(Long::longValue).max().orElse(0);
+        List<SummaryCell> cells = new ArrayList<>();
+        for (int i = 0; i < options.size(); i++) {
+            PollOption option = options.get(i);
+            long count = yesCounts.getOrDefault(option.optionId(), 0L);
+            cells.add(new SummaryCell(option.optionId(), (int) count, count == max && count > 0, isDayBoundary(options, i)));
+        }
+        return cells;
+    }
+
+    private boolean isDayBoundary(List<PollOption> options, int index) {
+        if (index >= options.size() - 1) {
+            return false;
+        }
+        return !options.get(index).date().equals(options.get(index + 1).date());
     }
 
     private String symbolFor(PollVoteValue value) {
@@ -107,6 +162,17 @@ public class PollVoteController {
             case YES -> "✓";
             case IF_NEEDED -> "(✓)";
             case NO -> "✗";
+        };
+    }
+
+    private String markerClassFor(PollVoteValue value) {
+        if (value == null) {
+            return "";
+        }
+        return switch (value) {
+            case YES -> "votes-table__marker--yes";
+            case IF_NEEDED -> "votes-table__marker--if-needed";
+            case NO -> "votes-table__marker--no";
         };
     }
 
@@ -124,7 +190,7 @@ public class PollVoteController {
         }
     }
 
-    record VoteCell(UUID optionId, PollVoteValue value, String symbol) {
+    record VoteCell(UUID optionId, PollVoteValue value, String symbol, String markerClass, boolean dayBoundary) {
         public UUID getOptionId() {
             return optionId;
         }
@@ -135,6 +201,32 @@ public class PollVoteController {
 
         public String getSymbol() {
             return symbol;
+        }
+
+        public String getMarkerClass() {
+            return markerClass;
+        }
+
+        public boolean isDayBoundary() {
+            return dayBoundary;
+        }
+    }
+
+    record SummaryCell(UUID optionId, int count, boolean best, boolean dayBoundary) {
+        public UUID getOptionId() {
+            return optionId;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public boolean isBest() {
+            return best;
+        }
+
+        public boolean isDayBoundary() {
+            return dayBoundary;
         }
     }
 }

@@ -8,9 +8,14 @@ import io.github.bodote.woodle.domain.model.PollVote;
 import io.github.bodote.woodle.domain.model.PollVoteValue;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.server.ResponseStatusException;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.LocalDate;
@@ -18,7 +23,6 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -42,33 +46,114 @@ public class PollViewController {
 
     @GetMapping("/poll/{pollId:[0-9a-fA-F\\-]{36}}")
     public String viewPoll(@PathVariable UUID pollId, Model model) {
-        Poll poll = readPollUseCase.getPublic(pollId);
-        model.addAttribute("poll", poll);
-        model.addAttribute("adminView", false);
-        model.addAttribute("pollId", pollId);
-        applyParticipantView(model, poll);
+        Poll poll = loadPublicPoll(pollId);
+        applyParticipantModel(model, pollId, poll);
+        return "poll/view";
+    }
+
+    @GetMapping("/poll/dynamic/{pollId:[0-9a-fA-F\\-]{36}}")
+    public String viewPollDynamic(@PathVariable UUID pollId, Model model) {
+        Poll poll = loadPublicPoll(pollId);
+        applyParticipantModel(model, pollId, poll);
         return "poll/view";
     }
 
     @GetMapping("/poll/{pollId:[0-9a-fA-F\\-]{36}}-{adminSecret}")
     public String viewPollAdmin(@PathVariable UUID pollId,
                                 @PathVariable String adminSecret,
+                                @RequestParam(value = "emailFailed", defaultValue = "false") boolean emailFailed,
+                                @RequestParam(value = "emailDisabled", defaultValue = "false") boolean emailDisabled,
                                 Model model,
                                 HttpServletRequest request) {
-        Poll poll = readPollUseCase.getAdmin(pollId, adminSecret);
-        model.addAttribute("poll", poll);
-        model.addAttribute("adminView", true);
-        model.addAttribute("pollId", pollId);
-        model.addAttribute("adminSecret", adminSecret);
+        Poll poll = loadAdminPoll(pollId, adminSecret);
         String origin = resolveOrigin(request);
-        model.addAttribute("participantShareUrl", origin + "/poll/" + pollId);
-        model.addAttribute("adminShareUrl", origin + "/poll/" + pollId + "-" + adminSecret);
+        applyAdminModel(model, pollId, adminSecret, poll, origin);
+        model.addAttribute("emailFailed", emailFailed);
+        model.addAttribute("emailDisabled", emailDisabled);
         return "poll/view";
+    }
+
+    @GetMapping("/poll/dynamic/{pollId:[0-9a-fA-F\\-]{36}}-{adminSecret}")
+    public String viewPollAdminDynamic(@PathVariable UUID pollId,
+                                       @PathVariable String adminSecret,
+                                       @RequestParam(value = "emailFailed", defaultValue = "false") boolean emailFailed,
+                                       @RequestParam(value = "emailDisabled", defaultValue = "false") boolean emailDisabled,
+                                       Model model,
+                                       HttpServletRequest request) {
+        return viewPollAdmin(pollId, adminSecret, emailFailed, emailDisabled, model, request);
+    }
+
+    @GetMapping("/poll/static/{pollId:[0-9a-fA-F\\-]{36}}")
+    public String staticPollLoader(@PathVariable UUID pollId, Model model) {
+        model.addAttribute("dynamicPollPath", "/poll/dynamic/" + pollId);
+        model.addAttribute("readyPath", "/poll/dynamic/" + pollId + "/ready");
+        model.addAttribute("fragmentPath", "/poll/dynamic/" + pollId + "/fragment");
+        return "poll/static-loader";
+    }
+
+    @GetMapping("/poll/static/{pollId:[0-9a-fA-F\\-]{36}}-{adminSecret}")
+    public String staticAdminPollLoader(@PathVariable UUID pollId,
+                                        @PathVariable String adminSecret,
+                                        @RequestParam(value = "emailFailed", defaultValue = "false") boolean emailFailed,
+                                        @RequestParam(value = "emailDisabled", defaultValue = "false") boolean emailDisabled,
+                                        Model model) {
+        String basePath = "/poll/dynamic/" + pollId + "-" + adminSecret;
+        String query = buildEmailQuery(emailFailed, emailDisabled);
+        model.addAttribute("dynamicPollPath", basePath);
+        model.addAttribute("readyPath", basePath + "/ready");
+        model.addAttribute("fragmentPath", basePath + "/fragment" + query);
+        model.addAttribute("emailFailed", emailFailed);
+        model.addAttribute("emailDisabled", emailDisabled);
+        return "poll/static-loader";
+    }
+
+    @GetMapping("/poll/dynamic/{pollId:[0-9a-fA-F\\-]{36}}/ready")
+    @ResponseBody
+    public ResponseEntity<String> participantReady(@PathVariable UUID pollId) {
+        try {
+            readPollUseCase.getPublic(pollId);
+            return ResponseEntity.ok("ready");
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/poll/dynamic/{pollId:[0-9a-fA-F\\-]{36}}-{adminSecret}/ready")
+    @ResponseBody
+    public ResponseEntity<String> adminReady(@PathVariable UUID pollId, @PathVariable String adminSecret) {
+        try {
+            readPollUseCase.getAdmin(pollId, adminSecret);
+            return ResponseEntity.ok("ready");
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/poll/dynamic/{pollId:[0-9a-fA-F\\-]{36}}/fragment")
+    public String participantFragment(@PathVariable UUID pollId, Model model) {
+        Poll poll = loadPublicPoll(pollId);
+        applyParticipantModel(model, pollId, poll);
+        return "poll/view :: pollContent";
+    }
+
+    @GetMapping("/poll/dynamic/{pollId:[0-9a-fA-F\\-]{36}}-{adminSecret}/fragment")
+    public String adminFragment(@PathVariable UUID pollId,
+                                @PathVariable String adminSecret,
+                                @RequestParam(value = "emailFailed", defaultValue = "false") boolean emailFailed,
+                                @RequestParam(value = "emailDisabled", defaultValue = "false") boolean emailDisabled,
+                                Model model,
+                                HttpServletRequest request) {
+        Poll poll = loadAdminPoll(pollId, adminSecret);
+        String origin = resolveOrigin(request);
+        applyAdminModel(model, pollId, adminSecret, poll, origin);
+        model.addAttribute("emailFailed", emailFailed);
+        model.addAttribute("emailDisabled", emailDisabled);
+        return "poll/view :: pollContent";
     }
 
     @GetMapping("/poll/{pollId:[0-9a-fA-F\\-]{36}}/responses/{responseId:[0-9a-fA-F\\-]{36}}/edit")
     public String editResponseRow(@PathVariable UUID pollId, @PathVariable UUID responseId, Model model) {
-        Poll poll = readPollUseCase.getPublic(pollId);
+        Poll poll = loadPublicPoll(pollId);
         PollResponse response = poll.responses().stream()
                 .filter(candidate -> candidate.responseId().equals(responseId))
                 .findFirst()
@@ -91,6 +176,22 @@ public class PollViewController {
         return "poll/participant-row-edit :: row";
     }
 
+    private Poll loadPublicPoll(UUID pollId) {
+        try {
+            return readPollUseCase.getPublic(pollId);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Poll not found", exception);
+        }
+    }
+
+    private Poll loadAdminPoll(UUID pollId, String adminSecret) {
+        try {
+            return readPollUseCase.getAdmin(pollId, adminSecret);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Poll not found", exception);
+        }
+    }
+
     private void applyParticipantView(Model model, Poll poll) {
         List<PollOption> options = poll.options().stream()
                 .sorted(Comparator.comparing(PollOption::date)
@@ -100,8 +201,35 @@ public class PollViewController {
         model.addAttribute("voteOptionHeaders", buildOptionHeaders(options));
         model.addAttribute("voteOptions", options);
         model.addAttribute("monthGroups", buildMonthGroups(dates));
+        model.addAttribute("dateGroups", buildDateGroups(options));
         model.addAttribute("participantRows", buildParticipantRows(options, poll.responses()));
         model.addAttribute("summaryCells", buildSummaryCells(options, poll.responses()));
+    }
+
+    private void applyParticipantModel(Model model, UUID pollId, Poll poll) {
+        model.addAttribute("poll", poll);
+        model.addAttribute("adminView", false);
+        model.addAttribute("pollId", pollId);
+        applyParticipantView(model, poll);
+    }
+
+    private void applyAdminModel(Model model, UUID pollId, String adminSecret, Poll poll, String origin) {
+        model.addAttribute("poll", poll);
+        model.addAttribute("adminView", true);
+        model.addAttribute("pollId", pollId);
+        model.addAttribute("adminSecret", adminSecret);
+        model.addAttribute("participantShareUrl", origin + "/poll/static/" + pollId);
+        model.addAttribute("adminShareUrl", origin + "/poll/static/" + pollId + "-" + adminSecret);
+    }
+
+    private String buildEmailQuery(boolean emailFailed, boolean emailDisabled) {
+        if (emailFailed) {
+            return "?emailFailed=true";
+        }
+        if (emailDisabled) {
+            return "?emailDisabled=true";
+        }
+        return "";
     }
 
     private List<MonthGroup> buildMonthGroups(List<LocalDate> dates) {
@@ -132,10 +260,40 @@ public class PollViewController {
         return name.substring(0, 1).toUpperCase(Locale.GERMAN) + name.substring(1) + " " + month.getYear();
     }
 
+    private List<DateGroup> buildDateGroups(List<PollOption> options) {
+        List<DateGroup> groups = new ArrayList<>();
+        LocalDate currentDate = null;
+        int startIndex = 0;
+        for (int i = 0; i < options.size(); i++) {
+            LocalDate date = options.get(i).date();
+            if (currentDate == null) {
+                currentDate = date;
+                startIndex = i;
+                continue;
+            }
+            if (!date.equals(currentDate)) {
+                groups.add(new DateGroup(formatDateGroupLabel(currentDate), startIndex, i - startIndex, true));
+                currentDate = date;
+                startIndex = i;
+            }
+        }
+        if (currentDate != null) {
+            groups.add(new DateGroup(formatDateGroupLabel(currentDate), startIndex, options.size() - startIndex, false));
+        }
+        return groups;
+    }
+
+    private String formatDateGroupLabel(LocalDate date) {
+        return date.format(DateTimeFormatter.ofPattern("EEE, dd.MM.", Locale.GERMAN));
+    }
+
     private List<OptionHeader> buildOptionHeaders(List<PollOption> options) {
-        return options.stream()
-                .map(option -> new OptionHeader(option, formatOptionLabel(option)))
-                .toList();
+        List<OptionHeader> headers = new ArrayList<>();
+        for (int i = 0; i < options.size(); i++) {
+            PollOption option = options.get(i);
+            headers.add(new OptionHeader(option, formatOptionLabel(option), isDayBoundary(options, i)));
+        }
+        return headers;
     }
 
     private String formatOptionLabel(PollOption option) {
@@ -145,7 +303,7 @@ public class PollViewController {
         if (startTime == null) {
             return dayLabel;
         }
-        return dayLabel + " " + startTime;
+        return startTime.toString();
     }
 
     private List<ParticipantRow> buildParticipantRows(List<PollOption> options, List<PollResponse> responses) {
@@ -162,9 +320,10 @@ public class PollViewController {
         Map<UUID, PollVoteValue> byOptionId = votes.stream()
                 .collect(Collectors.toMap(PollVote::optionId, PollVote::value));
         List<VoteCell> cells = new ArrayList<>();
-        for (PollOption option : options) {
+        for (int i = 0; i < options.size(); i++) {
+            PollOption option = options.get(i);
             PollVoteValue value = byOptionId.get(option.optionId());
-            cells.add(new VoteCell(option.optionId(), value, symbolFor(value)));
+            cells.add(new VoteCell(option.optionId(), value, symbolFor(value), markerClassFor(value), isDayBoundary(options, i)));
         }
         return cells;
     }
@@ -176,11 +335,19 @@ public class PollViewController {
                 .collect(Collectors.groupingBy(PollVote::optionId, Collectors.counting()));
         long max = yesCounts.values().stream().mapToLong(Long::longValue).max().orElse(0);
         List<SummaryCell> cells = new ArrayList<>();
-        for (PollOption option : options) {
+        for (int i = 0; i < options.size(); i++) {
+            PollOption option = options.get(i);
             long count = yesCounts.getOrDefault(option.optionId(), 0L);
-            cells.add(new SummaryCell(option.optionId(), (int) count, count == max && count > 0));
+            cells.add(new SummaryCell(option.optionId(), (int) count, count == max && count > 0, isDayBoundary(options, i)));
         }
         return cells;
+    }
+
+    private boolean isDayBoundary(List<PollOption> options, int index) {
+        if (index >= options.size() - 1) {
+            return false;
+        }
+        return !options.get(index).date().equals(options.get(index + 1).date());
     }
 
     private String symbolFor(PollVoteValue value) {
@@ -194,6 +361,17 @@ public class PollViewController {
         };
     }
 
+    private String markerClassFor(PollVoteValue value) {
+        if (value == null) {
+            return "";
+        }
+        return switch (value) {
+            case YES -> "votes-table__marker--yes";
+            case IF_NEEDED -> "votes-table__marker--if-needed";
+            case NO -> "votes-table__marker--no";
+        };
+    }
+
     private String resolveOrigin(HttpServletRequest request) {
         if (!publicBaseUrl.isBlank()) {
             return publicBaseUrl.endsWith("/") ? publicBaseUrl.substring(0, publicBaseUrl.length() - 1) : publicBaseUrl;
@@ -202,38 +380,22 @@ public class PollViewController {
         String forwarded = firstHeaderValue(request, "Forwarded");
 
         String forwardedHost = forwardedFieldValue(forwarded, "host");
-        String scheme = forwardedFieldValue(forwarded, "proto");
-        if (scheme == null || scheme.isBlank()) {
-            scheme = firstHeaderValue(request, "X-Forwarded-Proto");
-        }
-        if (scheme == null || scheme.isBlank()) {
-            scheme = request.getScheme();
-        }
-        if (scheme == null || scheme.isBlank()) {
+        String xForwardedHost = firstHeaderValue(request, "X-Forwarded-Host");
+        String scheme = firstNonBlank(
+                forwardedFieldValue(forwarded, "proto"),
+                firstHeaderValue(request, "X-Forwarded-Proto"),
+                request.getScheme()
+        );
+        if (!hasText(scheme)) {
             scheme = "https";
         }
 
-        String xForwardedHost = firstHeaderValue(request, "X-Forwarded-Host");
-        String host = forwardedHost;
-        if (host == null || host.isBlank()) {
-            host = xForwardedHost;
-        }
-        if (host == null || host.isBlank()) {
-            host = request.getHeader("Host");
-        }
-        if (host == null || host.isBlank()) {
-            host = request.getServerName();
-        }
-        if (host == null || host.isBlank()) {
-            String requestUrl = request.getRequestURL().toString();
-            if (!requestUrl.isBlank()) {
-                URI uri = URI.create(requestUrl);
-                host = uri.getHost();
-                if (scheme == null || scheme.isBlank()) {
-                    scheme = uri.getScheme();
-                }
-            }
-        }
+        String host = firstNonBlank(
+                forwardedHost,
+                xForwardedHost,
+                request.getHeader("Host"),
+                request.getServerName()
+        );
         host = host == null ? "" : host.trim();
 
         if (host.contains(":")) {
@@ -241,14 +403,14 @@ public class PollViewController {
         }
 
         String forwardedPort = firstHeaderValue(request, "X-Forwarded-Port");
-        boolean hasProxyHost = (forwardedHost != null && !forwardedHost.isBlank())
-                || (xForwardedHost != null && !xForwardedHost.isBlank());
+        boolean hasProxyHost = hasText(forwardedHost) || hasText(xForwardedHost);
         int port = hasProxyHost && "https".equalsIgnoreCase(scheme) ? 443 : request.getServerPort();
         if (hasProxyHost && "http".equalsIgnoreCase(scheme)) {
             port = 80;
         }
-        if (forwardedPort != null && !forwardedPort.isBlank()) {
-            port = Integer.parseInt(forwardedPort.trim());
+        Integer parsedForwardedPort = parsePort(forwardedPort);
+        if (parsedForwardedPort != null) {
+            port = parsedForwardedPort;
         }
 
         boolean defaultHttp = "http".equalsIgnoreCase(scheme) && port == 80;
@@ -257,6 +419,19 @@ public class PollViewController {
             return scheme + "://" + host;
         }
         return scheme + "://" + host + ":" + port;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (hasText(value)) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 
     private String firstHeaderValue(HttpServletRequest request, String headerName) {
@@ -290,7 +465,22 @@ public class PollViewController {
         return null;
     }
 
-    record MonthGroup(String label, int startIndex, int span) {
+    private Integer parsePort(String value) {
+        if (!hasText(value)) {
+            return null;
+        }
+        try {
+            int parsed = Integer.parseInt(value.trim());
+            if (parsed < 1 || parsed > 65535) {
+                return null;
+            }
+            return parsed;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    public record MonthGroup(String label, int startIndex, int span) {
         public String getLabel() {
             return label;
         }
@@ -300,7 +490,21 @@ public class PollViewController {
         }
     }
 
-    record OptionHeader(PollOption option, String label) {
+    public record DateGroup(String label, int startIndex, int span, boolean dayBoundary) {
+        public String getLabel() {
+            return label;
+        }
+
+        public int getSpan() {
+            return span;
+        }
+
+        public boolean isDayBoundary() {
+            return dayBoundary;
+        }
+    }
+
+    public record OptionHeader(PollOption option, String label, boolean dayBoundary) {
         public PollOption getOption() {
             return option;
         }
@@ -308,9 +512,13 @@ public class PollViewController {
         public String getLabel() {
             return label;
         }
+
+        public boolean isDayBoundary() {
+            return dayBoundary;
+        }
     }
 
-    record ParticipantRow(UUID responseId, String name, List<VoteCell> cells) {
+    public record ParticipantRow(UUID responseId, String name, List<VoteCell> cells) {
         public UUID getResponseId() {
             return responseId;
         }
@@ -324,7 +532,7 @@ public class PollViewController {
         }
     }
 
-    record EditableRow(UUID responseId, String name, List<VoteCell> cells) {
+    public record EditableRow(UUID responseId, String name, List<VoteCell> cells) {
         public UUID getResponseId() {
             return responseId;
         }
@@ -338,7 +546,7 @@ public class PollViewController {
         }
     }
 
-    record VoteCell(UUID optionId, PollVoteValue value, String symbol) {
+    public record VoteCell(UUID optionId, PollVoteValue value, String symbol, String markerClass, boolean dayBoundary) {
         public UUID getOptionId() {
             return optionId;
         }
@@ -350,9 +558,17 @@ public class PollViewController {
         public String getSymbol() {
             return symbol;
         }
+
+        public String getMarkerClass() {
+            return markerClass;
+        }
+
+        public boolean isDayBoundary() {
+            return dayBoundary;
+        }
     }
 
-    record SummaryCell(UUID optionId, int count, boolean best) {
+    public record SummaryCell(UUID optionId, int count, boolean best, boolean dayBoundary) {
         public UUID getOptionId() {
             return optionId;
         }
@@ -363,6 +579,10 @@ public class PollViewController {
 
         public boolean isBest() {
             return best;
+        }
+
+        public boolean isDayBoundary() {
+            return dayBoundary;
         }
     }
 }

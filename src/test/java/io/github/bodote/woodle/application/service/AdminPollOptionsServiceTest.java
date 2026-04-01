@@ -17,6 +17,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @DisplayName("AdminPollOptionsService")
 class AdminPollOptionsServiceTest {
@@ -37,9 +39,81 @@ class AdminPollOptionsServiceTest {
         CapturingRepo repo = new CapturingRepo(poll);
         AdminPollOptionsService service = new AdminPollOptionsService(repo);
 
-        service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 12));
+        service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 12), null);
 
         assertEquals(1, repo.saved.options().size());
+        assertNull(repo.saved.options().getFirst().startTime());
+    }
+
+    @Test
+    @DisplayName("adds intraday option with start and computed end time")
+    void addsIntradayOptionWithStartAndComputedEndTime() {
+        UUID pollId = UUID.randomUUID();
+        Poll poll = TestFixtures.poll(
+                pollId,
+                TestFixtures.ADMIN_SECRET,
+                EventType.INTRADAY,
+                90,
+                List.of(),
+                List.of()
+        );
+
+        CapturingRepo repo = new CapturingRepo(poll);
+        AdminPollOptionsService service = new AdminPollOptionsService(repo);
+
+        service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 12), LocalTime.of(14, 30));
+
+        assertEquals(1, repo.saved.options().size());
+        assertEquals(LocalTime.of(14, 30), repo.saved.options().getFirst().startTime());
+        assertEquals(LocalTime.of(16, 0), repo.saved.options().getFirst().endTime());
+    }
+
+    @Test
+    @DisplayName("adds intraday option without end time when duration is missing")
+    void addsIntradayOptionWithoutEndTimeWhenDurationIsMissing() {
+        UUID pollId = UUID.randomUUID();
+        Poll poll = TestFixtures.poll(
+                pollId,
+                TestFixtures.ADMIN_SECRET,
+                EventType.INTRADAY,
+                null,
+                List.of(),
+                List.of()
+        );
+
+        CapturingRepo repo = new CapturingRepo(poll);
+        AdminPollOptionsService service = new AdminPollOptionsService(repo);
+
+        service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 12), LocalTime.of(14, 30));
+
+        assertEquals(1, repo.saved.options().size());
+        assertEquals(LocalTime.of(14, 30), repo.saved.options().getFirst().startTime());
+        assertNull(repo.saved.options().getFirst().endTime());
+    }
+
+    @Test
+    @DisplayName("rejects intraday option when start time is omitted")
+    void rejectsIntradayOptionWhenStartTimeIsOmitted() {
+        UUID pollId = UUID.randomUUID();
+        Poll poll = TestFixtures.poll(
+                pollId,
+                TestFixtures.ADMIN_SECRET,
+                EventType.INTRADAY,
+                90,
+                List.of(),
+                List.of()
+        );
+
+        CapturingRepo repo = new CapturingRepo(poll);
+        AdminPollOptionsService service = new AdminPollOptionsService(repo);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 12), null)
+        );
+
+        assertEquals("Start time is required for intraday polls", exception.getMessage());
+        assertNull(repo.saved);
     }
 
     @Test
@@ -86,6 +160,91 @@ class AdminPollOptionsServiceTest {
         assertEquals(0, repo.saved.options().size());
     }
 
+    @Test
+    @DisplayName("does not remove intraday option when start time does not match")
+    void doesNotRemoveIntradayOptionWhenStartTimeDoesNotMatch() {
+        UUID pollId = UUID.randomUUID();
+        PollOption option = TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10), LocalTime.of(9, 0), LocalTime.of(10, 30));
+        Poll poll = TestFixtures.poll(
+                pollId,
+                TestFixtures.ADMIN_SECRET,
+                EventType.INTRADAY,
+                90,
+                List.of(option),
+                List.of()
+        );
+
+        CapturingRepo repo = new CapturingRepo(poll);
+        AdminPollOptionsService service = new AdminPollOptionsService(repo);
+
+        service.removeOption(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 10), LocalTime.of(9, 15));
+
+        assertEquals(1, repo.saved.options().size());
+    }
+
+    @Test
+    @DisplayName("keeps timed option when no start time is provided and date matches")
+    void keepsTimedOptionWhenNoStartTimeIsProvidedAndDateMatches() {
+        UUID pollId = UUID.randomUUID();
+        PollOption differentDate = TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 9), LocalTime.of(8, 0), LocalTime.of(9, 30));
+        PollOption sameDateTimed = TestFixtures.option(UUID.randomUUID(), LocalDate.of(2026, 2, 10), LocalTime.of(9, 0), LocalTime.of(10, 30));
+        Poll poll = TestFixtures.poll(
+                pollId,
+                TestFixtures.ADMIN_SECRET,
+                EventType.INTRADAY,
+                90,
+                List.of(differentDate, sameDateTimed),
+                List.of()
+        );
+
+        CapturingRepo repo = new CapturingRepo(poll);
+        AdminPollOptionsService service = new AdminPollOptionsService(repo);
+
+        service.removeOption(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 10), null);
+
+        assertEquals(2, repo.saved.options().size());
+    }
+
+    @Test
+    @DisplayName("throws when poll is missing")
+    void throwsWhenPollIsMissing() {
+        UUID pollId = UUID.randomUUID();
+        CapturingRepo repo = new CapturingRepo(null);
+        AdminPollOptionsService service = new AdminPollOptionsService(repo);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.addDate(pollId, TestFixtures.ADMIN_SECRET, LocalDate.of(2026, 2, 10), null)
+        );
+
+        assertEquals("Poll not found", exception.getMessage());
+        assertNull(repo.saved);
+    }
+
+    @Test
+    @DisplayName("throws when admin secret is invalid")
+    void throwsWhenAdminSecretIsInvalid() {
+        UUID pollId = UUID.randomUUID();
+        Poll poll = TestFixtures.poll(
+                pollId,
+                TestFixtures.ADMIN_SECRET,
+                EventType.ALL_DAY,
+                null,
+                List.of(),
+                List.of()
+        );
+        CapturingRepo repo = new CapturingRepo(poll);
+        AdminPollOptionsService service = new AdminPollOptionsService(repo);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.addDate(pollId, "wrong-secret", LocalDate.of(2026, 2, 10), null)
+        );
+
+        assertEquals("Invalid admin secret", exception.getMessage());
+        assertNull(repo.saved);
+    }
+
     private static final class CapturingRepo implements PollRepository {
         private Poll saved;
         private final Poll existing;
@@ -101,7 +260,12 @@ class AdminPollOptionsServiceTest {
 
         @Override
         public Optional<Poll> findById(UUID pollId) {
-            return Optional.of(existing);
+            return Optional.ofNullable(existing);
+        }
+
+        @Override
+        public long countActivePolls() {
+            return existing == null ? 0L : 1L;
         }
     }
 }

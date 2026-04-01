@@ -74,14 +74,39 @@ Rules:
 ## URL Patterns
 
 *   Create poll: `/poll/new`
+*   Active poll count (HTMX/footer): `/poll/active-count` (alias API: `/v1/polls/active-count`)
 *   Participant link: absolute URL based on current origin, e.g. `https://qs.woodle.click/poll/<UUID>`, `https://woodle.click/poll/<UUID>`, or `http://localhost:8088/poll/<UUID>`
 *   Admin link: absolute URL based on current origin, e.g. `https://qs.woodle.click/poll/<UUID>-<admin-secret>`, `https://woodle.click/poll/<UUID>-<admin-secret>`, or `http://localhost:8088/poll/<UUID>-<admin-secret>`
+
+## Step-1 UX Optimizations
+
+*   The footer shows **Anzahl aktiver Umfragen** and loads the value via HTMX from `/poll/active-count` with a spinner fallback while loading.
+*   Step-1 submit (`Weiter zum 2. Schritt`) uses a transient error handler for `502/503/504` with up to **10 retries** and **1000ms** delay.
+*   The loading hint `Schritt 2 wird geladen...` includes a spinner and is shown with a short delay (200ms), so very fast responses do not flicker.
+*   The active poll count request uses the same transient retry strategy (**10 retries**, **1000ms**).
+*   Step 1 does not prewarm `/poll/step-2` in the background; wizard session state starts only after the user submits to `/poll/step-2`.
+*   The only background request on step 1 is `/poll/active-count`, which is read-only and does not start wizard session state.
+*   HTMX is served from a local static asset (`/js/vendor/htmx.min.js`) instead of third-party CDNs.
+
+## Email Delivery
+
+*   Poll creation can send an author confirmation email.
+*   Email sending is environment-driven via:
+    * `woodle.email.enabled`
+    * `woodle.email.from`
+    * `woodle.email.subject-prefix`
+*   When disabled, the app uses a no-op sender.
+*   When enabled, the app uses AWS SES (`SesV2Client`).
+*   If delivery fails during creation, the admin page is opened with `?emailFailed=true` and shows a warning so links can be shared manually.
 
 ## Persistence & Data Lifecycle
 
 *   No user accounts.
 *   Each poll has a UUID and a secret admin token.
 *   Polls are stored as a single JSON per UUID in S3.
+*   Poll JSON includes a top-level `schemaVersion` field. Default value is `"1"` (configurable via `woodle.poll.schema-version`).
+*   Rule for future schema changes: increment `schemaVersion` and add/maintain migration logic for older versions before rollout.
+*   Read-time migration: when a poll is loaded and `schemaVersion` is missing or lower than `woodle.poll.schema-version`, the app converts it to the current schema and immediately overwrites the S3 object before returning the poll to the UI.
 *   Polls are deleted after the expiry date.
 
 ## Product Spec (Date Poll)
@@ -120,6 +145,9 @@ Full strategy:
 
 # Coverage
 ./gradlew jacocoTestReport
+
+# Coverage gates (enforced)
+./gradlew check
 
 # Mutation testing
 ./gradlew pitest
@@ -210,7 +238,7 @@ Operational note:
 *   Test strategy: `/Users/bodo.te/dev/woodle/test-strategie.md`
 *   Product spec: `/Users/bodo.te/dev/woodle/woodle-create-poll-date-spec.md`
 *   AWS deployment guide: `deploy-on-aws.md` (Architektur, Deploy-Flows, Smoke-Checks)
-*   Open infra issue backlog: `todo.md` (aktuelle Blocker wie CloudFront-CNAME-Konflikt)
+*   Native deployment gotchas: `docs/native-deploy-gotchas.md` (GraalVM/AOT Fallstricke, Logs, Smoke-Checks)
 *   HTMX usability guidance: `docs/usability-htmx-guide.md` (UX-/Interaktionsregeln für HTMX-Seiten)
 *   Infra module overview: `infra/README.md` (AWS-Infrastrukturstruktur und Templates)
 *   IAM policy notes for deploy identity: `infra/iam-deploy-identity-policies.md` (benötigte Deploy-Berechtigungen)

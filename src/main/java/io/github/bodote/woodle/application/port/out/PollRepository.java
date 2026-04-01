@@ -10,4 +10,6 @@ public interface PollRepository {
     void save(Poll poll);
 
     Optional<Poll> findById(UUID pollId);
+
+    long countActivePolls();
 }

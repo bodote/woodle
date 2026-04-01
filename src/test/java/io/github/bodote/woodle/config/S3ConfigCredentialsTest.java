@@ -41,4 +41,34 @@ class S3ConfigCredentialsTest {
 
         assertEquals(StaticCredentialsProvider.class, provider.getClass());
     }
+
+    @Test
+    @DisplayName("uses default credentials provider for blank keys")
+    void usesDefaultProviderForBlankCredentials() throws Exception {
+        S3Config config = new S3Config();
+
+        Method method = S3Config.class.getDeclaredMethod(
+                "resolveCredentialsProvider", String.class, String.class);
+        method.setAccessible(true);
+
+        AwsCredentialsProvider provider =
+                (AwsCredentialsProvider) method.invoke(config, " ", "");
+
+        assertEquals(DefaultCredentialsProvider.class, provider.getClass());
+    }
+
+    @Test
+    @DisplayName("uses default credentials provider for null keys")
+    void usesDefaultProviderForNullCredentials() throws Exception {
+        S3Config config = new S3Config();
+
+        Method method = S3Config.class.getDeclaredMethod(
+                "resolveCredentialsProvider", String.class, String.class);
+        method.setAccessible(true);
+
+        AwsCredentialsProvider provider =
+                (AwsCredentialsProvider) method.invoke(config, new Object[]{null, null});
+
+        assertEquals(DefaultCredentialsProvider.class, provider.getClass());
+    }
 }

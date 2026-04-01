@@ -1,0 +1,21 @@
+<tr th:fragment="row" id="summary-row" class="summary-row">
+    <th scope="row" class="votes-table__summary-label votes-table__sticky-left">Summe</th>
+    <td th:each="cell : ${summaryCells}"
+        class="votes-table__summary"
+        th:classappend="${cell.dayBoundary} ? ' votes-table__day-boundary' : ''">
+        <span th:text="${cell.count}">0</span>
+        <span th:if="${cell.best}" class="votes-table__best">★</span>
+    </td>
+    <td class="votes-table__sticky-right votes-table__corner"> </td>
+</tr>
+
+<tr th:fragment="rowOob" id="summary-row" class="summary-row" hx-swap-oob="true">
+    <th scope="row" class="votes-table__summary-label votes-table__sticky-left">Summe</th>
+    <td th:each="cell : ${summaryCells}"
+        class="votes-table__summary"
+        th:classappend="${cell.dayBoundary} ? ' votes-table__day-boundary' : ''">
+        <span th:text="${cell.count}">0</span>
+        <span th:if="${cell.best}" class="votes-table__best">★</span>
+    </td>
+    <td class="votes-table__sticky-right votes-table__corner"> </td>
+</tr>

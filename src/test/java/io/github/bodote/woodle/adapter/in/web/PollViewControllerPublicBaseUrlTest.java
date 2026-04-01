@@ -52,7 +52,7 @@ class PollViewControllerPublicBaseUrlTest {
                             return request;
                         }))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId)))
-                .andExpect(content().string(containsString("https://woodle.click/poll/" + pollId + "-" + adminSecret)));
+                .andExpect(content().string(containsString("https://woodle.click/poll/static/" + pollId)))
+                .andExpect(content().string(containsString("https://woodle.click/poll/static/" + pollId + "-" + adminSecret)));
     }
 }

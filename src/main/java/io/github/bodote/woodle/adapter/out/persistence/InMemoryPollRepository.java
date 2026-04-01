@@ -21,4 +21,9 @@ public class InMemoryPollRepository implements PollRepository {
     public Optional<Poll> findById(UUID pollId) {
         return Optional.ofNullable(storage.get(pollId));
     }
+
+    @Override
+    public long countActivePolls() {
+        return storage.size();
+    }
 }

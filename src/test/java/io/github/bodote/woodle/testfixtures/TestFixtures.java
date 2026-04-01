@@ -1,6 +1,6 @@
 package io.github.bodote.woodle.testfixtures;
 
-import io.github.bodote.woodle.adapter.in.web.WizardState;
+import io.github.bodote.woodle.application.model.WizardState;
 import io.github.bodote.woodle.domain.model.EventType;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.domain.model.PollOption;

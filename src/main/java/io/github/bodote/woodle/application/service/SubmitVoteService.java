@@ -48,4 +48,11 @@ public class SubmitVoteService implements SubmitVoteUseCase {
 
         pollRepository.save(poll.addResponse(response));
     }
+
+    @Override
+    public void delete(UUID pollId, UUID responseId) {
+        Poll poll = pollRepository.findById(pollId)
+                .orElseThrow(() -> new IllegalArgumentException("Poll not found"));
+        pollRepository.save(poll.removeResponse(responseId));
+    }
 }

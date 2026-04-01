@@ -1,7 +1,8 @@
 package io.github.bodote.woodle.application.service;
 
 import io.github.bodote.woodle.application.port.in.command.CreatePollCommand;
-import io.github.bodote.woodle.application.service.CreatePollService;
+import io.github.bodote.woodle.application.port.out.PollCreatedEmail;
+import io.github.bodote.woodle.application.port.out.PollEmailSender;
 import io.github.bodote.woodle.domain.model.EventType;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.application.port.out.PollRepository;
@@ -9,29 +10,42 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("CreatePollService")
 class CreatePollServiceTest {
+
+    private static final String AUTHOR_NAME = "Max";
+    private static final String AUTHOR_EMAIL = "max@invalid";
+    private static final String TITLE = "Test";
+    private static final String DESCRIPTION = "Desc";
+    private static final LocalDate DATE_ONE = LocalDate.of(2026, 2, 10);
+    private static final LocalDate DATE_TWO = LocalDate.of(2026, 2, 20);
 
     @Test
     @DisplayName("uses expiresAt override when provided")
     void usesExpiresAtOverrideWhenProvided() {
         CapturingPollRepository repository = new CapturingPollRepository();
-        CreatePollService service = new CreatePollService(repository);
+        CapturingPollEmailSender pollEmailSender = new CapturingPollEmailSender();
+        CreatePollService service = new CreatePollService(repository, pollEmailSender, true);
 
         LocalDate override = LocalDate.of(2026, 3, 1);
         CreatePollCommand command = new CreatePollCommand(
-                "Max",
-                "max@invalid",
-                "Test",
-                "Desc",
+                AUTHOR_NAME,
+                AUTHOR_EMAIL,
+                TITLE,
+                DESCRIPTION,
                 EventType.ALL_DAY,
                 null,
-                List.of(LocalDate.of(2026, 2, 10)),
+                List.of(DATE_ONE),
                 List.of(),
                 override
         );
@@ -42,6 +56,190 @@ class CreatePollServiceTest {
         assertNotNull(saved);
         assertEquals(override, saved.expiresAt());
         assertEquals(0, saved.responses().size());
+        assertNotNull(pollEmailSender.lastEmail);
+        assertTrue(pollEmailSender.lastResult);
+    }
+
+    @Test
+    @DisplayName("derives expiresAt from latest option date when no override is provided")
+    void derivesExpiresAtFromLatestOptionDateWhenNoOverrideIsProvided() {
+        CapturingPollRepository repository = new CapturingPollRepository();
+        CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender(), true);
+
+        CreatePollCommand command = new CreatePollCommand(
+                AUTHOR_NAME,
+                AUTHOR_EMAIL,
+                TITLE,
+                DESCRIPTION,
+                EventType.ALL_DAY,
+                null,
+                List.of(DATE_ONE, DATE_TWO),
+                List.of(),
+                null
+        );
+
+        service.create(command);
+
+        Poll saved = repository.saved;
+        assertNotNull(saved);
+        assertEquals(LocalDate.of(2026, 3, 20), saved.expiresAt());
+    }
+
+    @Test
+    @DisplayName("rejects intraday options when a start time is missing")
+    void rejectsIntradayOptionsWhenAStartTimeIsMissing() {
+        CapturingPollRepository repository = new CapturingPollRepository();
+        CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender(), true);
+
+        CreatePollCommand command = new CreatePollCommand(
+                AUTHOR_NAME,
+                AUTHOR_EMAIL,
+                TITLE,
+                DESCRIPTION,
+                EventType.INTRADAY,
+                60,
+                List.of(DATE_ONE, DATE_TWO),
+                List.of(LocalTime.of(9, 0)),
+                null
+        );
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> service.create(command));
+        assertEquals("Start time is required for intraday polls", exception.getMessage());
+        assertNull(repository.saved);
+    }
+
+    @Test
+    @DisplayName("rejects poll creation when no dates are provided")
+    void rejectsPollCreationWhenNoDatesAreProvided() {
+        CapturingPollRepository repository = new CapturingPollRepository();
+        CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender(), true);
+
+        CreatePollCommand command = new CreatePollCommand(
+                AUTHOR_NAME,
+                AUTHOR_EMAIL,
+                TITLE,
+                DESCRIPTION,
+                EventType.ALL_DAY,
+                null,
+                List.of(),
+                List.of(),
+                null
+        );
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> service.create(command));
+        assertEquals("At least one date option is required", exception.getMessage());
+        assertNull(repository.saved);
+    }
+
+    @Test
+    @DisplayName("rejects intraday options when a start time entry is null")
+    void rejectsIntradayOptionsWhenAStartTimeEntryIsNull() {
+        CapturingPollRepository repository = new CapturingPollRepository();
+        CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender(), true);
+
+        CreatePollCommand command = new CreatePollCommand(
+                AUTHOR_NAME,
+                AUTHOR_EMAIL,
+                TITLE,
+                DESCRIPTION,
+                EventType.INTRADAY,
+                60,
+                List.of(DATE_ONE, DATE_TWO),
+                java.util.Arrays.asList(LocalTime.of(9, 0), null),
+                null
+        );
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> service.create(command));
+        assertEquals("Start time is required for intraday polls", exception.getMessage());
+        assertNull(repository.saved);
+    }
+
+    @Test
+    @DisplayName("does not calculate end time when duration is missing")
+    void doesNotCalculateEndTimeWhenDurationIsMissing() {
+        CapturingPollRepository repository = new CapturingPollRepository();
+        CapturingPollEmailSender pollEmailSender = new CapturingPollEmailSender();
+        CreatePollService service = new CreatePollService(repository, pollEmailSender, true);
+
+        CreatePollCommand command = new CreatePollCommand(
+                AUTHOR_NAME,
+                AUTHOR_EMAIL,
+                TITLE,
+                DESCRIPTION,
+                EventType.INTRADAY,
+                null,
+                List.of(DATE_ONE),
+                List.of(LocalTime.of(14, 30)),
+                null
+        );
+
+        var result = service.create(command);
+
+        Poll saved = repository.saved;
+        assertNotNull(saved);
+        assertNotNull(result);
+        assertNotNull(saved.adminSecret());
+        assertEquals(12, saved.adminSecret().length());
+        assertTrue(saved.adminSecret().matches("[0-9A-Za-z]{12}"));
+        assertEquals(LocalTime.of(14, 30), saved.options().getFirst().startTime());
+        assertNull(saved.options().getFirst().endTime());
+        assertTrue(result.notificationQueued());
+        assertFalse(result.notificationDisabled());
+        assertNotNull(pollEmailSender.lastEmail);
+        assertEquals(saved.pollId(), pollEmailSender.lastEmail.pollId());
+        assertEquals(saved.adminSecret(), pollEmailSender.lastEmail.adminSecret());
+    }
+
+    @Test
+    @DisplayName("keeps all-day options without start and end time even when duration is set")
+    void keepsAllDayOptionsWithoutStartAndEndTimeEvenWhenDurationIsSet() {
+        CapturingPollRepository repository = new CapturingPollRepository();
+        CreatePollService service = new CreatePollService(repository, new CapturingPollEmailSender(), true);
+
+        CreatePollCommand command = new CreatePollCommand(
+                AUTHOR_NAME,
+                AUTHOR_EMAIL,
+                TITLE,
+                DESCRIPTION,
+                EventType.ALL_DAY,
+                45,
+                List.of(DATE_ONE),
+                List.of(),
+                null
+        );
+
+        service.create(command);
+
+        Poll saved = repository.saved;
+        assertNotNull(saved);
+        assertNull(saved.options().getFirst().startTime());
+        assertNull(saved.options().getFirst().endTime());
+    }
+
+    @Test
+    @DisplayName("marks notification as disabled when email sending is disabled")
+    void marksNotificationAsDisabledWhenEmailSendingIsDisabled() {
+        CapturingPollRepository repository = new CapturingPollRepository();
+        CapturingPollEmailSender pollEmailSender = new CapturingPollEmailSender();
+        CreatePollService service = new CreatePollService(repository, pollEmailSender, false);
+
+        CreatePollCommand command = new CreatePollCommand(
+                AUTHOR_NAME,
+                AUTHOR_EMAIL,
+                TITLE,
+                DESCRIPTION,
+                EventType.ALL_DAY,
+                null,
+                List.of(DATE_ONE),
+                List.of(),
+                null
+        );
+
+        var result = service.create(command);
+
+        assertFalse(result.notificationQueued());
+        assertTrue(result.notificationDisabled());
+        assertNull(pollEmailSender.lastEmail);
     }
 
     private static final class CapturingPollRepository implements PollRepository {
@@ -55,6 +253,23 @@ class CreatePollServiceTest {
         @Override
         public java.util.Optional<Poll> findById(java.util.UUID pollId) {
             return java.util.Optional.empty();
+        }
+
+        @Override
+        public long countActivePolls() {
+            return 0L;
+        }
+    }
+
+    private static final class CapturingPollEmailSender implements PollEmailSender {
+        private PollCreatedEmail lastEmail;
+        private boolean lastResult;
+
+        @Override
+        public boolean sendPollCreated(PollCreatedEmail pollCreatedEmail) {
+            this.lastEmail = pollCreatedEmail;
+            this.lastResult = true;
+            return true;
         }
     }
 }

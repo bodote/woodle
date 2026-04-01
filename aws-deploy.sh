@@ -21,8 +21,13 @@ fi
 
 DEFAULT_ENV_NAME="${DEPLOY_STAGE}"
 DEFAULT_FRONTEND_DOMAIN="qs.woodle.click"
+DEFAULT_EMAIL_FROM="woodle@funknstein.de"
+DEFAULT_EMAIL_SUBJECT_PREFIX="[Woodle-QS]"
+DEFAULT_SMTP_PASSWORD_SECRET_ID="arn:aws:secretsmanager:eu-central-1:168474026156:secret:woodle/prod/smtp-8zh1Zn"
 if [[ "${DEPLOY_STAGE}" == "prod" ]]; then
   DEFAULT_FRONTEND_DOMAIN="woodle.click"
+  DEFAULT_EMAIL_FROM="woodle@funknstein.de"
+  DEFAULT_EMAIL_SUBJECT_PREFIX="[Woodle]"
 fi
 
 AWS_REGION="${AWS_REGION:-eu-central-1}"
@@ -42,7 +47,20 @@ ACM_CERTIFICATE_ARN="${ACM_CERTIFICATE_ARN:-}"
 DISABLE_CLOUDFRONT_INVALIDATION="${DISABLE_CLOUDFRONT_INVALIDATION:-false}"
 CLOUDFRONT_INVALIDATION_PATHS="${CLOUDFRONT_INVALIDATION_PATHS:-/*}"
 WOODLE_BACKEND_BASE_URL="${WOODLE_BACKEND_BASE_URL:-}"
+WOODLE_EMAIL_ENABLED="${WOODLE_EMAIL_ENABLED:-true}"
+WOODLE_EMAIL_PROVIDER="${WOODLE_EMAIL_PROVIDER:-smtp}"
+WOODLE_EMAIL_FROM="${WOODLE_EMAIL_FROM:-${DEFAULT_EMAIL_FROM}}"
+WOODLE_EMAIL_SUBJECT_PREFIX="${WOODLE_EMAIL_SUBJECT_PREFIX:-${DEFAULT_EMAIL_SUBJECT_PREFIX}}"
+WOODLE_EMAIL_SMTP_HOST="${WOODLE_EMAIL_SMTP_HOST:-smtp.ionos.de}"
+WOODLE_EMAIL_SMTP_PORT="${WOODLE_EMAIL_SMTP_PORT:-587}"
+WOODLE_EMAIL_SMTP_USERNAME="${WOODLE_EMAIL_SMTP_USERNAME:-woodle@funknstein.de}"
+WOODLE_EMAIL_SMTP_PASSWORD_SECRET_ID="${WOODLE_EMAIL_SMTP_PASSWORD_SECRET_ID:-${DEFAULT_SMTP_PASSWORD_SECRET_ID}}"
 DRY_RUN="${DRY_RUN:-false}"
+
+if [[ -z "${WOODLE_EMAIL_FROM}" ]]; then
+  echo "WOODLE_EMAIL_FROM must be set (for example woodle@funknstein.de)." >&2
+  exit 1
+fi
 
 if [[ -z "${LAMBDA_DOCKERFILE}" ]]; then
   if [[ "${DEPLOY_RUNTIME}" == "native" ]]; then
@@ -189,7 +207,18 @@ docker buildx build \
 PARAMETER_OVERRIDES=(
   "EnvironmentName=${ENV_NAME}"
   "LambdaImageUri=${IMAGE_URI}"
+  "EmailEnabled=${WOODLE_EMAIL_ENABLED}"
+  "EmailProvider=${WOODLE_EMAIL_PROVIDER}"
+  "EmailFromAddress=${WOODLE_EMAIL_FROM}"
+  "EmailSubjectPrefix=${WOODLE_EMAIL_SUBJECT_PREFIX}"
+  "EmailSmtpHost=${WOODLE_EMAIL_SMTP_HOST}"
+  "EmailSmtpPort=${WOODLE_EMAIL_SMTP_PORT}"
+  "EmailSmtpUsername=${WOODLE_EMAIL_SMTP_USERNAME}"
 )
+
+if [[ -n "${WOODLE_EMAIL_SMTP_PASSWORD_SECRET_ID}" ]]; then
+  PARAMETER_OVERRIDES+=("EmailSmtpPasswordSecretId=${WOODLE_EMAIL_SMTP_PASSWORD_SECRET_ID}")
+fi
 
 if [[ -n "${APP_DOMAIN_NAME}" ]]; then
   PARAMETER_OVERRIDES+=("AppDomainName=${APP_DOMAIN_NAME}")
@@ -309,3 +338,6 @@ aws cloudformation describe-stacks \
   --region "${AWS_REGION}" \
   --query "Stacks[0].Outputs" \
   --output table
+
+DEPLOYED_AT="$(date '+%Y-%m-%d %H:%M:%S %Z')"
+echo "Deployment erfolgreich am: ${DEPLOYED_AT}"

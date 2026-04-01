@@ -17,11 +17,54 @@ Parameters:
     Type: String
     Default: ""
     Description: Optional ACM certificate ARN (us-east-1) for CloudFront custom domain
+  EmailEnabled:
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Enable email sending from Lambda
+  EmailProvider:
+    Type: String
+    Default: "ses"
+    AllowedValues:
+      - "ses"
+      - "smtp"
+    Description: Outbound email provider used by Lambda
+  EmailFromAddress:
+    Type: String
+    Default: ""
+    Description: From address used for outbound poll emails
+  EmailSubjectPrefix:
+    Type: String
+    Default: ""
+    Description: Optional subject prefix for outbound poll emails
+  EmailSmtpHost:
+    Type: String
+    Default: "smtp.ionos.de"
+    Description: SMTP host used when EmailProvider is smtp
+  EmailSmtpPort:
+    Type: Number
+    Default: 587
+    Description: SMTP port used when EmailProvider is smtp
+  EmailSmtpUsername:
+    Type: String
+    Default: "woodle@funknstein.de"
+    Description: SMTP username used when EmailProvider is smtp
+  EmailSmtpPasswordSecretId:
+    Type: String
+    Default: ""
+    Description: Optional Secrets Manager secret id containing JSON field password for SMTP password
 
 Conditions:
   HasCustomDomain: !Not [!Equals [!Ref AppDomainName, ""]]
   HasCertificate: !Not [!Equals [!Ref AcmCertificateArn, ""]]
   UseAliasConfig: !And [!Condition HasCustomDomain, !Condition HasCertificate]
+  IsEmailEnabled: !Equals [!Ref EmailEnabled, "true"]
+  IsEmailProviderSes: !Equals [!Ref EmailProvider, "ses"]
+  HasEmailFromAddress: !Not [!Equals [!Ref EmailFromAddress, ""]]
+  HasEmailSmtpPasswordSecretId: !Not [!Equals [!Ref EmailSmtpPasswordSecretId, ""]]
+  UseSesEmailPolicy: !And [!Condition IsEmailEnabled, !Condition IsEmailProviderSes, !Condition HasEmailFromAddress]
 
 Resources:
   WebBucket:
@@ -65,6 +108,35 @@ Resources:
         SigningBehavior: always
         SigningProtocol: sigv4
 
+  NoReferrerResponseHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub woodle-no-referrer-${EnvironmentName}
+        Comment: Enforce no-referrer on all viewer responses
+        SecurityHeadersConfig:
+            ReferrerPolicy:
+              Override: true
+              ReferrerPolicy: no-referrer
+
+  StaticPollLoaderRewriteFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub woodle-static-loader-rewrite-${EnvironmentName}
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Rewrite /poll/static/{id} to static loader object
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var uri = request.uri || '';
+          if (uri.indexOf('/poll/static/') === 0 && uri !== '/poll/static/loader.html') {
+            request.uri = '/poll/static/loader.html';
+          }
+          return request;
+        }
+
   WebDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -90,7 +162,20 @@ Resources:
           CachedMethods: [GET, HEAD, OPTIONS]
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
           OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+          ResponseHeadersPolicyId: !Ref NoReferrerResponseHeadersPolicy
         CacheBehaviors:
+          - PathPattern: /poll/static/*
+            TargetOriginId: web-bucket-origin
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD, OPTIONS]
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+            ResponseHeadersPolicyId: !Ref NoReferrerResponseHeadersPolicy
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt StaticPollLoaderRewriteFunction.FunctionMetadata.FunctionARN
           - PathPattern: /poll/new
             TargetOriginId: web-bucket-origin
             ViewerProtocolPolicy: redirect-to-https
@@ -99,6 +184,7 @@ Resources:
             CachedMethods: [GET, HEAD, OPTIONS]
             CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
             OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+            ResponseHeadersPolicyId: !Ref NoReferrerResponseHeadersPolicy
           - PathPattern: /poll/new-step1.html
             TargetOriginId: web-bucket-origin
             ViewerProtocolPolicy: redirect-to-https
@@ -107,6 +193,7 @@ Resources:
             CachedMethods: [GET, HEAD, OPTIONS]
             CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
             OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf
+            ResponseHeadersPolicyId: !Ref NoReferrerResponseHeadersPolicy
           - PathPattern: /poll*
             TargetOriginId: api-origin
             ViewerProtocolPolicy: redirect-to-https
@@ -115,6 +202,7 @@ Resources:
             CachedMethods: [GET, HEAD]
             CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
             OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac
+            ResponseHeadersPolicyId: !Ref NoReferrerResponseHeadersPolicy
         CustomErrorResponses:
           - ErrorCode: 404
             ResponseCode: 200
@@ -122,6 +210,18 @@ Resources:
           - ErrorCode: 403
             ResponseCode: 200
             ResponsePagePath: /poll/new-step1.html
+          - ErrorCode: 500
+            ResponseCode: 503
+            ResponsePagePath: /error-unavailable.html
+          - ErrorCode: 502
+            ResponseCode: 503
+            ResponsePagePath: /error-unavailable.html
+          - ErrorCode: 503
+            ResponseCode: 503
+            ResponsePagePath: /error-unavailable.html
+          - ErrorCode: 504
+            ResponseCode: 503
+            ResponsePagePath: /error-unavailable.html
         PriceClass: PriceClass_100
         Aliases: !If [HasCustomDomain, [!Ref AppDomainName], !Ref "AWS::NoValue"]
         ViewerCertificate: !If
@@ -148,10 +248,20 @@ Resources:
               StringEquals:
                 AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebDistribution}
 
+  ApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/apigateway/woodle-${EnvironmentName}
+      RetentionInDays: 14
+
   Api:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: "$default"
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiAccessLogGroup.Arn
+        Format: >-
+          {"requestId":"$context.requestId","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","path":"$context.path","status":"$context.status","responseLatency":"$context.responseLatency","integrationLatency":"$context.integrationLatency","integrationRequestId":"$context.integration.requestId","sourceIp":"$context.identity.sourceIp"}
       CorsConfiguration:
         AllowOrigins:
           - !If
@@ -187,6 +297,7 @@ Resources:
       MemorySize: 1024
       Architectures:
         - arm64
+      Tracing: Active
       Environment:
         Variables:
           WOODLE_PUBLIC_BASE_URL: !If
@@ -197,6 +308,17 @@ Resources:
           WOODLE_S3_REGION: !Ref AWS::Region
           WOODLE_S3_BUCKET: !Ref PollsBucket
           WOODLE_S3_PATH_STYLE: "false"
+          WOODLE_EMAIL_ENABLED: !Ref EmailEnabled
+          WOODLE_EMAIL_PROVIDER: !Ref EmailProvider
+          WOODLE_EMAIL_FROM: !Ref EmailFromAddress
+          WOODLE_EMAIL_SUBJECT_PREFIX: !Ref EmailSubjectPrefix
+          WOODLE_EMAIL_SMTP_HOST: !Ref EmailSmtpHost
+          WOODLE_EMAIL_SMTP_PORT: !Ref EmailSmtpPort
+          WOODLE_EMAIL_SMTP_USERNAME: !Ref EmailSmtpUsername
+          WOODLE_EMAIL_SMTP_PASSWORD: !If
+            - HasEmailSmtpPasswordSecretId
+            - !Sub "{{resolve:secretsmanager:${EmailSmtpPasswordSecretId}:SecretString}}"
+            - !Ref AWS::NoValue
       Policies:
         - Version: "2012-10-17"
           Statement:
@@ -206,7 +328,31 @@ Resources:
                 - s3:GetObject
                 - s3:PutObject
                 - s3:DeleteObject
-              Resource: !Sub ${PollsBucket.Arn}/polls/*
+              Resource:
+                - !Sub ${PollsBucket.Arn}/polls/*
+                - !Sub ${PollsBucket.Arn}/drafts/*
+            - Sid: PollBucketListAccess
+              Effect: Allow
+              Action:
+                - s3:ListBucket
+              Resource: !GetAtt PollsBucket.Arn
+            - Sid: XRayWriteAccess
+              Effect: Allow
+              Action:
+                - xray:PutTraceSegments
+                - xray:PutTelemetryRecords
+              Resource: "*"
+            - !If
+              - UseSesEmailPolicy
+              - Sid: PollEmailSesSend
+                Effect: Allow
+                Action:
+                  - ses:SendEmail
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    ses:FromAddress: !Ref EmailFromAddress
+              - !Ref AWS::NoValue
       Events:
         ProxyAny:
           Type: HttpApi

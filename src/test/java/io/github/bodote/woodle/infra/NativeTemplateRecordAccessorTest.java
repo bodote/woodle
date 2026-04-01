@@ -63,6 +63,12 @@ class NativeTemplateRecordAccessorTest {
         assertTrue(
                 hintsClass.contains("PollViewController$ParticipantRow"),
                 "Expected participant row model to be registered for reflection hints");
+        assertTrue(
+                hintsClass.contains("io.github.bodote.woodle.adapter.out.persistence.PollDAO"),
+                "Expected PollDAO to be registered for Jackson reflection hints in native mode");
+        assertTrue(
+                hintsClass.contains("io.github.bodote.woodle.adapter.out.persistence.PollDAO$OptionItem"),
+                "Expected PollDAO nested record types to be registered for Jackson reflection hints in native mode");
     }
 
     @Test

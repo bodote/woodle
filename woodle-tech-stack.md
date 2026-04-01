@@ -5,6 +5,7 @@
 - Spring Boot
 - Thymeleaf als HTML-Template-Engine
 - HTMX (https://htmx.org) für dynamische Elemente
+- HTMX wird als lokale statische Asset-Datei ausgeliefert (`/js/vendor/htmx.min.js`), nicht über Drittanbieter-CDNs.
 
 ## Laufzeit & Deployment
 - Kein dauerhaft laufender Spring-Boot-Server.
@@ -103,6 +104,15 @@ class ArchitectureTest {
 - API Gateway + Spring Cloud Function.
 - HTTP-Requests werden über Function-Adapter entgegengenommen, kein dauerhaft laufender Server.
 
+## E-Mail-Versand
+- Optionaler E-Mail-Versand nach erfolgreicher Umfrage-Erstellung über Amazon SES (AWS SDK v2 `SesV2Client`).
+- Konfiguration über:
+  - `woodle.email.enabled`
+  - `woodle.email.from`
+  - `woodle.email.subject-prefix`
+- Fallback bei deaktivierter E-Mail-Konfiguration: No-op Sender ohne Versand.
+- IAM-Berechtigung im Lambda-Kontext: `ses:SendEmail` mit Einschränkung auf die konfigurierte Absenderadresse.
+
 ## S3-Datenmodell (Empfehlung zur Review)
 
 Ziel: genau **eine** JSON-Datei pro Umfrage. Der S3-Key ist die generierte UUID der Umfrage.
@@ -173,7 +183,9 @@ Ziel: genau **eine** JSON-Datei pro Umfrage. Der S3-Key ist die generierte UUID 
 - Danach vollständige Löschung aller `polls/{pollId}/**`-Objekte.
 
 ## Validierung
-- Keine E-Mail- oder Passwort-Validierung erforderlich (Zugriff über UUID und Admin-Secret).
+- Keine User-Account-Verwaltung mit Login/Passwort.
+- Zugriff erfolgt über UUID und Admin-Secret.
+- E-Mail-Adressen bleiben fachlich relevant (z. B. für spätere Benachrichtigungen) und dürfen validiert werden.
 
 ## Änderbarkeit der Optionen
 - `endTime` wird bei intraday explizit gespeichert und nicht nachträglich aus `startTime + durationMinutes` abgeleitet.

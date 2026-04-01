@@ -16,10 +16,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -99,6 +101,12 @@ class PollParticipantViewTest {
                 .andExpect(content().string(containsString("value=\"YES\"")))
                 .andExpect(content().string(containsString("value=\"IF_NEEDED\"")))
                 .andExpect(content().string(containsString("value=\"NO\"")))
+                .andExpect(content().string(containsString("✅")))
+                .andExpect(content().string(containsString("(✔️)")))
+                .andExpect(content().string(containsString("❌")))
+                .andExpect(content().string(containsString("votes-table__marker--yes")))
+                .andExpect(content().string(containsString("votes-table__marker--if-needed")))
+                .andExpect(content().string(containsString("votes-table__marker--no")))
                 .andExpect(content().string(containsString("class=\"summary-row\"")))
                 .andExpect(content().string(containsString("Speichern")));
     }
@@ -130,7 +138,174 @@ class PollParticipantViewTest {
                 .andExpect(content().string(containsString("value=\"" + responseId + "\"")))
                 .andExpect(content().string(containsString("name=\"participantName\"")))
                 .andExpect(content().string(containsString("value=\"Alice\"")))
+                .andExpect(content().string(containsString("hx-include=\"closest tr\"")))
                 .andExpect(content().string(containsString("name=\"vote_edit_" + option.optionId() + "\"")))
-                .andExpect(content().string(containsString("value=\"YES\"")));
+                .andExpect(content().string(containsString("value=\"YES\"")))
+                .andExpect(content().string(containsString("title=\"Speichern\"")))
+                .andExpect(content().string(containsString("title=\"Löschen\"")));
+    }
+
+    @Test
+    @DisplayName("renders delete action with confirmation for editable participant row")
+    void rendersDeleteActionWithConfirmationForEditableParticipantRow() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000216");
+        UUID responseId = UUID.fromString("00000000-0000-0000-0000-000000000316");
+        PollOption option = TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000026"),
+                LocalDate.of(2026, 2, 21));
+        PollResponse response = TestFixtures.response(
+                responseId,
+                "Alice",
+                List.of(new PollVote(option.optionId(), PollVoteValue.YES))
+        );
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(option),
+                List.of(response)
+        );
+
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId + "/responses/" + responseId + "/edit"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("hx-delete=\"/poll/" + pollId + "/responses/" + responseId + "\"")))
+                .andExpect(content().string(containsString("hx-confirm=\"Eintrag von Alice wirklich löschen?\"")));
+    }
+
+    @Test
+    @DisplayName("groups intraday time options by date in voting header")
+    void groupsIntradayTimeOptionsByDateInVotingHeader() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000212");
+        PollOption option1 = TestFixtures.option(
+                UUID.fromString("00000000-0000-0000-0000-000000000101"),
+                LocalDate.of(2026, 2, 20),
+                LocalTime.of(9, 0),
+                LocalTime.of(10, 0)
+        );
+        PollOption option2 = TestFixtures.option(
+                UUID.fromString("00000000-0000-0000-0000-000000000102"),
+                LocalDate.of(2026, 2, 20),
+                LocalTime.of(11, 30),
+                LocalTime.of(12, 30)
+        );
+        PollOption option3 = TestFixtures.option(
+                UUID.fromString("00000000-0000-0000-0000-000000000103"),
+                LocalDate.of(2026, 2, 21),
+                LocalTime.of(9, 0),
+                LocalTime.of(10, 0)
+        );
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(option1, option2, option3),
+                List.of()
+        );
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("votes-table__date-group")))
+                .andExpect(content().string(containsString("colspan=\"2\"")))
+                .andExpect(content().string(containsString("20.02.")))
+                .andExpect(content().string(containsString("09:00")))
+                .andExpect(content().string(containsString("11:30")));
+    }
+
+    @Test
+    @DisplayName("marks day boundaries separately from hourly separators in intraday tables")
+    void marksDayBoundariesSeparatelyFromHourlySeparatorsInIntradayTables() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000215");
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(
+                        TestFixtures.option(
+                                UUID.fromString("00000000-0000-0000-0000-000000000141"),
+                                LocalDate.of(2026, 4, 1),
+                                LocalTime.of(8, 0),
+                                LocalTime.of(9, 0)
+                        ),
+                        TestFixtures.option(
+                                UUID.fromString("00000000-0000-0000-0000-000000000142"),
+                                LocalDate.of(2026, 4, 1),
+                                LocalTime.of(9, 0),
+                                LocalTime.of(10, 0)
+                        ),
+                        TestFixtures.option(
+                                UUID.fromString("00000000-0000-0000-0000-000000000143"),
+                                LocalDate.of(2026, 4, 2),
+                                LocalTime.of(8, 0),
+                                LocalTime.of(9, 0)
+                        )
+                ),
+                List.of()
+        );
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("class=\"votes-table__date-group  votes-table__day-boundary\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__date  votes-table__day-boundary\"\n                    data-date=\"2026-04-01\">09:00</th>")))
+                .andExpect(content().string(containsString("class=\"votes-table__cell  votes-table__day-boundary\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__summary  votes-table__day-boundary\"")));
+    }
+
+    @Test
+    @DisplayName("keeps participant and edit columns sticky when many date columns exist")
+    void keepsParticipantAndEditColumnsStickyWhenManyDateColumnsExist() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000213");
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000111"), LocalDate.of(2026, 2, 28)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000112"), LocalDate.of(2026, 3, 4)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000113"), LocalDate.of(2026, 3, 6)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000114"), LocalDate.of(2026, 3, 7)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000115"), LocalDate.of(2026, 3, 12)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000116"), LocalDate.of(2026, 3, 13)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000117"), LocalDate.of(2026, 3, 14)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000118"), LocalDate.of(2026, 3, 15)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000119"), LocalDate.of(2026, 3, 16)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000120"), LocalDate.of(2026, 3, 17)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000121"), LocalDate.of(2026, 3, 18)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000122"), LocalDate.of(2026, 4, 1)),
+                        TestFixtures.option(UUID.fromString("00000000-0000-0000-0000-000000000123"), LocalDate.of(2026, 4, 24))
+                ),
+                List.of()
+        );
+
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("votes-table-wrap--participant")))
+                .andExpect(content().string(containsString("class=\"votes-table__name votes-table__sticky-left\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__edit votes-table__sticky-right\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__sticky-left votes-table__corner\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__sticky-right votes-table__corner\"")))
+                .andExpect(content().string(containsString("class=\"votes-table__summary-label votes-table__sticky-left\"")));
+    }
+
+    @Test
+    @DisplayName("renders participant scroll hint hidden until overflow is detected")
+    void rendersParticipantScrollHintHiddenUntilOverflowIsDetected() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000214");
+        PollOption option = TestFixtures.option(
+                UUID.fromString("00000000-0000-0000-0000-000000000131"),
+                LocalDate.of(2026, 3, 26)
+        );
+        Poll poll = TestFixtures.poll(
+                pollId,
+                List.of(option),
+                List.of()
+        );
+
+        when(readPollUseCase.getPublic(pollId)).thenReturn(poll);
+
+        mockMvc.perform(get("/poll/" + pollId))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("id=\"participant-scroll-hint\"")))
+                .andExpect(content().string(containsString("id=\"participant-scroll-hint\"\n                 class=\"scroll-hint scroll-hint--participant\"\n                 role=\"status\"\n                 aria-live=\"polite\"\n                 hidden")))
+                .andExpect(content().string(containsString("Weitere Termine: rechts/links scrollen")))
+                .andExpect(content().string(containsString("class=\"votes-table-wrap votes-table-wrap--participant\"")))
+                .andExpect(content().string(containsString("title=\"Speichern\"")))
+                .andExpect(content().string(not(containsString("title=\"Löschen\""))));
     }
 }

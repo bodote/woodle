@@ -1,11 +1,12 @@
 <tr th:fragment="row"
     th:id="${'row-' + editRow.responseId}"
     th:attr="data-edit-row=${editRow.name}">
-    <th scope="row" class="votes-table__name">
+    <th scope="row" class="votes-table__name votes-table__sticky-left">
         <span th:text="${editRow.name}">Name</span>
         <form th:id="${'edit-form-' + editRow.responseId}"
               th:action="@{/poll/{pollId}/vote(pollId=${pollId})}"
               th:attr="hx-post=@{/poll/{pollId}/vote(pollId=${pollId})}"
+              hx-include="closest tr"
               hx-target="closest tr"
               hx-swap="outerHTML"
               method="post"></form>
@@ -16,15 +17,32 @@
                th:value="${editRow.responseId}"
                th:attr="form=${'edit-form-' + editRow.responseId}">
     </th>
-    <td th:each="cell : ${editRow.cells}" class="votes-table__cell">
+    <td th:each="cell : ${editRow.cells}"
+        class="votes-table__cell"
+        th:classappend="${cell.dayBoundary} ? ' votes-table__day-boundary' : ''">
         <select th:name="${'vote_edit_' + cell.optionId}"
                 th:attr="form=${'edit-form-' + editRow.responseId}">
-            <option value="YES" th:selected="${cell.value != null and cell.value.name() == 'YES'}">Ja</option>
-            <option value="IF_NEEDED" th:selected="${cell.value != null and cell.value.name() == 'IF_NEEDED'}">Wenn nötig</option>
-            <option value="NO" th:selected="${cell.value != null and cell.value.name() == 'NO'}">Nein</option>
+            <option value="YES" th:selected="${cell.value != null and cell.value.name() == 'YES'}">✅</option>
+            <option value="IF_NEEDED" th:selected="${cell.value != null and cell.value.name() == 'IF_NEEDED'}">(✔️)</option>
+            <option value="NO" th:selected="${cell.value != null and cell.value.name() == 'NO'}">❌</option>
         </select>
     </td>
-    <td class="votes-table__edit">
-        <button type="submit" th:attr="form=${'edit-form-' + editRow.responseId}">Speichern</button>
+    <td class="votes-table__edit votes-table__sticky-right">
+        <div class="votes-table__actions">
+            <button type="submit"
+                    th:attr="form=${'edit-form-' + editRow.responseId}"
+                    class="icon-button votes-table__action-button"
+                    title="Speichern"
+                    aria-label="Speichern">💾</button>
+            <button type="button"
+                    th:attr="form=${'edit-form-' + editRow.responseId},
+                             hx-delete=@{/poll/{pollId}/responses/{responseId}(pollId=${pollId},responseId=${editRow.responseId})},
+                             hx-confirm=${'Eintrag von ' + editRow.name + ' wirklich löschen?'}"
+                    hx-target="closest tr"
+                    hx-swap="delete"
+                    class="icon-button votes-table__action-button votes-table__action-button--danger"
+                    title="Löschen"
+                    aria-label="Löschen">🗑</button>
+        </div>
     </td>
 </tr>

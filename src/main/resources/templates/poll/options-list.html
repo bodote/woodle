@@ -1,5 +1,5 @@
 <div id="options-list" th:fragment="optionsList">
-    <ul>
+    <ul class="option-list">
         <li th:each="option : ${poll.options}">
             <span th:if="${option.startTime != null}"
                   th:text="${option.date + ' ' + option.startTime}">Datum</span>

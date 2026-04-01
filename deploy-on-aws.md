@@ -139,6 +139,12 @@ Response `200 OK`:
 Not found:
 - `404 Not Found` if `pollId` does not exist
 
+### Active poll count
+- `GET /v1/polls/active-count` (same-origin alias: `/poll/active-count`)
+
+Response `200 OK`:
+- plain text integer count of active poll objects (`polls/*.json`)
+
 ### Update poll metadata/settings
 - `PUT /v1/polls/{pollId}`
 - Require `If-Match: <etag>` header to prevent lost updates.
@@ -243,9 +249,51 @@ CORS operational notes:
 2. Lambda execution role permissions restricted to:
    - `s3:GetObject`, `s3:PutObject`, optional `s3:DeleteObject`
    - resource scope: `arn:aws:s3:::woodle-polls-<env>/polls/*`
+   - `s3:ListBucket` on bucket resource `arn:aws:s3:::woodle-polls-<env>` for active poll counting
 3. Enable server-side encryption (SSE-S3 or SSE-KMS).
 4. Enable API throttling and request size limits in API Gateway.
 5. Add CORS rules only for required frontend origins.
+
+## Transactional Email (Amazon SES)
+
+Recommended AWS-native approach for Lambda email sending:
+- Use Amazon SES API (AWS SDK) from Lambda.
+- Do not run your own SMTP server.
+- Keep email sending optional via env config.
+
+### Runtime configuration
+- `WOODLE_EMAIL_ENABLED=true`
+- `WOODLE_EMAIL_FROM=noreply@woodle.click` (must be verified in SES)
+- `WOODLE_EMAIL_SUBJECT_PREFIX=[prod]` (optional)
+- `WOODLE_PUBLIC_BASE_URL=https://woodle.click` (for absolute links in email body)
+
+### SES prerequisites
+1. Verify sender identity (domain preferred) in SES.
+2. Configure DKIM and SPF (and ideally DMARC) on DNS.
+3. If account is in SES sandbox, request production access before sending to non-verified recipients.
+
+### Lambda IAM policy (least privilege)
+Attach to Lambda execution role and scope to your verified identity ARN:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowSesSendEmail",
+      "Effect": "Allow",
+      "Action": [
+        "ses:SendEmail"
+      ],
+      "Resource": "arn:aws:ses:eu-central-1:123456789012:identity/woodle.click"
+    }
+  ]
+}
+```
+
+Notes:
+- Keep region aligned with your SES identity/endpoint.
+- Add `ses:SendRawEmail` only if MIME/raw sending is required.
 
 ## Cost Guardrails
 
@@ -363,6 +411,38 @@ What must be validated in AWS (cannot be fully proven locally):
 3. CloudFront caching/CORS/custom-domain TLS.
 4. Real cold-start and latency behavior.
 5. Cost/budget/anomaly alerts in actual billing pipeline.
+
+## Transient 504 Runbook (CloudFront/API/Lambda)
+
+Observed pattern in production-like traffic:
+- A single `504 Gateway Timeout` can occur on step transition (`/poll/step-2`) during Lambda cold start.
+- Immediate retry often succeeds after the new Lambda container is initialized.
+
+Cost-aware mitigation used in this project:
+1. Do **not** keep Lambda warm with scheduled pings on critical paths (idle-cost first).
+2. Use client-side transient retries for `502/503/504`:
+   - step-1 submit (`/poll/step-2`): 10 retries, 1000ms interval
+   - active poll count (`/poll/active-count`): 10 retries, 1000ms interval
+3. Show delayed progress feedback (`Schritt 2 wird geladen...` + spinner) if response time exceeds ~200ms.
+
+Operational verification:
+1. Check CloudWatch logs around the event for `INIT_REPORT` timeout/restart patterns.
+2. Re-run the same user flow on the same stage (`qs` or `prod`) and confirm success on retry.
+3. Verify no persistent routing/domain issue (CloudFront alias, API mapping, cert).
+
+How to force realistic cold-start conditions for testing:
+1. Update Lambda configuration on target stage by changing a dummy env var.
+2. Example:
+   - Resolve function name from stack resources:
+     `aws cloudformation describe-stack-resources --stack-name woodle-qs --region eu-central-1 --logical-resource-id AppFunction`
+   - Read current env vars and merge the dummy key (safe: preserves existing variables):
+     `CURRENT_VARS_JSON="$(aws lambda get-function-configuration --function-name <physical-function-name> --region eu-central-1 --query 'Environment.Variables' --output json)"`
+     `MERGED_VARS_JSON="$(echo "$CURRENT_VARS_JSON" | jq '. + {\"DUMMY_WARMUP_TEST\":\"2026-02-15T11:00:00Z\"}')"`
+   - Convert merged JSON map to AWS CLI shorthand and update:
+     `MERGED_VARS_SHORTHAND="$(echo "$MERGED_VARS_JSON" | jq -r 'to_entries | map(\"\\(.key)=\\(.value)\") | join(\",\")')"`
+     `aws lambda update-function-configuration --function-name <physical-function-name> --region eu-central-1 --environment "Variables={$MERGED_VARS_SHORTHAND}"`
+   - Important: `update-function-configuration --environment` replaces the full map; never update only one key without merging.
+3. Then run immediate UI smoke tests (step-1 submit and active-count load) and verify loading indicator + retry behavior.
 
 ## Definition of Done (Per Environment)
 1. All tests pass (`test`, targeted `*IT`, key E2E).

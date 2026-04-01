@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record PollDAO(
         UUID pollId,
+        String schemaVersion,
         String type,
         String title,
         String descriptionHtml,
