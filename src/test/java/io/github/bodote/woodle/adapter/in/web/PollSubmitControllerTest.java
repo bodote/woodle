@@ -402,6 +402,56 @@ class PollSubmitControllerTest {
     }
 
     @Test
+    @DisplayName("passes notifyOnComment=true from session state to CreatePollCommand")
+    void passesNotifyOnCommentTrueFromSessionToCommand() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000020");
+        String adminSecret = "NotifyCommentTest";
+        MockHttpSession session = new MockHttpSession();
+        WizardState state = TestFixtures.wizardStateWithDates(
+                EventType.ALL_DAY,
+                List.of(LocalDate.of(2026, 2, 10))
+        );
+        state.setNotifyOnComment(true);
+        session.setAttribute(WizardState.SESSION_KEY, state);
+
+        when(createPollUseCase.create(any(CreatePollCommand.class)))
+                .thenReturn(new CreatePollResult(pollId, adminSecret, true, false));
+
+        mockMvc.perform(post("/poll/submit").session(session))
+                .andExpect(status().is3xxRedirection());
+
+        org.mockito.ArgumentCaptor<CreatePollCommand> captor =
+                org.mockito.ArgumentCaptor.forClass(CreatePollCommand.class);
+        verify(createPollUseCase).create(captor.capture());
+        assertEquals(true, captor.getValue().notifyOnComment());
+    }
+
+    @Test
+    @DisplayName("passes notifyOnComment=false from session state to CreatePollCommand by default")
+    void passesNotifyOnCommentFalseByDefault() throws Exception {
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000021");
+        String adminSecret = "NotifyCommentOff";
+        MockHttpSession session = new MockHttpSession();
+        WizardState state = TestFixtures.wizardStateWithDates(
+                EventType.ALL_DAY,
+                List.of(LocalDate.of(2026, 2, 10))
+        );
+        // notifyOnComment not explicitly set → default false
+        session.setAttribute(WizardState.SESSION_KEY, state);
+
+        when(createPollUseCase.create(any(CreatePollCommand.class)))
+                .thenReturn(new CreatePollResult(pollId, adminSecret, true, false));
+
+        mockMvc.perform(post("/poll/submit").session(session))
+                .andExpect(status().is3xxRedirection());
+
+        org.mockito.ArgumentCaptor<CreatePollCommand> captor =
+                org.mockito.ArgumentCaptor.forClass(CreatePollCommand.class);
+        verify(createPollUseCase).create(captor.capture());
+        assertEquals(false, captor.getValue().notifyOnComment());
+    }
+
+    @Test
     @DisplayName("handles blank parameters in date and time extraction")
     void handlesParametersWithNoValuesInDateAndTimeExtraction() throws Exception {
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000008");

@@ -56,7 +56,8 @@ public class CreatePollService implements CreatePollUseCase {
                 List.of(),
                 now,
                 now,
-                expiresAt
+                expiresAt,
+                command.notifyOnComment()
         );
 
         pollRepository.save(poll);

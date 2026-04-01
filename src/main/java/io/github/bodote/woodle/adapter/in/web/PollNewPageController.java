@@ -75,6 +75,7 @@ public class PollNewPageController {
             @RequestParam("authorEmail") String authorEmail,
             @RequestParam("pollTitle") String pollTitle,
             @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "notifyOnComment", required = false, defaultValue = "false") boolean notifyOnComment,
             Model model,
             HttpSession session
     ) {
@@ -84,6 +85,7 @@ public class PollNewPageController {
             state.setAuthorEmail(authorEmail);
             state.setTitle(pollTitle);
             state.setDescription(description);
+            state.setNotifyOnComment(notifyOnComment);
             applyStep1Model(model, state, authorEmail, true);
             return "poll/new-step1";
         }
@@ -92,6 +94,7 @@ public class PollNewPageController {
         state.setAuthorEmail(authorEmail);
         state.setTitle(pollTitle);
         state.setDescription(description);
+        state.setNotifyOnComment(notifyOnComment);
         UUID draftId = null;
         try {
             draftId = wizardStateRepository.create(state);

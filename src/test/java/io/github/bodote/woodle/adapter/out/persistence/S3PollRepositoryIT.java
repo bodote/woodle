@@ -77,7 +77,8 @@ class S3PollRepositoryIT {
                 List.of(),
                 now,
                 now,
-                LocalDate.of(2026, 3, 10)
+                LocalDate.of(2026, 3, 10),
+                false
         );
 
         repository.save(poll);

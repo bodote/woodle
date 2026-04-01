@@ -44,7 +44,21 @@ tasks.named('test') {
 tasks.register('integrationTest', Test) {
     useJUnitPlatform()
     include '**/*IT.class'
+    testClassesDirs = files(layout.buildDirectory.dir('classes/java/test'))
+    classpath = files(
+            layout.buildDirectory.dir('classes/java/test'),
+            layout.buildDirectory.dir('resources/test')
+    ) + configurations.testRuntimeClasspath
+    dependsOn compileTestJava, processTestResources
     shouldRunAfter test
+}
+
+tasks.register('installPlaywrightBrowsers', JavaExec) {
+    group = 'verification'
+    description = 'Downloads Chromium browser for Playwright E2E tests.'
+    classpath = configurations.testRuntimeClasspath
+    mainClass = 'com.microsoft.playwright.CLI'
+    args = ['install', 'chromium']
 }
 
 jacocoTestReport {

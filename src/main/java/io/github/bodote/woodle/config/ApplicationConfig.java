@@ -19,6 +19,7 @@ import io.github.bodote.woodle.application.service.SubmitVoteService;
 import io.github.bodote.woodle.application.port.in.AdminPollOptionsUseCase;
 import io.github.bodote.woodle.application.service.AdminPollOptionsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -110,7 +111,7 @@ public class ApplicationConfig {
 
     @Bean
     @ConditionalOnMissingBean(SesV2Client.class)
-    @ConditionalOnProperty(name = "woodle.email.provider", havingValue = "ses", matchIfMissing = true)
+    @ConditionalOnExpression("'${woodle.email.enabled:false}' == 'true' && '${woodle.email.provider:ses}' == 'ses'")
     public SesV2Client sesV2Client() {
         return SesV2Client.create();
     }
@@ -168,8 +169,12 @@ public class ApplicationConfig {
     }
 
     @Bean
-    public SubmitVoteUseCase submitVoteUseCase(PollRepository pollRepository) {
-        return new SubmitVoteService(pollRepository);
+    public SubmitVoteUseCase submitVoteUseCase(
+            PollRepository pollRepository,
+            PollEmailSender pollEmailSender,
+            @Value("${woodle.email.enabled:false}") boolean emailEnabled
+    ) {
+        return new SubmitVoteService(pollRepository, pollEmailSender, emailEnabled);
     }
 
     @Bean

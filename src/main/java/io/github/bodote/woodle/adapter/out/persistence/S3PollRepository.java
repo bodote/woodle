@@ -160,7 +160,7 @@ public class S3PollRepository implements PollRepository {
                 new PollDAO.Author(poll.authorName(), poll.authorEmail()),
                 new PollDAO.Access(null, null, true, poll.adminSecret()),
                 new PollDAO.Permissions("ALL_CAN_EDIT"),
-                new PollDAO.Notifications(false, false),
+                new PollDAO.Notifications(false, poll.notifyOnComment()),
                 new PollDAO.ResultsVisibility(false),
                 "OPEN",
                 poll.expiresAt(),
@@ -182,6 +182,7 @@ public class S3PollRepository implements PollRepository {
         List<PollResponse> responses = pollDAO.responses().stream()
                 .map(this::fromResponse)
                 .toList();
+        boolean notifyOnComment = pollDAO.notifications() != null && pollDAO.notifications().onComment();
         return new Poll(
                 pollDAO.pollId(),
                 pollDAO.access().adminToken(),
@@ -195,7 +196,8 @@ public class S3PollRepository implements PollRepository {
                 responses,
                 pollDAO.createdAt(),
                 pollDAO.updatedAt(),
-                pollDAO.expiresAt()
+                pollDAO.expiresAt(),
+                notifyOnComment
         );
     }
 

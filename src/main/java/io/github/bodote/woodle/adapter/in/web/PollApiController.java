@@ -47,7 +47,8 @@ public class PollApiController {
                 requestDTO.durationMinutes(),
                 requestDTO.dates(),
                 requestDTO.startTimes() == null ? List.of() : requestDTO.startTimes(),
-                requestDTO.expiresAtOverride()
+                requestDTO.expiresAtOverride(),
+                false
         );
 
         CreatePollResult result = createPollUseCase.create(command);

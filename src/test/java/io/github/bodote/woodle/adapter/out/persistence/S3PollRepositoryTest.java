@@ -91,7 +91,8 @@ class S3PollRepositoryTest {
                 )),
                 now,
                 now,
-                LocalDate.of(2026, 3, 11)
+                LocalDate.of(2026, 3, 11),
+                false
         );
 
         repository.save(poll);
@@ -601,7 +602,8 @@ class S3PollRepositoryTest {
                 List.of(),
                 now,
                 now,
-                LocalDate.of(2026, 3, 11)
+                LocalDate.of(2026, 3, 11),
+                false
         );
 
         repository.save(poll);
@@ -678,11 +680,89 @@ class S3PollRepositoryTest {
                 List.of(),
                 now,
                 now,
-                LocalDate.of(2026, 3, 11)
+                LocalDate.of(2026, 3, 11),
+                false
         );
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> repository.save(poll));
 
         assertEquals("Failed to serialize poll", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("persists notifyOnComment=true and restores it on read")
+    void persistsNotifyOnCommentTrueAndRestoresItOnRead() throws IOException {
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+                .thenReturn(PutObjectResponse.builder().build());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000150");
+        OffsetDateTime now = OffsetDateTime.of(2026, 2, 10, 10, 0, 0, 0, ZoneOffset.UTC);
+        Poll poll = new Poll(
+                pollId,
+                "AdminSecret12",
+                "Notify Poll",
+                "desc",
+                "Alice",
+                "alice@invalid",
+                EventType.ALL_DAY,
+                null,
+                List.of(),
+                List.of(),
+                now,
+                now,
+                LocalDate.of(2026, 3, 10),
+                true
+        );
+
+        repository.save(poll);
+
+        ArgumentCaptor<RequestBody> bodyCaptor = ArgumentCaptor.forClass(RequestBody.class);
+        verify(s3Client).putObject(any(PutObjectRequest.class), bodyCaptor.capture());
+        String json = new String(bodyCaptor.getValue().contentStreamProvider().newStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertTrue(json.contains("\"onComment\":true"));
+    }
+
+    @Test
+    @DisplayName("reads notifyOnComment=true from persisted JSON")
+    void readsNotifyOnCommentTrueFromPersistedJson() {
+        S3Client s3Client = mock(S3Client.class);
+        String json = """
+                {
+                  "pollId":"00000000-0000-0000-0000-000000000151",
+                  "schemaVersion":"2",
+                  "type":"date",
+                  "title":"Notify Test",
+                  "descriptionHtml":"",
+                  "language":"de",
+                  "createdAt":"2026-02-10T10:00:00Z",
+                  "updatedAt":"2026-02-10T10:00:00Z",
+                  "author":{"name":"Alice","email":"alice@invalid"},
+                  "access":{"customSlug":null,"passwordHash":null,"resultsPublic":true,"adminToken":"secret"},
+                  "permissions":{"voteChangePolicy":"ALL_CAN_EDIT"},
+                  "notifications":{"onVote":false,"onComment":true},
+                  "resultsVisibility":{"onlyAuthor":false},
+                  "status":"OPEN",
+                  "expiresAt":"2026-03-10",
+                  "options":{"eventType":"ALL_DAY","durationMinutes":null,"items":[]},
+                  "responses":[]
+                }
+                """;
+        GetObjectResponse response = GetObjectResponse.builder().build();
+        ResponseInputStream<GetObjectResponse> stream = new ResponseInputStream<>(
+                response,
+                AbortableInputStream.create(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)))
+        );
+        when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        Poll poll = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000151")).orElseThrow();
+
+        assertTrue(poll.notifyOnComment());
     }
 }

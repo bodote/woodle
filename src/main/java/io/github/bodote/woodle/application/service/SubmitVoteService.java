@@ -2,9 +2,12 @@ package io.github.bodote.woodle.application.service;
 
 import io.github.bodote.woodle.application.port.in.SubmitVoteUseCase;
 import io.github.bodote.woodle.application.port.in.command.SubmitVoteCommand;
+import io.github.bodote.woodle.application.port.out.NewCommentEmail;
+import io.github.bodote.woodle.application.port.out.PollEmailSender;
 import io.github.bodote.woodle.application.port.out.PollRepository;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.domain.model.PollResponse;
+import io.github.bodote.woodle.domain.model.PollVote;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -13,9 +16,15 @@ import java.util.UUID;
 public class SubmitVoteService implements SubmitVoteUseCase {
 
     private final PollRepository pollRepository;
+    private final PollEmailSender pollEmailSender;
+    private final boolean emailEnabled;
 
-    public SubmitVoteService(PollRepository pollRepository) {
+    public SubmitVoteService(PollRepository pollRepository,
+                             PollEmailSender pollEmailSender,
+                             boolean emailEnabled) {
         this.pollRepository = pollRepository;
+        this.pollEmailSender = pollEmailSender;
+        this.emailEnabled = emailEnabled;
     }
 
     @Override
@@ -47,6 +56,21 @@ public class SubmitVoteService implements SubmitVoteUseCase {
         }
 
         pollRepository.save(poll.addResponse(response));
+
+        if (emailEnabled
+                && poll.notifyOnComment()
+                && command.comment() != null
+                && !command.comment().isBlank()) {
+            pollEmailSender.sendNewComment(new NewCommentEmail(
+                    poll.pollId(),
+                    poll.adminSecret(),
+                    poll.authorName(),
+                    poll.authorEmail(),
+                    poll.title(),
+                    command.participantName(),
+                    command.comment()
+            ));
+        }
     }
 
     @Override

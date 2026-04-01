@@ -16,7 +16,8 @@ public record CreatePollCommand(
         Integer durationMinutes,
         List<LocalDate> dates,
         List<LocalTime> startTimes,
-        LocalDate expiresAtOverride
+        LocalDate expiresAtOverride,
+        boolean notifyOnComment
 ) {
     public CreatePollCommand {
         Objects.requireNonNull(authorName, "authorName");
