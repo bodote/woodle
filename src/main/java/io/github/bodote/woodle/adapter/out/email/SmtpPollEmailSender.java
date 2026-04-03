@@ -1,5 +1,6 @@
 package io.github.bodote.woodle.adapter.out.email;
 
+import io.github.bodote.woodle.application.port.out.NewCommentEmail;
 import io.github.bodote.woodle.application.port.out.PollCreatedEmail;
 import io.github.bodote.woodle.application.port.out.PollEmailSender;
 import org.slf4j.Logger;
@@ -53,6 +54,39 @@ public class SmtpPollEmailSender implements PollEmailSender {
             return true;
         } catch (RuntimeException ex) {
             LOGGER.warn("Failed to send poll created email for poll {}", pollId, ex);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean sendNewComment(NewCommentEmail email) {
+        String pollId = email.pollId().toString();
+        String adminUrl = absoluteUrl("/poll/static/" + pollId + "-" + email.adminSecret());
+
+        String subject = subjectPrefix.isBlank()
+                ? "Neuer Eintrag: " + email.pollTitle()
+                : subjectPrefix + " Neuer Eintrag: " + email.pollTitle();
+        String commentLine = (email.comment() != null && !email.comment().isBlank())
+                ? "\nKommentar: " + email.comment() + "\n"
+                : "";
+        String body = "Hello " + email.authorName() + ",\n\n"
+                + email.participantName() + " hat einen neuen Eintrag in deiner Umfrage \""
+                + email.pollTitle() + "\" hinterlassen."
+                + commentLine + "\n"
+                + "Admin URL:\n"
+                + adminUrl + "\n";
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromAddress);
+        message.setTo(email.authorEmail());
+        message.setSubject(subject);
+        message.setText(body);
+
+        try {
+            javaMailSender.send(message);
+            return true;
+        } catch (RuntimeException ex) {
+            LOGGER.warn("Failed to send new comment email for poll {}", pollId, ex);
             return false;
         }
     }

@@ -113,11 +113,11 @@
             <fieldset class="choice-grid">
                 <legend>E-Mail-Benachrichtigungen</legend>
                 <label class="choice-card">
-                    <input name="notifyOnVote" type="checkbox">
-                    <span class="choice-card__label">Bei jeder neuen Wertung eine E-Mail erhalten</span>
+                    <input name="notifyOnVote" type="checkbox" th:disabled="${!emailEnabled}">
+                    <span class="choice-card__label">Bei jeder neuen Umfrage eine E-Mail erhalten</span>
                 </label>
                 <label class="choice-card">
-                    <input name="notifyOnComment" type="checkbox">
+                    <input name="notifyOnComment" type="checkbox" th:disabled="${!emailEnabled}">
                     <span class="choice-card__label">Bei jedem neuen Eintrag eine E-Mail erhalten</span>
                 </label>
             </fieldset>

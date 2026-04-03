@@ -18,7 +18,8 @@ public record Poll(
         List<PollResponse> responses,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,
-        LocalDate expiresAt
+        LocalDate expiresAt,
+        boolean notifyOnComment
 ) {
     public String getTitle() {
         return title;
@@ -36,7 +37,8 @@ public record Poll(
         List<PollResponse> updated = new java.util.ArrayList<>(responses);
         updated.add(response);
         return new Poll(pollId, adminSecret, title, description, authorName, authorEmail, eventType,
-                durationMinutes, options, java.util.List.copyOf(updated), createdAt, updatedAt, expiresAt);
+                durationMinutes, options, java.util.List.copyOf(updated), createdAt, updatedAt, expiresAt,
+                notifyOnComment);
     }
 
     public Poll replaceResponse(PollResponse response) {
@@ -53,7 +55,8 @@ public record Poll(
             updated.add(response);
         }
         return new Poll(pollId, adminSecret, title, description, authorName, authorEmail, eventType,
-                durationMinutes, options, java.util.List.copyOf(updated), createdAt, updatedAt, expiresAt);
+                durationMinutes, options, java.util.List.copyOf(updated), createdAt, updatedAt, expiresAt,
+                notifyOnComment);
     }
 
     public Poll removeResponse(UUID responseId) {
@@ -63,11 +66,13 @@ public record Poll(
             throw new IllegalArgumentException("Response not found");
         }
         return new Poll(pollId, adminSecret, title, description, authorName, authorEmail, eventType,
-                durationMinutes, options, java.util.List.copyOf(updated), createdAt, updatedAt, expiresAt);
+                durationMinutes, options, java.util.List.copyOf(updated), createdAt, updatedAt, expiresAt,
+                notifyOnComment);
     }
 
     public Poll withOptions(List<PollOption> newOptions) {
         return new Poll(pollId, adminSecret, title, description, authorName, authorEmail, eventType,
-                durationMinutes, List.copyOf(newOptions), responses, createdAt, updatedAt, expiresAt);
+                durationMinutes, List.copyOf(newOptions), responses, createdAt, updatedAt, expiresAt,
+                notifyOnComment);
     }
 }

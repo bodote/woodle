@@ -8,12 +8,25 @@ import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.FormData;
 import com.microsoft.playwright.options.RequestOptions;
 import com.microsoft.playwright.Playwright;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.env.Environment;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 
 import java.time.LocalDate;
 import java.util.Map;
@@ -21,13 +34,59 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT
 )
 @DisplayName("Playwright E2E")
 class PollE2EIT {
 
+    private static final String BUCKET = "woodle-e2e";
     private static final String NOT_HEADLESS_PROPERTY = "playwright.not-headless";
+
+    // Initialised lazily so that GraalVM processTestAot can load this class
+    // even when Docker is unavailable.  At test-execution time the
+    // @Testcontainers(disabledWithoutDocker = true) extension will skip all
+    // tests when localstack is null (Docker was not found).
+    @Container
+    static final LocalStackContainer localstack;
+
+    static {
+        LocalStackContainer container = null;
+        try {
+            container = new LocalStackContainer(
+                    DockerImageName.parse("localstack/localstack:3.1.0"))
+                    .withServices(LocalStackContainer.Service.S3);
+        } catch (Exception ignored) {
+            // Docker not reachable during AOT processing – tests will be skipped at runtime
+        }
+        localstack = container;
+    }
+
+    @DynamicPropertySource
+    static void localstackProperties(DynamicPropertyRegistry registry) {
+        if (localstack == null) return;
+        registry.add("woodle.s3.enabled", () -> "true");
+        registry.add("woodle.s3.endpoint",
+                () -> localstack.getEndpointOverride(LocalStackContainer.Service.S3).toString());
+        registry.add("woodle.s3.region", localstack::getRegion);
+        registry.add("woodle.s3.accessKey", localstack::getAccessKey);
+        registry.add("woodle.s3.secretKey", localstack::getSecretKey);
+        registry.add("woodle.s3.bucket", () -> BUCKET);
+    }
+
+    @BeforeAll
+    static void createBucket() {
+        if (localstack == null) return;
+        S3Client s3 = S3Client.builder()
+                .endpointOverride(localstack.getEndpointOverride(LocalStackContainer.Service.S3))
+                .region(Region.of(localstack.getRegion()))
+                .credentialsProvider(StaticCredentialsProvider.create(
+                        AwsBasicCredentials.create(localstack.getAccessKey(), localstack.getSecretKey())))
+                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+                .build();
+        s3.createBucket(CreateBucketRequest.builder().bucket(BUCKET).build());
+    }
 
     @Autowired
     private Environment environment;

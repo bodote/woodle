@@ -76,7 +76,8 @@ public class PollSubmitController {
                 state.durationMinutes(),
                 state.dates(),
                 state.startTimes(),
-                state.expiresAtOverride()
+                state.expiresAtOverride(),
+                state.notifyOnComment()
         );
         CreatePollResult result = createPollUseCase.create(command);
         if (draftId != null) {

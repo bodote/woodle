@@ -105,7 +105,8 @@ public class S3WizardStateRepository implements WizardStateRepository {
             java.util.List<java.time.LocalDate> dates,
             java.util.List<java.time.LocalTime> startTimes,
             java.util.List<WizardDayDocument> days,
-            java.time.LocalDate expiresAtOverride
+            java.time.LocalDate expiresAtOverride,
+            Boolean notifyOnComment
     ) {
         static WizardStateDocument from(WizardState state) {
             return new WizardStateDocument(
@@ -118,7 +119,8 @@ public class S3WizardStateRepository implements WizardStateRepository {
                     null,
                     null,
                     toDayDocuments(state),
-                    state.expiresAtOverride()
+                    state.expiresAtOverride(),
+                    state.notifyOnComment() ? Boolean.TRUE : null
             );
         }
 
@@ -139,6 +141,7 @@ public class S3WizardStateRepository implements WizardStateRepository {
                 state.setStartTimes(startTimes == null ? java.util.List.of() : startTimes);
             }
             state.setExpiresAtOverride(expiresAtOverride);
+            state.setNotifyOnComment(Boolean.TRUE.equals(notifyOnComment));
             return state;
         }
 

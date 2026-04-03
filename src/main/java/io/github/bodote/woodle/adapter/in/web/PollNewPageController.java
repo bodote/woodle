@@ -2,6 +2,7 @@ package io.github.bodote.woodle.adapter.in.web;
 
 import io.github.bodote.woodle.application.model.WizardState;
 import io.github.bodote.woodle.application.port.out.WizardStateRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,9 +33,12 @@ public class PollNewPageController {
     private static final int STEP2_MAX_TIMES_PER_DAY = 10;
     private static final String EMAIL_ERROR_MESSAGE = "Bitte eine gültige E-Mail-Adresse eingeben";
     private final WizardStateRepository wizardStateRepository;
+    private final boolean emailEnabled;
 
-    public PollNewPageController(WizardStateRepository wizardStateRepository) {
+    public PollNewPageController(WizardStateRepository wizardStateRepository,
+                                 @Value("${woodle.email.enabled:false}") boolean emailEnabled) {
         this.wizardStateRepository = wizardStateRepository;
+        this.emailEnabled = emailEnabled;
     }
 
     @GetMapping("/poll/new")
@@ -75,6 +79,7 @@ public class PollNewPageController {
             @RequestParam("authorEmail") String authorEmail,
             @RequestParam("pollTitle") String pollTitle,
             @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "notifyOnComment", required = false, defaultValue = "false") boolean notifyOnComment,
             Model model,
             HttpSession session
     ) {
@@ -84,6 +89,7 @@ public class PollNewPageController {
             state.setAuthorEmail(authorEmail);
             state.setTitle(pollTitle);
             state.setDescription(description);
+            state.setNotifyOnComment(notifyOnComment);
             applyStep1Model(model, state, authorEmail, true);
             return "poll/new-step1";
         }
@@ -92,6 +98,7 @@ public class PollNewPageController {
         state.setAuthorEmail(authorEmail);
         state.setTitle(pollTitle);
         state.setDescription(description);
+        state.setNotifyOnComment(notifyOnComment);
         UUID draftId = null;
         try {
             draftId = wizardStateRepository.create(state);
@@ -366,6 +373,7 @@ public class PollNewPageController {
         model.addAttribute("pollTitle", state.title());
         model.addAttribute("description", state.description());
         model.addAttribute("emailError", emailError);
+        model.addAttribute("emailEnabled", emailEnabled);
         if (emailError) {
             model.addAttribute("emailErrorMessage", EMAIL_ERROR_MESSAGE);
         }

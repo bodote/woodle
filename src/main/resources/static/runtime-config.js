@@ -1,1 +1,2 @@
 window.WOODLE_BACKEND_BASE_URL = "";
+window.WOODLE_EMAIL_ENABLED = false;

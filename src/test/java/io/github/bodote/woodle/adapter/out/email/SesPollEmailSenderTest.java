@@ -1,5 +1,6 @@
 package io.github.bodote.woodle.adapter.out.email;
 
+import io.github.bodote.woodle.application.port.out.NewCommentEmail;
 import io.github.bodote.woodle.application.port.out.PollCreatedEmail;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -106,6 +107,128 @@ class SesPollEmailSenderTest {
         assertEquals("Umfrage erstellt: Board meeting", subject);
         assertTrue(body.contains("/poll/static/00000000-0000-0000-0000-000000000113"));
         assertTrue(body.contains("/poll/static/00000000-0000-0000-0000-000000000113-Secret113ABC"));
+    }
+
+    @Test
+    @DisplayName("sends new comment email via SES and returns true")
+    void sendsNewCommentEmailViaSesAndReturnsTrue() {
+        SesV2Client sesV2Client = mock(SesV2Client.class);
+        when(sesV2Client.sendEmail(any(SendEmailRequest.class))).thenReturn(SendEmailResponse.builder().build());
+        SesPollEmailSender sender = new SesPollEmailSender(
+                sesV2Client,
+                "noreply@woodle.click",
+                "[prod]",
+                "https://woodle.click"
+        );
+
+        boolean queued = sender.sendNewComment(new NewCommentEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000115"),
+                "AdminSecret15",
+                "Alice",
+                "alice@example.com",
+                "Team lunch",
+                "Bob",
+                "I can make it!"
+        ));
+
+        assertTrue(queued);
+        ArgumentCaptor<SendEmailRequest> requestCaptor = ArgumentCaptor.forClass(SendEmailRequest.class);
+        verify(sesV2Client).sendEmail(requestCaptor.capture());
+        SendEmailRequest request = requestCaptor.getValue();
+        assertEquals("noreply@woodle.click", request.fromEmailAddress());
+        assertEquals("alice@example.com", request.destination().toAddresses().getFirst());
+        String subject = request.content().simple().subject().data();
+        String body = request.content().simple().body().text().data();
+        assertTrue(subject.contains("Team lunch"));
+        assertTrue(body.contains("Bob"));
+        assertTrue(body.contains("I can make it!"));
+        assertTrue(body.contains("neuen Eintrag"));
+        assertTrue(body.contains("https://woodle.click/poll/static/00000000-0000-0000-0000-000000000115-AdminSecret15"));
+    }
+
+    @Test
+    @DisplayName("sends new comment email without comment line when comment is blank")
+    void sendsNewCommentEmailWithoutCommentLineWhenCommentIsBlank() {
+        SesV2Client sesV2Client = mock(SesV2Client.class);
+        when(sesV2Client.sendEmail(any(SendEmailRequest.class))).thenReturn(SendEmailResponse.builder().build());
+        SesPollEmailSender sender = new SesPollEmailSender(
+                sesV2Client,
+                "noreply@woodle.click",
+                "[prod]",
+                "https://woodle.click"
+        );
+
+        boolean queued = sender.sendNewComment(new NewCommentEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000118"),
+                "AdminSecret18",
+                "Alice",
+                "alice@example.com",
+                "Team lunch",
+                "Bob",
+                "   "
+        ));
+
+        assertTrue(queued);
+        ArgumentCaptor<SendEmailRequest> requestCaptor = ArgumentCaptor.forClass(SendEmailRequest.class);
+        verify(sesV2Client).sendEmail(requestCaptor.capture());
+        String body = requestCaptor.getValue().content().simple().body().text().data();
+        assertTrue(body.contains("neuen Eintrag"));
+        assertFalse(body.contains("Kommentar:"));
+    }
+
+    @Test
+    @DisplayName("sends new comment email without comment line when comment is null")
+    void sendsNewCommentEmailWithoutCommentLineWhenCommentIsNull() {
+        SesV2Client sesV2Client = mock(SesV2Client.class);
+        when(sesV2Client.sendEmail(any(SendEmailRequest.class))).thenReturn(SendEmailResponse.builder().build());
+        SesPollEmailSender sender = new SesPollEmailSender(
+                sesV2Client,
+                "noreply@woodle.click",
+                "[prod]",
+                "https://woodle.click"
+        );
+
+        boolean queued = sender.sendNewComment(new NewCommentEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000117"),
+                "AdminSecret17",
+                "Alice",
+                "alice@example.com",
+                "Team lunch",
+                "Bob",
+                null
+        ));
+
+        assertTrue(queued);
+        ArgumentCaptor<SendEmailRequest> requestCaptor = ArgumentCaptor.forClass(SendEmailRequest.class);
+        verify(sesV2Client).sendEmail(requestCaptor.capture());
+        String body = requestCaptor.getValue().content().simple().body().text().data();
+        assertTrue(body.contains("neuen Eintrag"));
+        assertFalse(body.contains("Kommentar:"));
+    }
+
+    @Test
+    @DisplayName("returns false for sendNewComment when SES throws runtime exception")
+    void returnsFalseForNewCommentWhenSesThrows() {
+        SesV2Client sesV2Client = mock(SesV2Client.class);
+        when(sesV2Client.sendEmail(any(SendEmailRequest.class))).thenThrow(new RuntimeException("boom"));
+        SesPollEmailSender sender = new SesPollEmailSender(
+                sesV2Client,
+                "noreply@woodle.click",
+                "",
+                "https://woodle.click"
+        );
+
+        boolean queued = sender.sendNewComment(new NewCommentEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000116"),
+                "AdminSecret16",
+                "Carol",
+                "carol@example.com",
+                "Board meeting",
+                "Dave",
+                "Can't attend"
+        ));
+
+        assertFalse(queued);
     }
 
     @Test

@@ -25,7 +25,7 @@ Diese Seite ist Schritt 1 von 3 zur Erstellung einer Datums‑Umfrage auf woodle
 - Feld „Beschreibung“ als einfache Textarea.
 
 ## Benachrichtigungen
-- Checkbox: „Bei jeder neuen Wertung eine E‑Mail erhalten“
+- Checkbox: „Bei jeder neuen Umfrage eine E‑Mail erhalten“
 - Checkbox: „Bei jedem neuen Kommentar eine E‑Mail erhalten“
 
 ## Navigation / Aktionen

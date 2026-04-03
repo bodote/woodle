@@ -1,6 +1,7 @@
 package io.github.bodote.woodle.application.service;
 
 import io.github.bodote.woodle.application.port.in.command.CreatePollCommand;
+import io.github.bodote.woodle.application.port.out.NewCommentEmail;
 import io.github.bodote.woodle.application.port.out.PollCreatedEmail;
 import io.github.bodote.woodle.application.port.out.PollEmailSender;
 import io.github.bodote.woodle.domain.model.EventType;
@@ -47,7 +48,8 @@ class CreatePollServiceTest {
                 null,
                 List.of(DATE_ONE),
                 List.of(),
-                override
+                override,
+                false
         );
 
         service.create(command);
@@ -75,7 +77,8 @@ class CreatePollServiceTest {
                 null,
                 List.of(DATE_ONE, DATE_TWO),
                 List.of(),
-                null
+                null,
+                false
         );
 
         service.create(command);
@@ -100,7 +103,8 @@ class CreatePollServiceTest {
                 60,
                 List.of(DATE_ONE, DATE_TWO),
                 List.of(LocalTime.of(9, 0)),
-                null
+                null,
+                false
         );
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> service.create(command));
@@ -123,7 +127,8 @@ class CreatePollServiceTest {
                 null,
                 List.of(),
                 List.of(),
-                null
+                null,
+                false
         );
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> service.create(command));
@@ -146,7 +151,8 @@ class CreatePollServiceTest {
                 60,
                 List.of(DATE_ONE, DATE_TWO),
                 java.util.Arrays.asList(LocalTime.of(9, 0), null),
-                null
+                null,
+                false
         );
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> service.create(command));
@@ -170,7 +176,8 @@ class CreatePollServiceTest {
                 null,
                 List.of(DATE_ONE),
                 List.of(LocalTime.of(14, 30)),
-                null
+                null,
+                false
         );
 
         var result = service.create(command);
@@ -205,7 +212,8 @@ class CreatePollServiceTest {
                 45,
                 List.of(DATE_ONE),
                 List.of(),
-                null
+                null,
+                false
         );
 
         service.create(command);
@@ -232,7 +240,8 @@ class CreatePollServiceTest {
                 null,
                 List.of(DATE_ONE),
                 List.of(),
-                null
+                null,
+                false
         );
 
         var result = service.create(command);
@@ -270,6 +279,11 @@ class CreatePollServiceTest {
             this.lastEmail = pollCreatedEmail;
             this.lastResult = true;
             return true;
+        }
+
+        @Override
+        public boolean sendNewComment(NewCommentEmail newCommentEmail) {
+            return false;
         }
     }
 }

@@ -20,6 +20,7 @@ public class WizardState {
     private List<LocalDate> dates = new ArrayList<>();
     private List<LocalTime> startTimes = new ArrayList<>();
     private LocalDate expiresAtOverride;
+    private boolean notifyOnComment;
 
     public String authorName() {
         return authorName;
@@ -143,6 +144,14 @@ public class WizardState {
         this.expiresAtOverride = expiresAtOverride;
     }
 
+    public boolean notifyOnComment() {
+        return notifyOnComment;
+    }
+
+    public void setNotifyOnComment(boolean notifyOnComment) {
+        this.notifyOnComment = notifyOnComment;
+    }
+
     public static WizardState copyOf(WizardState source) {
         WizardState copy = new WizardState();
         copy.setAuthorName(source.authorName());
@@ -154,6 +163,7 @@ public class WizardState {
         copy.setDates(source.dates());
         copy.setStartTimes(source.startTimes());
         copy.setExpiresAtOverride(source.expiresAtOverride());
+        copy.setNotifyOnComment(source.notifyOnComment());
         return copy;
     }
 

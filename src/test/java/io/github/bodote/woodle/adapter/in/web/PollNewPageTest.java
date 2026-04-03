@@ -7,17 +7,20 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.htmlunit.MockMvcWebClientBuilder;
 
+import io.github.bodote.woodle.application.model.WizardState;
 import org.htmlunit.HttpMethod;
 import org.htmlunit.WebClient;
 import org.htmlunit.WebRequest;
 import org.htmlunit.html.HtmlInput;
 import org.htmlunit.html.HtmlPage;
 import org.htmlunit.util.NameValuePair;
+import org.springframework.mock.web.MockHttpSession;
 
 import java.net.URL;
 import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -97,5 +100,58 @@ class PollNewPageTest {
             org.junit.jupiter.api.Assertions.assertNotNull(emailInput);
             org.junit.jupiter.api.Assertions.assertTrue(page.asNormalizedText().contains("Bitte eine gültige E-Mail-Adresse eingeben"));
         }
+    }
+
+    @Test
+    @DisplayName("stores notifyOnComment=true in wizard state when checkbox is submitted")
+    void storesNotifyOnCommentTrueInWizardStateWhenCheckboxSubmitted() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/poll/step-2")
+                        .session(session)
+                        .param("authorName", "Max")
+                        .param("authorEmail", "max@example.com")
+                        .param("pollTitle", "Team lunch")
+                        .param("notifyOnComment", "true"))
+                .andExpect(status().isOk());
+
+        WizardState state = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
+        org.junit.jupiter.api.Assertions.assertNotNull(state);
+        org.junit.jupiter.api.Assertions.assertTrue(state.notifyOnComment());
+    }
+
+    @Test
+    @DisplayName("stores notifyOnComment=false in wizard state when checkbox is absent")
+    void storesNotifyOnCommentFalseWhenCheckboxAbsent() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/poll/step-2")
+                        .session(session)
+                        .param("authorName", "Max")
+                        .param("authorEmail", "max@example.com")
+                        .param("pollTitle", "Team lunch"))
+                .andExpect(status().isOk());
+
+        WizardState state = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
+        org.junit.jupiter.api.Assertions.assertNotNull(state);
+        org.junit.jupiter.api.Assertions.assertFalse(state.notifyOnComment());
+    }
+
+    @Test
+    @DisplayName("preserves notifyOnComment in session when email validation fails")
+    void preservesNotifyOnCommentInSessionWhenEmailValidationFails() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/poll/step-2")
+                        .session(session)
+                        .param("authorName", "Max")
+                        .param("authorEmail", "not-an-email")
+                        .param("pollTitle", "Team lunch")
+                        .param("notifyOnComment", "true"))
+                .andExpect(status().isOk());
+
+        WizardState state = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
+        org.junit.jupiter.api.Assertions.assertNotNull(state);
+        org.junit.jupiter.api.Assertions.assertTrue(state.notifyOnComment());
     }
 }

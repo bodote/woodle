@@ -1,5 +1,6 @@
 package io.github.bodote.woodle.adapter.out.email;
 
+import io.github.bodote.woodle.application.port.out.NewCommentEmail;
 import io.github.bodote.woodle.application.port.out.PollCreatedEmail;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -125,6 +126,123 @@ class SmtpPollEmailSenderTest {
         String body = messageCaptor.getValue().getText();
         assertTrue(body.contains("https://woodle.click/poll/static/00000000-0000-0000-0000-000000000214"));
         assertFalse(body.contains("https://woodle.click//poll/static/00000000-0000-0000-0000-000000000214"));
+    }
+
+    @Test
+    @DisplayName("sends new comment email via SMTP and returns true")
+    void sendsNewCommentEmailViaSmtpAndReturnsTrue() {
+        JavaMailSender javaMailSender = mock(JavaMailSender.class);
+        SmtpPollEmailSender sender = new SmtpPollEmailSender(
+                javaMailSender,
+                "woodle@funknstein.de",
+                "[Woodle]",
+                "https://woodle.click"
+        );
+
+        boolean queued = sender.sendNewComment(new NewCommentEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000216"),
+                "AdminSecret16",
+                "Alice",
+                "alice@example.com",
+                "Team lunch",
+                "Bob",
+                "Looks great!"
+        ));
+
+        assertTrue(queued);
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(javaMailSender).send(messageCaptor.capture());
+        SimpleMailMessage message = messageCaptor.getValue();
+        assertEquals("woodle@funknstein.de", message.getFrom());
+        assertEquals("alice@example.com", message.getTo()[0]);
+        assertTrue(message.getSubject().contains("Team lunch"));
+        assertTrue(message.getText().contains("Bob"));
+        assertTrue(message.getText().contains("Looks great!"));
+        assertTrue(message.getText().contains("neuen Eintrag"));
+        assertTrue(message.getText().contains("https://woodle.click/poll/static/00000000-0000-0000-0000-000000000216-AdminSecret16"));
+    }
+
+    @Test
+    @DisplayName("sends new comment email without comment line when comment is blank")
+    void sendsNewCommentEmailWithoutCommentLineWhenCommentIsBlank() {
+        JavaMailSender javaMailSender = mock(JavaMailSender.class);
+        SmtpPollEmailSender sender = new SmtpPollEmailSender(
+                javaMailSender,
+                "woodle@funknstein.de",
+                "[Woodle]",
+                "https://woodle.click"
+        );
+
+        boolean queued = sender.sendNewComment(new NewCommentEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000219"),
+                "AdminSecret19",
+                "Alice",
+                "alice@example.com",
+                "Team lunch",
+                "Bob",
+                "   "
+        ));
+
+        assertTrue(queued);
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(javaMailSender).send(messageCaptor.capture());
+        String body = messageCaptor.getValue().getText();
+        assertTrue(body.contains("neuen Eintrag"));
+        assertFalse(body.contains("Kommentar:"));
+    }
+
+    @Test
+    @DisplayName("sends new comment email without comment line when comment is null")
+    void sendsNewCommentEmailWithoutCommentLineWhenCommentIsNull() {
+        JavaMailSender javaMailSender = mock(JavaMailSender.class);
+        SmtpPollEmailSender sender = new SmtpPollEmailSender(
+                javaMailSender,
+                "woodle@funknstein.de",
+                "[Woodle]",
+                "https://woodle.click"
+        );
+
+        boolean queued = sender.sendNewComment(new NewCommentEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000218"),
+                "AdminSecret18",
+                "Alice",
+                "alice@example.com",
+                "Team lunch",
+                "Bob",
+                null
+        ));
+
+        assertTrue(queued);
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(javaMailSender).send(messageCaptor.capture());
+        String body = messageCaptor.getValue().getText();
+        assertTrue(body.contains("neuen Eintrag"));
+        assertFalse(body.contains("Kommentar:"));
+    }
+
+    @Test
+    @DisplayName("returns false for sendNewComment when SMTP throws runtime exception")
+    void returnsFalseForNewCommentWhenSmtpThrows() {
+        JavaMailSender javaMailSender = mock(JavaMailSender.class);
+        doThrow(new RuntimeException("smtp boom")).when(javaMailSender).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
+        SmtpPollEmailSender sender = new SmtpPollEmailSender(
+                javaMailSender,
+                "woodle@funknstein.de",
+                "",
+                "https://woodle.click"
+        );
+
+        boolean queued = sender.sendNewComment(new NewCommentEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000217"),
+                "AdminSecret17",
+                "Carol",
+                "carol@example.com",
+                "Board meeting",
+                "Dave",
+                "Can't make it"
+        ));
+
+        assertFalse(queued);
     }
 
     @Test
