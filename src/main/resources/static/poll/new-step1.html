@@ -164,6 +164,10 @@
         const descriptionInput = document.getElementById("poll-description");
         const notifyOnVoteInput = document.querySelector("input[name='notifyOnVote']");
         const notifyOnCommentInput = document.querySelector("input[name='notifyOnComment']");
+        if (!window.WOODLE_EMAIL_ENABLED) {
+            if (notifyOnVoteInput) { notifyOnVoteInput.disabled = true; }
+            if (notifyOnCommentInput) { notifyOnCommentInput.disabled = true; }
+        }
         const pollTitleHistory = document.getElementById("poll-title-history");
         const authorNameStorageKey = "woodle.poll.step1.authorName";
         const authorEmailStorageKey = "woodle.poll.step1.authorEmail";
@@ -332,10 +336,10 @@
         if (descriptionInput && !descriptionInput.value) {
             descriptionInput.value = readStoredValue(descriptionStorageKey);
         }
-        if (notifyOnVoteInput) {
+        if (notifyOnVoteInput && window.WOODLE_EMAIL_ENABLED) {
             notifyOnVoteInput.checked = readStoredBoolean(notifyOnVoteStorageKey);
         }
-        if (notifyOnCommentInput) {
+        if (notifyOnCommentInput && window.WOODLE_EMAIL_ENABLED) {
             notifyOnCommentInput.checked = readStoredBoolean(notifyOnCommentStorageKey);
         }
         if (step1Form && base) {

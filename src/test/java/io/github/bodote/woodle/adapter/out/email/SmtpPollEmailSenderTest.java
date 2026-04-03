@@ -158,7 +158,66 @@ class SmtpPollEmailSenderTest {
         assertTrue(message.getSubject().contains("Team lunch"));
         assertTrue(message.getText().contains("Bob"));
         assertTrue(message.getText().contains("Looks great!"));
+        assertTrue(message.getText().contains("neuen Eintrag"));
         assertTrue(message.getText().contains("https://woodle.click/poll/static/00000000-0000-0000-0000-000000000216-AdminSecret16"));
+    }
+
+    @Test
+    @DisplayName("sends new comment email without comment line when comment is blank")
+    void sendsNewCommentEmailWithoutCommentLineWhenCommentIsBlank() {
+        JavaMailSender javaMailSender = mock(JavaMailSender.class);
+        SmtpPollEmailSender sender = new SmtpPollEmailSender(
+                javaMailSender,
+                "woodle@funknstein.de",
+                "[Woodle]",
+                "https://woodle.click"
+        );
+
+        boolean queued = sender.sendNewComment(new NewCommentEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000219"),
+                "AdminSecret19",
+                "Alice",
+                "alice@example.com",
+                "Team lunch",
+                "Bob",
+                "   "
+        ));
+
+        assertTrue(queued);
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(javaMailSender).send(messageCaptor.capture());
+        String body = messageCaptor.getValue().getText();
+        assertTrue(body.contains("neuen Eintrag"));
+        assertFalse(body.contains("Kommentar:"));
+    }
+
+    @Test
+    @DisplayName("sends new comment email without comment line when comment is null")
+    void sendsNewCommentEmailWithoutCommentLineWhenCommentIsNull() {
+        JavaMailSender javaMailSender = mock(JavaMailSender.class);
+        SmtpPollEmailSender sender = new SmtpPollEmailSender(
+                javaMailSender,
+                "woodle@funknstein.de",
+                "[Woodle]",
+                "https://woodle.click"
+        );
+
+        boolean queued = sender.sendNewComment(new NewCommentEmail(
+                UUID.fromString("00000000-0000-0000-0000-000000000218"),
+                "AdminSecret18",
+                "Alice",
+                "alice@example.com",
+                "Team lunch",
+                "Bob",
+                null
+        ));
+
+        assertTrue(queued);
+        ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(javaMailSender).send(messageCaptor.capture());
+        String body = messageCaptor.getValue().getText();
+        assertTrue(body.contains("neuen Eintrag"));
+        assertFalse(body.contains("Kommentar:"));
     }
 
     @Test

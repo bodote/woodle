@@ -221,8 +221,26 @@ class SubmitVoteServiceTest {
     // ── NEW comment notification tests ────────────────────────────────────────
 
     @Test
-    @DisplayName("sends comment notification email when notifyOnComment is true and comment is present")
-    void sendsCommentEmailWhenNotifyOnCommentIsTrueAndCommentIsPresent() {
+    @DisplayName("sends entry notification email when notifyOnComment is true and no comment")
+    void sendsEntryEmailWhenNotifyOnCommentIsTrueWithoutComment() {
+        UUID pollId = UUID.randomUUID();
+        Poll poll = pollWithNotifyOnComment(pollId, true);
+        CapturingRepo repo = new CapturingRepo(poll);
+        CapturingPollEmailSender emailSender = new CapturingPollEmailSender();
+        SubmitVoteService service = new SubmitVoteService(repo, emailSender, true);
+
+        service.submit(new SubmitVoteCommand(pollId, "Alice", List.of(), null, null));
+
+        assertNotNull(emailSender.lastCommentEmail);
+        assertEquals("Alice", emailSender.lastCommentEmail.participantName());
+        assertNull(emailSender.lastCommentEmail.comment());
+        assertEquals(TestFixtures.AUTHOR_EMAIL, emailSender.lastCommentEmail.authorEmail());
+        assertEquals(TestFixtures.TITLE, emailSender.lastCommentEmail.pollTitle());
+    }
+
+    @Test
+    @DisplayName("sends entry notification email when notifyOnComment is true and comment is present")
+    void sendsEntryEmailWhenNotifyOnCommentIsTrueWithComment() {
         UUID pollId = UUID.randomUUID();
         Poll poll = pollWithNotifyOnComment(pollId, true);
         CapturingRepo repo = new CapturingRepo(poll);
@@ -232,56 +250,25 @@ class SubmitVoteServiceTest {
         service.submit(new SubmitVoteCommand(pollId, "Alice", List.of(), "Great timing!", null));
 
         assertNotNull(emailSender.lastCommentEmail);
-        assertEquals("Alice", emailSender.lastCommentEmail.participantName());
         assertEquals("Great timing!", emailSender.lastCommentEmail.comment());
-        assertEquals(TestFixtures.AUTHOR_EMAIL, emailSender.lastCommentEmail.authorEmail());
-        assertEquals(TestFixtures.TITLE, emailSender.lastCommentEmail.pollTitle());
     }
 
     @Test
-    @DisplayName("does not send comment email when notifyOnComment is false")
-    void doesNotSendCommentEmailWhenNotifyOnCommentIsFalse() {
+    @DisplayName("does not send entry email when notifyOnComment is false")
+    void doesNotSendEntryEmailWhenNotifyOnCommentIsFalse() {
         UUID pollId = UUID.randomUUID();
         Poll poll = pollWithNotifyOnComment(pollId, false);
         CapturingRepo repo = new CapturingRepo(poll);
         CapturingPollEmailSender emailSender = new CapturingPollEmailSender();
         SubmitVoteService service = new SubmitVoteService(repo, emailSender, true);
 
-        service.submit(new SubmitVoteCommand(pollId, "Bob", List.of(), "Nice poll!", null));
+        service.submit(new SubmitVoteCommand(pollId, "Bob", List.of(), null, null));
 
         assertNull(emailSender.lastCommentEmail);
     }
 
     @Test
-    @DisplayName("does not send comment email when comment is null")
-    void doesNotSendCommentEmailWhenCommentIsNull() {
-        UUID pollId = UUID.randomUUID();
-        Poll poll = pollWithNotifyOnComment(pollId, true);
-        CapturingRepo repo = new CapturingRepo(poll);
-        CapturingPollEmailSender emailSender = new CapturingPollEmailSender();
-        SubmitVoteService service = new SubmitVoteService(repo, emailSender, true);
-
-        service.submit(new SubmitVoteCommand(pollId, "Carol", List.of(), null, null));
-
-        assertNull(emailSender.lastCommentEmail);
-    }
-
-    @Test
-    @DisplayName("does not send comment email when comment is blank")
-    void doesNotSendCommentEmailWhenCommentIsBlank() {
-        UUID pollId = UUID.randomUUID();
-        Poll poll = pollWithNotifyOnComment(pollId, true);
-        CapturingRepo repo = new CapturingRepo(poll);
-        CapturingPollEmailSender emailSender = new CapturingPollEmailSender();
-        SubmitVoteService service = new SubmitVoteService(repo, emailSender, true);
-
-        service.submit(new SubmitVoteCommand(pollId, "Dave", List.of(), "  ", null));
-
-        assertNull(emailSender.lastCommentEmail);
-    }
-
-    @Test
-    @DisplayName("does not send comment email when email is disabled")
+    @DisplayName("does not send entry email when email is disabled")
     void doesNotSendCommentEmailWhenEmailIsDisabled() {
         UUID pollId = UUID.randomUUID();
         Poll poll = pollWithNotifyOnComment(pollId, true);
@@ -289,14 +276,29 @@ class SubmitVoteServiceTest {
         CapturingPollEmailSender emailSender = new CapturingPollEmailSender();
         SubmitVoteService service = new SubmitVoteService(repo, emailSender, false);
 
-        service.submit(new SubmitVoteCommand(pollId, "Eve", List.of(), "Looks good!", null));
+        service.submit(new SubmitVoteCommand(pollId, "Eve", List.of(), null, null));
 
         assertNull(emailSender.lastCommentEmail);
     }
 
     @Test
-    @DisplayName("does not send comment email when editing an existing response")
-    void doesNotSendCommentEmailWhenEditingExistingResponse() {
+    @DisplayName("logs warning when entry notification email send fails")
+    void logsWarningWhenEntryNotificationEmailSendFails() {
+        UUID pollId = UUID.randomUUID();
+        Poll poll = pollWithNotifyOnComment(pollId, true);
+        CapturingRepo repo = new CapturingRepo(poll);
+        FailingPollEmailSender failingSender = new FailingPollEmailSender();
+        SubmitVoteService service = new SubmitVoteService(repo, failingSender, true);
+
+        // should not throw even when email send returns false
+        service.submit(new SubmitVoteCommand(pollId, "Grace", List.of(), null, null));
+
+        assertEquals(1, repo.saved.responses().size());
+    }
+
+    @Test
+    @DisplayName("does not send comment email when a responseId is provided")
+    void doesNotSendCommentEmailWhenResponseIdIsProvided() {
         UUID pollId = UUID.randomUUID();
         UUID responseId = UUID.randomUUID();
         Poll poll = pollWithNotifyOnComment(pollId, true);
@@ -329,6 +331,18 @@ class SubmitVoteServiceTest {
                 LocalDate.of(2026, 3, 10),
                 notifyOnComment
         );
+    }
+
+    private static final class FailingPollEmailSender implements PollEmailSender {
+        @Override
+        public boolean sendPollCreated(PollCreatedEmail pollCreatedEmail) {
+            return false;
+        }
+
+        @Override
+        public boolean sendNewComment(NewCommentEmail email) {
+            return false;
+        }
     }
 
     private static final class CapturingPollEmailSender implements PollEmailSender {

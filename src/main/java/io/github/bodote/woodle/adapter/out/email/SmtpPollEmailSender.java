@@ -64,12 +64,15 @@ public class SmtpPollEmailSender implements PollEmailSender {
         String adminUrl = absoluteUrl("/poll/static/" + pollId + "-" + email.adminSecret());
 
         String subject = subjectPrefix.isBlank()
-                ? "Neuer Kommentar: " + email.pollTitle()
-                : subjectPrefix + " Neuer Kommentar: " + email.pollTitle();
+                ? "Neuer Eintrag: " + email.pollTitle()
+                : subjectPrefix + " Neuer Eintrag: " + email.pollTitle();
+        String commentLine = (email.comment() != null && !email.comment().isBlank())
+                ? "\nKommentar: " + email.comment() + "\n"
+                : "";
         String body = "Hello " + email.authorName() + ",\n\n"
-                + email.participantName() + " hat einen Kommentar zu deiner Umfrage \""
-                + email.pollTitle() + "\" hinterlassen:\n\n"
-                + email.comment() + "\n\n"
+                + email.participantName() + " hat einen neuen Eintrag in deiner Umfrage \""
+                + email.pollTitle() + "\" hinterlassen."
+                + commentLine + "\n"
                 + "Admin URL:\n"
                 + adminUrl + "\n";
 

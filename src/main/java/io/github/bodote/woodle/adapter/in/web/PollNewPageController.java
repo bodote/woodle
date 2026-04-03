@@ -2,6 +2,7 @@ package io.github.bodote.woodle.adapter.in.web;
 
 import io.github.bodote.woodle.application.model.WizardState;
 import io.github.bodote.woodle.application.port.out.WizardStateRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,9 +33,12 @@ public class PollNewPageController {
     private static final int STEP2_MAX_TIMES_PER_DAY = 10;
     private static final String EMAIL_ERROR_MESSAGE = "Bitte eine gültige E-Mail-Adresse eingeben";
     private final WizardStateRepository wizardStateRepository;
+    private final boolean emailEnabled;
 
-    public PollNewPageController(WizardStateRepository wizardStateRepository) {
+    public PollNewPageController(WizardStateRepository wizardStateRepository,
+                                 @Value("${woodle.email.enabled:false}") boolean emailEnabled) {
         this.wizardStateRepository = wizardStateRepository;
+        this.emailEnabled = emailEnabled;
     }
 
     @GetMapping("/poll/new")
@@ -369,6 +373,7 @@ public class PollNewPageController {
         model.addAttribute("pollTitle", state.title());
         model.addAttribute("description", state.description());
         model.addAttribute("emailError", emailError);
+        model.addAttribute("emailEnabled", emailEnabled);
         if (emailError) {
             model.addAttribute("emailErrorMessage", EMAIL_ERROR_MESSAGE);
         }

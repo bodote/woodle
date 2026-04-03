@@ -7,13 +7,16 @@ import io.github.bodote.woodle.application.port.out.PollEmailSender;
 import io.github.bodote.woodle.application.port.out.PollRepository;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.domain.model.PollResponse;
-import io.github.bodote.woodle.domain.model.PollVote;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
 public class SubmitVoteService implements SubmitVoteUseCase {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SubmitVoteService.class);
 
     private final PollRepository pollRepository;
     private final PollEmailSender pollEmailSender;
@@ -57,11 +60,9 @@ public class SubmitVoteService implements SubmitVoteUseCase {
 
         pollRepository.save(poll.addResponse(response));
 
-        if (emailEnabled
-                && poll.notifyOnComment()
-                && command.comment() != null
-                && !command.comment().isBlank()) {
-            pollEmailSender.sendNewComment(new NewCommentEmail(
+        if (emailEnabled && poll.notifyOnComment()) {
+            LOGGER.info("Sending new-entry notification for poll {} to {}", poll.pollId(), poll.authorEmail());
+            boolean sent = pollEmailSender.sendNewComment(new NewCommentEmail(
                     poll.pollId(),
                     poll.adminSecret(),
                     poll.authorName(),
@@ -70,6 +71,12 @@ public class SubmitVoteService implements SubmitVoteUseCase {
                     command.participantName(),
                     command.comment()
             ));
+            if (!sent) {
+                LOGGER.warn("New-entry notification email could not be sent for poll {}", poll.pollId());
+            }
+        } else {
+            LOGGER.debug("Skipping new-entry notification for poll {} (emailEnabled={}, notifyOnComment={})",
+                    poll.pollId(), emailEnabled, poll.notifyOnComment());
         }
     }
 

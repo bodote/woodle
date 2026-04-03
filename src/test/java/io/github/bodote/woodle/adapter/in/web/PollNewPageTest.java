@@ -136,4 +136,22 @@ class PollNewPageTest {
         org.junit.jupiter.api.Assertions.assertNotNull(state);
         org.junit.jupiter.api.Assertions.assertFalse(state.notifyOnComment());
     }
+
+    @Test
+    @DisplayName("preserves notifyOnComment in session when email validation fails")
+    void preservesNotifyOnCommentInSessionWhenEmailValidationFails() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/poll/step-2")
+                        .session(session)
+                        .param("authorName", "Max")
+                        .param("authorEmail", "not-an-email")
+                        .param("pollTitle", "Team lunch")
+                        .param("notifyOnComment", "true"))
+                .andExpect(status().isOk());
+
+        WizardState state = (WizardState) session.getAttribute(WizardState.SESSION_KEY);
+        org.junit.jupiter.api.Assertions.assertNotNull(state);
+        org.junit.jupiter.api.Assertions.assertTrue(state.notifyOnComment());
+    }
 }

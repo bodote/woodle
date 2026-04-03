@@ -301,7 +301,10 @@ if [[ -d "${STATIC_DIR}" ]]; then
     echo "Using same-origin backend base URL for runtime config."
   fi
 
-  printf 'window.WOODLE_BACKEND_BASE_URL = "%s";\n' "${RUNTIME_BACKEND_BASE_URL}" > "${TMP_STATIC_DIR}/runtime-config.js"
+  printf 'window.WOODLE_BACKEND_BASE_URL = "%s";\nwindow.WOODLE_EMAIL_ENABLED = %s;\n' \
+    "${RUNTIME_BACKEND_BASE_URL}" \
+    "$( [[ "${WOODLE_EMAIL_ENABLED}" == "true" ]] && echo "true" || echo "false" )" \
+    > "${TMP_STATIC_DIR}/runtime-config.js"
 
   echo "Syncing static assets from ${STATIC_DIR} to s3://${WEB_BUCKET_NAME}/ ..."
   aws s3 sync "${TMP_STATIC_DIR}/" "s3://${WEB_BUCKET_NAME}/" --delete --region "${AWS_REGION}"

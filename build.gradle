@@ -28,6 +28,7 @@ dependencies {
     implementation 'software.amazon.awssdk:s3:2.25.67'
     implementation 'software.amazon.awssdk:sesv2:2.25.67'
 
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'
     testImplementation 'org.htmlunit:htmlunit:3.11.0'
@@ -47,9 +48,11 @@ tasks.register('integrationTest', Test) {
     testClassesDirs = files(layout.buildDirectory.dir('classes/java/test'))
     classpath = files(
             layout.buildDirectory.dir('classes/java/test'),
-            layout.buildDirectory.dir('resources/test')
+            layout.buildDirectory.dir('resources/test'),
+            layout.buildDirectory.dir('classes/java/main'),
+            layout.buildDirectory.dir('resources/main')
     ) + configurations.testRuntimeClasspath
-    dependsOn compileTestJava, processTestResources
+    dependsOn compileTestJava, processTestResources, compileJava, processResources
     shouldRunAfter test
 }
 
