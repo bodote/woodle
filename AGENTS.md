@@ -35,6 +35,20 @@ When moving a Java class to a new package, **never** delete and recreate it; use
 
 - If Playwright/Chrome hangs with the message “Wird in einer aktuellen Browsersitzung geöffnet”, fully quit Chrome and restart it. This usually unblocks the Playwright launch.
 
+## Step-1 Static File Architecture — Do Not Refactor Away
+
+`src/main/resources/static/poll/new-step1.html` is intentionally a **static file** served from S3/CloudFront,
+**not** a Thymeleaf template rendered by Lambda. This is a deliberate Lambda warm-up strategy:
+
+1. The static HTML is delivered instantly from CloudFront (no Lambda cold start).
+2. While the user fills out the form, HTMX fires a background request to `/poll/active-count` ("Anzahl aktiver Umfragen").
+3. That request spins up the Lambda container in the background.
+4. By the time the user clicks "Weiter zum 2. Schritt", the Lambda is already warm and answers immediately.
+
+**Do not convert step 1 to a Thymeleaf-rendered route.** The duplicate between
+`templates/poll/new-step1.html` (used for HTMX fragments only) and `static/poll/new-step1.html`
+(the actual page) is an accepted trade-off. Keep them in sync manually when changing shared logic.
+
 ## AWS Native Deployment Guardrails
 
 When changing AWS-native deployment (`DEPLOY_RUNTIME=native`, `Dockerfile.lambda.native`, Lambda runtime behavior), 

@@ -51,7 +51,7 @@ public class PollNewPageController {
     public String validateEmail(@RequestParam("authorEmail") String authorEmail, Model model, HttpSession session) {
         WizardState state = getOrInitWizard(session);
         applyStep1Model(model, state, authorEmail, isInvalidEmail(authorEmail));
-        return "poll/new-step1 :: emailField";
+        return "poll/step1-email-field :: emailField";
     }
 
     @GetMapping("/poll/step-2")

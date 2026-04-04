@@ -78,6 +78,19 @@ Rules:
 *   Participant link: absolute URL based on current origin, e.g. `https://qs.woodle.click/poll/<UUID>`, `https://woodle.click/poll/<UUID>`, or `http://localhost:8088/poll/<UUID>`
 *   Admin link: absolute URL based on current origin, e.g. `https://qs.woodle.click/poll/<UUID>-<admin-secret>`, `https://woodle.click/poll/<UUID>-<admin-secret>`, or `http://localhost:8088/poll/<UUID>-<admin-secret>`
 
+## Step-1 Static + Lambda Warm-Up Architecture
+
+Step 1 (`/poll/new-step1.html`) is a **static HTML file** served directly from S3 via CloudFront — it is **not** rendered by the Lambda/Spring Boot backend. This is intentional:
+
+*   CloudFront delivers the page instantly, with no Lambda cold-start delay.
+*   While the user fills in the form, HTMX fires a background request to `/poll/active-count` ("Anzahl aktiver Umfragen"). This request warms up the Lambda container in the background — the number itself is cosmetic.
+*   By the time the user clicks "Weiter zum 2. Schritt", Lambda is already warm and responds immediately.
+
+**Consequence:** Two files must be kept in sync manually:
+
+*   `src/main/resources/static/poll/new-step1.html` — the real page (served from S3/CloudFront, uses `window.WOODLE_EMAIL_ENABLED` / `window.WOODLE_BACKEND_BASE_URL` from `runtime-config.js`)
+*   `src/main/resources/templates/poll/new-step1.html` — Thymeleaf source used only for server-side HTMX fragments (e.g. the email-check field swap)
+
 ## Step-1 UX Optimizations
 
 *   The footer shows **Anzahl aktiver Umfragen** and loads the value via HTMX from `/poll/active-count` with a spinner fallback while loading.
@@ -98,6 +111,7 @@ Rules:
 *   When disabled, the app uses a no-op sender.
 *   When enabled, the app uses AWS SES (`SesV2Client`).
 *   If delivery fails during creation, the admin page is opened with `?emailFailed=true` and shows a warning so links can be shared manually.
+*   Step 1 offers two notification opt-ins (`notifyOnVote`, `notifyOnComment`). When `woodle.email.enabled=true` (qs/prod), both checkboxes are pre-checked by default; the user can deselect them. Locally (`woodle.email.enabled=false`), the checkboxes are disabled and unchecked. Previously stored user preferences (localStorage) take precedence over the default.
 
 ## Persistence & Data Lifecycle
 

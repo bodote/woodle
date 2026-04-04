@@ -5,41 +5,7 @@
     <title>Umfrage erstellen (Schritt 1 von 3) - woodle</title>
     <script src="/js/vendor/htmx.min.js"></script>
     <link rel="stylesheet" href="/css/app.css">
-    <style>
-        .step1-loading-indicator {
-            display: none;
-            margin-left: 0.8rem;
-            padding: 0.3rem 0.55rem;
-            border-radius: 999px;
-            border: 1px solid #d8d2c8;
-            background: #fff6e8;
-            color: #6b3f10;
-            font-weight: 700;
-        }
-
-        .step1-loading-indicator.step1-loading-indicator--visible {
-            display: inline-flex;
-            align-items: center;
-            opacity: 1 !important;
-        }
-
-        .step1-loading-spinner {
-            width: 0.9rem;
-            height: 0.9rem;
-            margin-right: 0.45rem;
-            border-radius: 50%;
-            border: 2px solid rgba(107, 63, 16, 0.25);
-            border-top-color: #6b3f10;
-            animation: step1-loading-spin 0.7s linear infinite;
-            flex-shrink: 0;
-        }
-
-        @keyframes step1-loading-spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/css/step1.css">
 </head>
 <body>
 <div class="page-shell">
@@ -66,402 +32,61 @@
             </div>
             <div class="dual-row">
                 <div class="form-row">
-                    <label for="author-name">Dein Name</label>
+                    <label for="author-name">Ihr Name</label>
                     <input id="author-name" name="authorName" type="text" autocomplete="name" required th:value="${authorName}">
                     <p class="form-help form-help--ghost" aria-hidden="true"></p>
                 </div>
 
-                <div id="author-email-field" class="form-row" th:fragment="emailField">
-                    <label for="author-email">Ihre E-Mail-Adresse</label>
-                    <input id="author-email"
-                           name="authorEmail"
-                           type="email"
-                           autocomplete="email"
-                           inputmode="email"
-                           autocapitalize="none"
-                           autocorrect="off"
-                           spellcheck="false"
-                           required
-                           hx-get="/poll/step-1/email-check"
-                           hx-trigger="blur changed"
-                           hx-target="#author-email-field"
-                           hx-swap="outerHTML"
-                           th:value="${authorEmail}"
-                           th:classappend="${emailError} ? ' input-error' : ''">
-                    <p class="form-help">E-Mail wird nur für Admin-Link genutzt.</p>
-                    <p class="form-error" th:if="${emailError}" th:text="${emailErrorMessage}">Bitte eine gültige E-Mail-Adresse eingeben</p>
+                <div th:replace="~{poll/step1-email-field :: emailField}"></div>
+            </div>
+
+            <div class="form-row">
+                <label for="poll-title">Titel der Umfrage</label>
+                <input id="poll-title" name="pollTitle" type="text" autocomplete="on" list="poll-title-history" required th:value="${pollTitle}">
+                <datalist id="poll-title-history"></datalist>
+            </div>
+
+            <div class="form-row">
+                <label for="poll-description">Beschreibung</label>
+                <textarea id="poll-description" name="description" rows="6" autocomplete="on" th:text="${description}"></textarea>
+            </div>
+
+            <section class="stack">
+                <div class="section-heading">
+                    <h2>Benachrichtigungen</h2>
+                    <p>Optional: automatische Hinweise bei neuen Aktivitäten.</p>
                 </div>
+
+                <fieldset class="choice-grid">
+                    <legend>E-Mail-Benachrichtigungen</legend>
+                    <label class="choice-card">
+                        <input name="notifyOnVote" type="checkbox" th:disabled="${!emailEnabled}">
+                        <span class="choice-card__label">Bei jeder neuen Umfrage eine E-Mail erhalten</span>
+                    </label>
+                    <label class="choice-card">
+                        <input name="notifyOnComment" type="checkbox" th:disabled="${!emailEnabled}">
+                        <span class="choice-card__label">Bei jedem neuen Eintrag eine E-Mail erhalten</span>
+                    </label>
+                </fieldset>
+            </section>
+
+            <div class="actions">
+                <button type="submit">Weiter zum 2. Schritt</button>
+                <span id="step1-loading-indicator"
+                      class="htmx-indicator step1-loading-indicator"
+                      aria-live="polite">
+                    <span class="step1-loading-spinner" aria-hidden="true"></span>
+                    Schritt 2 wird geladen...
+                </span>
             </div>
-
-        <div class="form-row">
-            <label for="poll-title">Titel der Umfrage</label>
-            <input id="poll-title" name="pollTitle" type="text" autocomplete="on" list="poll-title-history" required th:value="${pollTitle}">
-            <datalist id="poll-title-history"></datalist>
-        </div>
-
-        <div class="form-row">
-            <label for="poll-description">Beschreibung</label>
-            <textarea id="poll-description" name="description" rows="6" autocomplete="on" th:text="${description}"></textarea>
-        </div>
-
-        <section class="stack">
-            <div class="section-heading">
-                <h2>Benachrichtigungen</h2>
-                <p>Optional: automatische Hinweise bei neuen Aktivitäten.</p>
-            </div>
-
-            <fieldset class="choice-grid">
-                <legend>E-Mail-Benachrichtigungen</legend>
-                <label class="choice-card">
-                    <input name="notifyOnVote" type="checkbox" th:disabled="${!emailEnabled}">
-                    <span class="choice-card__label">Bei jeder neuen Umfrage eine E-Mail erhalten</span>
-                </label>
-                <label class="choice-card">
-                    <input name="notifyOnComment" type="checkbox" th:disabled="${!emailEnabled}">
-                    <span class="choice-card__label">Bei jedem neuen Eintrag eine E-Mail erhalten</span>
-                </label>
-            </fieldset>
-        </section>
-
-        <div class="actions">
-            <button type="submit">Weiter zum 2. Schritt</button>
-            <span id="step1-loading-indicator"
-                  class="htmx-indicator step1-loading-indicator"
-                  aria-live="polite">
-                <span class="step1-loading-spinner" aria-hidden="true"></span>
-                Schritt 2 wird geladen...
-            </span>
-        </div>
-    </form>
+        </form>
     </main>
 </div>
-<script id="step1-htmx-runtime-script">
-    (function () {
-        const step1Form = document.getElementById("step1-form");
-        const loadingIndicator = document.getElementById("step1-loading-indicator");
-        const authorNameInput = document.getElementById("author-name");
-        const pollTitleInput = document.getElementById("poll-title");
-        const descriptionInput = document.getElementById("poll-description");
-        const notifyOnVoteInput = document.querySelector("input[name='notifyOnVote']");
-        const notifyOnCommentInput = document.querySelector("input[name='notifyOnComment']");
-        const pollTitleHistory = document.getElementById("poll-title-history");
-        const authorNameStorageKey = "woodle.poll.step1.authorName";
-        const authorEmailStorageKey = "woodle.poll.step1.authorEmail";
-        const pollTitleStorageKey = "woodle.poll.step1.titleHistory";
-        const pollTitleCurrentStorageKey = "woodle.poll.step1.pollTitle";
-        const descriptionStorageKey = "woodle.poll.step1.description";
-        const notifyOnVoteStorageKey = "woodle.poll.step1.notifyOnVote";
-        const notifyOnCommentStorageKey = "woodle.poll.step1.notifyOnComment";
-        const maxPollTitleSuggestions = 8;
-        if (!step1Form) {
-            return;
-        }
-        const maxTransientRetries = 10;
-        const transientRetryDelayMs = 1000;
-        const maxActivePollCountRetries = 10;
-        const activePollCountRetryDelayMs = 1000;
-        let transientRetryCount = 0;
-        let retryInFlight = false;
-        let activePollCountRetryCount = 0;
-        let loadingHintTimer = null;
-
-        function setLoadingHintVisible(visible) {
-            if (!loadingIndicator) {
-                return;
-            }
-            loadingIndicator.classList.toggle("step1-loading-indicator--visible", visible);
-        }
-
-        function clearLoadingHintTimer() {
-            if (loadingHintTimer !== null) {
-                clearTimeout(loadingHintTimer);
-                loadingHintTimer = null;
-            }
-        }
-
-        function normalizePollTitle(value) {
-            return value ? value.trim() : "";
-        }
-
-        function normalizeTextValue(value) {
-            return value ? value.trim() : "";
-        }
-
-        function getAuthorEmailInput() {
-            return document.getElementById("author-email");
-        }
-
-        function writeStoredValue(key, value) {
-            if (!window.localStorage) {
-                return;
-            }
-            try {
-                const normalized = normalizeTextValue(value);
-                if (normalized) {
-                    window.localStorage.setItem(key, normalized);
-                } else {
-                    window.localStorage.removeItem(key);
-                }
-            } catch (error) {
-                // Ignore storage errors (private mode / blocked storage).
-            }
-        }
-
-        function readStoredValue(key) {
-            if (!window.localStorage) {
-                return "";
-            }
-            try {
-                return normalizeTextValue(window.localStorage.getItem(key) || "");
-            } catch (error) {
-                return "";
-            }
-        }
-
-        function writeStoredBoolean(key, value) {
-            if (!window.localStorage) {
-                return;
-            }
-            try {
-                window.localStorage.setItem(key, value ? "true" : "false");
-            } catch (error) {
-                // Ignore storage errors (private mode / blocked storage).
-            }
-        }
-
-        function readStoredBoolean(key) {
-            if (!window.localStorage) {
-                return false;
-            }
-            try {
-                return window.localStorage.getItem(key) === "true";
-            } catch (error) {
-                return false;
-            }
-        }
-
-        function readPollTitleHistory() {
-            if (!window.localStorage) {
-                return [];
-            }
-            try {
-                const raw = window.localStorage.getItem(pollTitleStorageKey);
-                if (!raw) {
-                    return [];
-                }
-                const parsed = JSON.parse(raw);
-                if (!Array.isArray(parsed)) {
-                    return [];
-                }
-                return parsed
-                        .filter(function (item) {
-                            return typeof item === "string";
-                        })
-                        .map(normalizePollTitle)
-                        .filter(function (item) {
-                            return item.length > 0;
-                        });
-            } catch (error) {
-                return [];
-            }
-        }
-
-        function writePollTitleHistory(values) {
-            if (!window.localStorage) {
-                return;
-            }
-            try {
-                window.localStorage.setItem(pollTitleStorageKey, JSON.stringify(values));
-            } catch (error) {
-                // Ignore storage errors (private mode / blocked storage).
-            }
-        }
-
-        function renderPollTitleHistory(values) {
-            if (!pollTitleHistory) {
-                return;
-            }
-            pollTitleHistory.innerHTML = "";
-            values.forEach(function (value) {
-                const option = document.createElement("option");
-                option.value = value;
-                pollTitleHistory.appendChild(option);
-            });
-        }
-
-        function rememberPollTitle(value) {
-            const normalized = normalizePollTitle(value);
-            writeStoredValue(pollTitleCurrentStorageKey, normalized);
-            if (!normalized) {
-                return;
-            }
-            const existing = readPollTitleHistory().filter(function (item) {
-                return item !== normalized;
-            });
-            const updated = [normalized]
-                    .concat(existing)
-                    .slice(0, maxPollTitleSuggestions);
-            writePollTitleHistory(updated);
-            renderPollTitleHistory(updated);
-        }
-
-        renderPollTitleHistory(readPollTitleHistory());
-        if (authorNameInput && !authorNameInput.value) {
-            authorNameInput.value = readStoredValue(authorNameStorageKey);
-        }
-        const initialEmailInput = getAuthorEmailInput();
-        if (initialEmailInput && !initialEmailInput.value) {
-            initialEmailInput.value = readStoredValue(authorEmailStorageKey);
-        }
-        if (pollTitleInput && !pollTitleInput.value) {
-            pollTitleInput.value = readStoredValue(pollTitleCurrentStorageKey);
-        }
-        if (descriptionInput && !descriptionInput.value) {
-            descriptionInput.value = readStoredValue(descriptionStorageKey);
-        }
-        if (notifyOnVoteInput) {
-            notifyOnVoteInput.checked = readStoredBoolean(notifyOnVoteStorageKey);
-        }
-        if (notifyOnCommentInput) {
-            notifyOnCommentInput.checked = readStoredBoolean(notifyOnCommentStorageKey);
-        }
-
-        step1Form.addEventListener("submit", function () {
-            if (authorNameInput) {
-                writeStoredValue(authorNameStorageKey, authorNameInput.value);
-            }
-            const currentEmailInput = getAuthorEmailInput();
-            if (currentEmailInput) {
-                writeStoredValue(authorEmailStorageKey, currentEmailInput.value);
-            }
-            if (pollTitleInput) {
-                rememberPollTitle(pollTitleInput.value);
-            }
-            if (descriptionInput) {
-                writeStoredValue(descriptionStorageKey, descriptionInput.value);
-            }
-            if (notifyOnVoteInput) {
-                writeStoredBoolean(notifyOnVoteStorageKey, notifyOnVoteInput.checked);
-            }
-            if (notifyOnCommentInput) {
-                writeStoredBoolean(notifyOnCommentStorageKey, notifyOnCommentInput.checked);
-            }
-            if (!retryInFlight) {
-                transientRetryCount = 0;
-            }
-        });
-        document.body.addEventListener("htmx:beforeRequest", function (event) {
-            if (event.target !== step1Form) {
-                return;
-            }
-            clearLoadingHintTimer();
-            setLoadingHintVisible(false);
-            loadingHintTimer = setTimeout(function () {
-                setLoadingHintVisible(true);
-                loadingHintTimer = null;
-            }, 200);
-        });
-        document.body.addEventListener("htmx:responseError", function (event) {
-            if (event.target !== step1Form) {
-                return;
-            }
-            const status = event.detail && event.detail.xhr ? event.detail.xhr.status : 0;
-            const isTransient = status === 502 || status === 503 || status === 504;
-            if (!isTransient || transientRetryCount >= maxTransientRetries) {
-                clearLoadingHintTimer();
-                setLoadingHintVisible(false);
-                return;
-            }
-            transientRetryCount += 1;
-            retryInFlight = true;
-            setTimeout(function () {
-                step1Form.requestSubmit();
-                retryInFlight = false;
-            }, transientRetryDelayMs);
-        });
-        document.body.addEventListener("htmx:afterRequest", function (event) {
-            if (event.target === step1Form) {
-                clearLoadingHintTimer();
-                setLoadingHintVisible(false);
-            }
-            if (event.target === step1Form && event.detail && event.detail.successful) {
-                transientRetryCount = 0;
-                retryInFlight = false;
-            }
-            const requestPath = event.detail && event.detail.requestConfig ? event.detail.requestConfig.path : "";
-            const isActiveCountRequest = event.target && event.target.id === "active-poll-count"
-                    || requestPath === "/poll/active-count"
-                    || requestPath.endsWith("/poll/active-count");
-            if (isActiveCountRequest && event.detail && event.detail.successful) {
-                activePollCountRetryCount = 0;
-            }
-        });
-        document.body.addEventListener("htmx:responseError", function (event) {
-            const requestPath = event.detail && event.detail.requestConfig ? event.detail.requestConfig.path : "";
-            if ((!(event.target && event.target.id === "active-poll-count"))
-                    && requestPath !== "/poll/active-count"
-                    && !requestPath.endsWith("/poll/active-count")) {
-                return;
-            }
-            const status = event.detail && event.detail.xhr ? event.detail.xhr.status : 0;
-            const isTransient = status === 502 || status === 503 || status === 504;
-            if (!isTransient || activePollCountRetryCount >= maxActivePollCountRetries) {
-                return;
-            }
-            activePollCountRetryCount += 1;
-            const activeCountEndpoint = event.target && event.target.id === "active-poll-count"
-                    ? event.target.getAttribute("hx-get")
-                    : requestPath;
-            setTimeout(function () {
-                if (window.htmx && typeof window.htmx.ajax === "function" && activeCountEndpoint) {
-                    window.htmx.ajax("GET", activeCountEndpoint, {
-                        target: "#active-poll-count",
-                        swap: "innerHTML"
-                    });
-                }
-            }, activePollCountRetryDelayMs);
-        });
-        document.body.addEventListener("htmx:afterSwap", function (event) {
-            if (!(event.target && event.target.id === "author-email-field")) {
-                return;
-            }
-            const currentEmailInput = getAuthorEmailInput();
-            if (currentEmailInput && !currentEmailInput.value) {
-                currentEmailInput.value = readStoredValue(authorEmailStorageKey);
-            }
-        });
-        if (pollTitleInput) {
-            pollTitleInput.addEventListener("blur", function () {
-                rememberPollTitle(pollTitleInput.value);
-            });
-        }
-        if (descriptionInput) {
-            descriptionInput.addEventListener("blur", function () {
-                writeStoredValue(descriptionStorageKey, descriptionInput.value);
-            });
-        }
-        if (notifyOnVoteInput) {
-            notifyOnVoteInput.addEventListener("change", function () {
-                writeStoredBoolean(notifyOnVoteStorageKey, notifyOnVoteInput.checked);
-            });
-        }
-        if (notifyOnCommentInput) {
-            notifyOnCommentInput.addEventListener("change", function () {
-                writeStoredBoolean(notifyOnCommentStorageKey, notifyOnCommentInput.checked);
-            });
-        }
-        if (authorNameInput) {
-            authorNameInput.addEventListener("blur", function () {
-                writeStoredValue(authorNameStorageKey, authorNameInput.value);
-            });
-        }
-        document.body.addEventListener("blur", function (event) {
-            if (!(event.target && event.target.id === "author-email")) {
-                return;
-            }
-            writeStoredValue(authorEmailStorageKey, event.target.value);
-        }, true);
-    })();
+<script src="/js/step1-runtime.js"></script>
+<script id="step1-htmx-runtime-script" th:inline="javascript">
+    window.initStep1({
+        emailEnabled: /*[[${emailEnabled}]]*/ false
+    });
 </script>
 </body>
 </html>

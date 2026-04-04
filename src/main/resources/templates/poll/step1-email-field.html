@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="de">
+<body>
+<div id="author-email-field" class="form-row" th:fragment="emailField">
+    <label for="author-email">Ihre E-Mail-Adresse</label>
+    <input id="author-email"
+           name="authorEmail"
+           type="email"
+           autocomplete="email"
+           inputmode="email"
+           autocapitalize="none"
+           autocorrect="off"
+           spellcheck="false"
+           required
+           hx-get="/poll/step-1/email-check"
+           hx-trigger="blur changed"
+           hx-target="#author-email-field"
+           hx-swap="outerHTML"
+           th:value="${authorEmail}"
+           th:classappend="${emailError} ? ' input-error' : ''">
+    <p class="form-help">E-Mail wird nur für Admin-Link genutzt.</p>
+    <p class="form-error" th:if="${emailError}" th:text="${emailErrorMessage}">Bitte eine gültige E-Mail-Adresse eingeben</p>
+</div>
+</body>
+</html>
