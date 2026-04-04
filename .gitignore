@@ -2,4 +2,5 @@ build/
 .gradle/
 .DS_Store
 **/.DS_Store
-bin/
+bin/    
+.claude/settings.local.json
