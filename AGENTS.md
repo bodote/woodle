@@ -34,6 +34,7 @@ When moving a Java class to a new package, **never** delete and recreate it; use
 ## Tooling Notes
 
 - If Playwright/Chrome hangs with the message “Wird in einer aktuellen Browsersitzung geöffnet”, fully quit Chrome and restart it. This usually unblocks the Playwright launch.
+- UI interaction rationale: see `docs/htmx-javascript-readme.md` for where HTMX is sufficient in this repo and where additional JavaScript is intentionally used.
 
 ## Step-1 Static File Architecture — Do Not Refactor Away
 
@@ -59,4 +60,3 @@ always run post-deploy AWS smoke checks (Playwright/manual) for poll edit lifecy
     - participant `Speichern`
     - row `Bearbeiten`
     - edit and `Speichern` again
-

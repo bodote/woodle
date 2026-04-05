@@ -254,6 +254,7 @@ Operational note:
 *   AWS deployment guide: `deploy-on-aws.md` (Architektur, Deploy-Flows, Smoke-Checks)
 *   Native deployment gotchas: `docs/native-deploy-gotchas.md` (GraalVM/AOT Fallstricke, Logs, Smoke-Checks)
 *   HTMX usability guidance: `docs/usability-htmx-guide.md` (UX-/Interaktionsregeln für HTMX-Seiten)
+*   HTMX vs. additional JavaScript in this repo: `docs/htmx-javascript-readme.md` (warum HTMX meist reicht und wo bewusst JavaScript ergänzt wurde)
 *   Infra module overview: `infra/README.md` (AWS-Infrastrukturstruktur und Templates)
 *   IAM policy notes for deploy identity: `infra/iam-deploy-identity-policies.md` (benötigte Deploy-Berechtigungen)
 
