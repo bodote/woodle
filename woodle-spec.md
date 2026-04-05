@@ -1,237 +1,237 @@
-# Woodle — Umfrage erstellen (Schritt 1 von 3, Typ: Datum)
+# Woodle — Create Poll (Step 1 of 3, Type: Date)
 
-## Überblick
-Diese Seite ist Schritt 1 von 3 zur Erstellung einer Datums‑Umfrage auf woodle. Der Fokus liegt auf Basis‑Metadaten der Umfrage (Autor, Kontakt, Titel, Beschreibung) sowie Benachrichtigungen. Die E‑Mail‑Adresse wird bereits beim Verlassen des Feldes auf ein plausibles Format geprüft und visuell markiert, wenn sie ungültig ist.
+## Overview
+This page is step 1 of 3 for creating a date poll in Woodle. The focus is on the poll's basic metadata (author, contact, title, description) and notifications. The email address is validated for a plausible format as soon as the field loses focus and is visually marked if invalid.
 
-## Seitendaten
+## Page Data
 - URL: `https://nuudel.digitalcourage.de/create_poll.php?type=date`
-- Titel: `Umfrage erstellen (Schritt 1 von 3) - woodle`
-- Sprache: Standard `Deutsch` (per Sprach‑Dropdown auswählbar)
+- Title: `Umfrage erstellen (Schritt 1 von 3) - woodle`
+- Language: default `Deutsch` (selectable via language dropdown)
 
 ## Layout
-- Kopfbereich mit Sprachwahl + OK‑Button, Logo/Link „woodle“, Seitentitel.
-- Hauptformular mit Pflichtfeldern und optionalen Einstellungen.
-- Call‑to‑Action‑Button für Schritt 2.
-- Fußbereich mit Spendenhinweisen und FAQ/Links.
+- Header area with language selector + OK button, logo/link `woodle`, and page title.
+- Main form with required fields and optional settings.
+- Call-to-action button for step 2.
+- Footer area with donation hint and FAQ/links.
 
-## Pflichtfelder
-- **Ihr Name** (Textbox, Pflichtfeld)
-- **Ihre E‑Mail‑Adresse** (Textbox, Pflichtfeld)
-  - Sofortige Format‑Prüfung nach Verlassen des Feldes (HTMX, ohne Seiten‑Reload).
-  - Ungültiges Format wird rot markiert und blockiert den Übergang zu Schritt 2.
-- **Titel der Umfrage** (Textbox, Pflichtfeld)
+## Required Fields
+- **Ihr Name** (textbox, required)
+- **Ihre E‑Mail‑Adresse** (textbox, required)
+  - Immediate format validation after leaving the field (HTMX, without full page reload).
+  - Invalid format is marked in red and blocks the transition to step 2.
+- **Titel der Umfrage** (textbox, required)
 
-## Beschreibung
-- Feld „Beschreibung“ als einfache Textarea.
+## Description
+- `Beschreibung` field as a simple textarea.
 
-## Benachrichtigungen
-- Checkbox: „Bei jeder neuen Umfrage eine E‑Mail erhalten“
-- Checkbox: „Bei jedem neuen Kommentar eine E‑Mail erhalten“
+## Notifications
+- Checkbox: `Bei jeder neuen Umfrage eine E‑Mail erhalten`
+- Checkbox: `Bei jedem neuen Kommentar eine E‑Mail erhalten`
 
-## Navigation / Aktionen
-- Button: **„Weiter zum 2. Schritt“** (führt zur nächsten Seite der Umfrageerstellung)
+## Navigation / Actions
+- Button: **`Weiter zum 2. Schritt`** (goes to the next page of poll creation)
 
-## Footer/Links (nicht Teil des Formulars)
-- Spendenaufruf „Digitalcourage Jetzt spenden“ mit Link.
-- FAQ‑Bereich mit Links zu Datenschutz, Impressum, AVV, Onion‑Service, Newsletter etc.
+## Footer / Links (Not Part of the Form)
+- Donation callout `Digitalcourage Jetzt spenden` with a link.
+- FAQ area with links to privacy policy, imprint, AVV, Onion service, newsletter, etc.
 
-## Offene Fragen / Nicht sichtbar in Schritt 1
-- Detailregeln für gültige E‑Mail‑Formate (z. B. erlaubte Sonderzeichen) sind nicht sichtbar.
-- Inhalte von Schritt 2 und 3 sind hier nicht Teil der Spezifikation.
+## Open Questions / Not Visible in Step 1
+- Detailed rules for valid email formats (for example allowed special characters) are not visible.
+- The contents of steps 2 and 3 are not part of this section of the specification.
 
-# Woodle — Umfragedaten (Schritt 2 von 3, Typ: Datum)
+# Woodle — Poll Data (Step 2 of 3, Type: Date)
 
-## Überblick
-Schritt 2 dient der Definition der eigentlichen Terminvorschläge. Zuerst wird abgefragt, ob es sich um ganze Tage handelt (mindestens ganztägig oder mehrtägig) oder um ein untertägiges Event. Mindestens zwei alternative Zeitpunkte sind erforderlich.
+## Overview
+Step 2 defines the actual date suggestions. First, the UI asks whether this is an all-day / multi-day event or an intraday event. At least two alternative time options are required.
 
-## Seitendaten
+## Page Data
 - URL: `https://nuudel.digitalcourage.de/create_date_poll.php`
-- Titel: `Umfragedaten (2 von 3) - woodle`
-- Sprache: Standard `Deutsch` (per Sprach-Dropdown auswählbar)
+- Title: `Umfragedaten (2 von 3) - woodle`
+- Language: default `Deutsch` (selectable via language dropdown)
 
 ## Layout
-- Kopfbereich wie in Schritt 1.
-- Hauptbereich mit Event‑Typ‑Auswahl und dynamischem Formularbereich für Terminvorschläge.
-- Dynamik per HTMX: Der Bereich unterhalb der Event‑Typ‑Frage wird ohne kompletten Seiten‑Reload ausgetauscht.
-- Navigation mit „Weiter“.
+- Header area as in step 1.
+- Main area with event-type selection and a dynamic form section for date suggestions.
+- Dynamic behavior via HTMX: the section below the event-type question is replaced without a full page reload.
+- Navigation with `Weiter`.
 
-## Erklärungstexte
-- „Mindestens zwei alternative Zeitpunkte“ erforderlich.
-- Hinweise zum Hinzufügen/Entfernen von Tagen.
-- Hinweis: Uhrzeiten sind abhängig vom Event‑Typ.
+## Explanatory Texts
+- `Mindestens zwei alternative Zeitpunkte` is required.
+- Hints for adding/removing days.
+- Hint: times depend on the selected event type.
 
-## Event-Typ (neu)
-- Frage: Handelt es sich um ein ganz‑ bzw. mehrtägiges Event?
-- Optionen:
-  - **Ganz-/Mehrtägig**: Terminvorschläge bestehen nur aus Tagen. **Keine Uhrzeiten, keine Dauer sichtbar.**
-  - **Untertägig**: Terminvorschläge bestehen immer aus **Tag + Startzeit** je Eintrag. Zusätzlich gibt es ein globales Feld für die **Dauer**.
+## Event Type
+- Question: Is this an all-day / multi-day event?
+- Options:
+  - **Ganz-/Mehrtägig**: suggestions consist only of days. **No times, no duration visible.**
+  - **Untertägig**: suggestions always consist of **day + start time** per entry. In addition, there is one global field for **duration**.
 
-## Terminvorschläge (ganz-/mehrtägig, wiederholbar)
-Standardmäßig zwei Blöcke sichtbar (Tag 1-2). Jeder Block enthält:
-- Datums‑Eingabe („Tag X“) mit Placeholder `yyyy-mm-dd`.
+## Date Suggestions (All-Day / Multi-Day, Repeatable)
+By default, two blocks are visible (`Tag 1-2`). Each block contains:
+- date input (`Tag X`) with placeholder `yyyy-mm-dd`.
 
-## Terminvorschläge (untertägig, wiederholbar)
-Zusätzlich zu den Tag‑Feldern gibt es ein globales Feld für die **Dauer** des Events (gilt für alle Varianten).
-Jeder Block enthält:
-- Datums‑Eingabe („Tag X“) mit Placeholder `yyyy-mm-dd`.
-- Startzeit („Startzeit X“, z. B. `11:00`).
-- Jeder zusätzliche Block ist eine weitere **Tag+Startzeit**‑Kombination.
+## Date Suggestions (Intraday, Repeatable)
+In addition to the day fields, there is a global field for the event **Dauer** that applies to all variants.
+Each block contains:
+- date input (`Tag X`) with placeholder `yyyy-mm-dd`.
+- start time (`Startzeit X`, for example `11:00`).
+- each additional block is another **day+start-time** combination.
 
-## Globale Aktionen
-- Buttons „Einen Tag hinzufügen/entfernen“ (ganz-/mehrtägig).
-- Buttons „Termin hinzufügen/entfernen“ (untertägig).
+## Global Actions
+- Buttons `Einen Tag hinzufügen/entfernen` (all-day / multi-day).
+- Buttons `Termin hinzufügen/entfernen` (intraday).
 
-## Navigation / Aktionen
-- Button „Weiter“ (führt zu Schritt 3).
+## Navigation / Actions
+- Button `Weiter` (goes to step 3).
 
-## Offene Fragen / Nicht sichtbar in Schritt 2
-- Exakte Validierungslogik für Datum/Uhrzeit (z. B. Format‑Fehler) ist hier nicht sichtbar.
+## Open Questions / Not Visible in Step 2
+- Exact validation logic for date/time (for example format errors) is not visible here.
 
-# Woodle — Abstimmungszeitraum und Bestätigung (Schritt 3 von 3)
+# Woodle — Voting Period and Confirmation (Step 3 of 3)
 
-## Überblick
-Schritt 3 zeigt eine Zusammenfassung der Auswahlmöglichkeiten, definiert das automatische Löschdatum und bietet die finale Erstellung der Umfrage an.
+## Overview
+Step 3 shows a summary of the available options, defines the automatic deletion date, and offers final poll creation.
 
-## Seitendaten
+## Page Data
 - URL: `https://nuudel.digitalcourage.de/create_date_poll.php`
-- Titel: `Abstimmungszeitraum und Bestätigung (3 von 3) - woodle`
-- Sprache: Standard `Deutsch` (per Sprach-Dropdown auswählbar)
+- Title: `Abstimmungszeitraum und Bestätigung (3 von 3) - woodle`
+- Language: default `Deutsch` (selectable via language dropdown)
 
-## Zusammenfassung der Auswahlmöglichkeiten
-- Überschrift „Liste Ihrer Auswahlmöglichkeiten“.
-- Liste der vorgeschlagenen Termine.
-  - Ganz-/Mehrtägig: Datumsliste.
-  - Untertägig: Datum **mit Uhrzeit** je Eintrag (z. B. `2026-02-10 09:00`).
+## Summary of Available Options
+- Heading `Liste Ihrer Auswahlmöglichkeiten`.
+- List of the proposed dates.
+  - all-day / multi-day: date list.
+  - intraday: date **with time** per entry (for example `2026-02-10 09:00`).
 
-## Löschdatum
-- Hinweis: Umfrage wird **720 Tage nach dem letzten Termin** automatisch gelöscht.
-- Option: „Tag der Löschung“ als Datumsfeld (Placeholder `yyyy-mm-dd`) mit vorbefülltem Datum.
+## Deletion Date
+- Hint: poll is deleted automatically **720 days after the last date**.
+- Option: `Tag der Löschung` as a date field (placeholder `yyyy-mm-dd`) with a prefilled value.
 
-## Bestätigungshinweise
-- Hinweis auf automatische Weiterleitung zur Administrationsseite nach Bestätigung.
-- Hinweis: Zwei E-Mails werden versendet (Teilnehmenden-Link und Admin-Link).
+## Confirmation Hints
+- Hint about automatic redirect to the administration page after confirmation.
+- Hint: two emails are sent (participant link and admin link).
 
-## Nach Erstellung (Admin-Seite)
-- Direkt auf der Seite werden zwei kopierbare Links angezeigt:
-  - Link für Teilnehmende (öffentlich).
-  - Admin-Link für Änderungen.
-- Beide Links werden als **vollständige absolute URL** angezeigt (inkl. Protokoll und Host), nicht nur als Pfad.
-  - Beispiel AWS: `https://woodle.click/poll/<pollId>`
-  - Beispiel lokal: `http://localhost:<port>/poll/<pollId>`
-  - Für den Admin-Link entsprechend: `.../poll/<pollId>-<adminSecret>`
-- Die URL-Bildung ist request-basiert:
-  - lokal `http` + tatsächlicher lokaler Port (z. B. `8088`)
-  - deployed auf AWS `https`
-- Admin kann bestehende Termine direkt in der Liste per „Termin löschen“-Button entfernen.
-  - Bei untertägigen Terminen erfolgt das Löschen **nach Datum + Uhrzeit**.
-- Die Links werden als nicht-editierbarer Text mit „Kopiere Link“ Buttons angezeigt.
-- Der Bereich „Optionen bearbeiten“ steht **oberhalb** von „Links zum Teilen“.
-- Der separate Block „Datum entfernen“ ist nicht vorhanden; Löschungen erfolgen ausschließlich über die Liste.
+## After Creation (Admin Page)
+- Two copyable links are shown directly on the page:
+  - `Link für Teilnehmende` (public).
+  - `Admin-Link` for changes.
+- Both links are shown as **full absolute URLs** including protocol and host, not only as a path.
+  - AWS example: `https://woodle.click/poll/<pollId>`
+  - local example: `http://localhost:<port>/poll/<pollId>`
+  - admin-link equivalent: `.../poll/<pollId>-<adminSecret>`
+- URL generation is request-based:
+  - locally `http` + the actual local port (for example `8088`)
+  - deployed on AWS: `https`
+- Admin can remove existing dates directly in the list via a `Termin löschen` button.
+  - For intraday dates, deletion happens **by date + time**.
+- The links are shown as non-editable text with `Kopiere Link` buttons.
+- The `Optionen bearbeiten` area appears **above** `Links zum Teilen`.
+- A separate `Datum entfernen` block does not exist; deletions happen exclusively via the list.
 
-## Navigation / Aktionen
-- Button „Zurück“ (führt zu Schritt 2).
-- Button „Umfrage erstellen“ (finale Erstellung).
+## Navigation / Actions
+- Button `Zurück` (goes to step 2).
+- Button `Umfrage erstellen` (final creation).
 
-## Footer/Links
-- Spendenaufruf und FAQ/Links analog zu Schritt 1/2.
+## Footer / Links
+- Donation callout and FAQ/links analogous to steps 1 and 2.
 
-# Screenshots (Formularbereich)
-- Hinweis: Die Screenshots sind **nicht verbindlich**. Sie dienen nur als grobe Orientierung und können (oder müssen) von der finalen Umsetzung abweichen, wenn die Spezifikation dies erfordert.
-- Schritt 1: ![Schritt 1 Formular](/Users/bodo.te/dev/woodle/screenshots/woodle-step1-form.png)
-- Schritt 2: ![Schritt 2 Formular](/Users/bodo.te/dev/woodle/screenshots/woodle-step2-form.png)
-- Schritt 3: ![Schritt 3 Formular](/Users/bodo.te/dev/woodle/screenshots/woodle-step3-form.png)
-- Benutzersicht (Inline‑Bearbeitung): ![Terminabstimmung Inline-Edit](/Users/bodo.te/dev/woodle/screenshots/TerminUmfrage_Benutzersicht_Abstimmung.png)
+# Screenshots (Form Area)
+- Note: the screenshots are **not binding**. They are only rough orientation and may need to differ from the final implementation if required by the specification.
+- Step 1: ![Schritt 1 Formular](/Users/bodo.te/dev/woodle/screenshots/woodle-step1-form.png)
+- Step 2: ![Schritt 2 Formular](/Users/bodo.te/dev/woodle/screenshots/woodle-step2-form.png)
+- Step 3: ![Schritt 3 Formular](/Users/bodo.te/dev/woodle/screenshots/woodle-step3-form.png)
+- User view (inline editing): ![Terminabstimmung Inline-Edit](/Users/bodo.te/dev/woodle/screenshots/TerminUmfrage_Benutzersicht_Abstimmung.png)
 
-# Woodle — Benutzersicht (Abstimmung auf bestehender Umfrage)
+# Woodle — User View (Voting on an Existing Poll)
 
-## Überblick
-Die Benutzersicht zeigt eine tabellenbasierte Übersicht aller Teilnehmenden und ihrer Stimmen pro Termin. Neue Stimmen können als zusätzliche Zeile hinzugefügt werden; bestehende Zeilen sind editierbar.
+## Overview
+The user view shows a table-based overview of all participants and their votes per date. New votes can be added as an extra row; existing rows are editable.
 
-## Tabellenlayout
-- Tabellenkopf mit gruppierten Datumsbereichen nach Monat (z. B. „Februar 2026“, „März 2026“).
-- Unter jedem Monat sind einzelne Spalten mit Datum (inkl. Wochentag/Datum, z. B. „Fr 20“).
-- Zeilen entsprechen Teilnehmenden; jede Zeile enthält die Abstimmungen für alle Termine.
+## Table Layout
+- Table header with grouped date ranges by month (for example `Februar 2026`, `März 2026`).
+- Under each month are individual columns with date labels (including weekday/date, for example `Fr 20`).
+- Rows correspond to participants; each row contains votes for all dates.
 
-## Zeilen-Interaktion
-- **Jede Zeile kann in den Edit-Mode versetzt werden**, um die eigene Stimmenzeile zu ändern.
-- Pro Zeile gibt es einen **Edit-Button** (Stift-Icon) neben dem Namen.
-- Im Edit-Mode werden die Zellen der Zeile bearbeitbar.
+## Row Interaction
+- **Every row can be switched into edit mode** to change that participant's vote row.
+- Each row has an **edit button** (pencil icon) next to the name.
+- In edit mode, the cells of that row become editable.
 
-## Abstimmungswerte (pro Zelle)
-- Drei Zustände je Termin:
+## Vote Values (Per Cell)
+- Three states per date:
   - **Ja**
   - **Wenn nötig**
   - **Nein**
-- Die Zustände werden in der Tabelle visuell unterscheidbar dargestellt (z. B. Icons/Farben).
+- These states are visually distinguishable in the table (for example by icons/colors).
 
-## Neue Stimme hinzufügen
-- Die Eingabezeile zum **Hinzufügen** ist **direkt in die Übersichtstabelle integriert** (am Ende der Tabelle).
-  - Eingabe für **Name**.
-  - Auswahl pro Termin (Ja / Wenn nötig / Nein).
-- Aktion: **Speichern** der neuen Zeile (Button rechts in der Tabellenzeile).
-- Der bisherige, separate Bereich **„Ihr Name“ bis „Speichern“ unterhalb der Tabelle entfällt**.
+## Add New Vote
+- The input row for **adding** is **integrated directly into the overview table** at the end of the table.
+  - Input for **Name**.
+  - Selection per date (`Ja` / `Wenn nötig` / `Nein`).
+- Action: **`Speichern`** the new row via the button on the right in the table row.
+- The previous separate area from `Ihr Name` to `Speichern` below the table is removed.
 
-## Bessere Inline-Interaktion (gewünschtes Verhalten)
-- **Neue Einträge und Änderungen erfolgen direkt innerhalb der Gesamttabelle**, nicht in einem separaten Dialog.
-- **Einfügezeile ist Teil der Tabelle** (am Ende, unter den bestehenden Teilnehmenden):
-  - Eingabefeld „Ihr Name“ direkt in der Tabellenzeile.
-  - Pro Termin eine **3‑Zustands‑Auswahl** (Ja / Wenn nötig / Nein) in der Zelle.
-  - Ein **einzelner Speichern‑Button** rechts neben der Zeile.
-- **Bearbeiten bestehender Zeilen**:
-  - Jede Zeile hat einen **Edit‑Button (Stift)** auf Zeilenhöhe.
-  - Beim Bearbeiten wird **nur diese Zeile** in einen editierbaren Zustand versetzt (3‑Zustands‑Auswahl pro Zelle).
-  - Speicherung erfolgt über den Speichern‑Button rechts (pro Zeile).
-- Ziel: **Übersicht + direkte Manipulation** ohne Kontextwechsel; Nutzer sehen beim Eintragen/Ändern weiterhin alle vorhandenen Stimmen.
+## Improved Inline Interaction (Desired Behavior)
+- **New entries and edits happen directly inside the full table**, not in a separate dialog.
+- **Insert row is part of the table** (at the end, below the existing participants):
+  - input field `Ihr Name` directly in the table row.
+  - for each date a **3-state selection** (`Ja` / `Wenn nötig` / `Nein`) inside the cell.
+  - one single **`Speichern`** button on the right next to the row.
+- **Editing existing rows**:
+  - each row has an **edit button (`Stift`)** at row level.
+  - when editing, **only that row** becomes editable (3-state selection per cell).
+  - saving happens via the `Speichern` button on the right (per row).
+- Goal: **overview + direct manipulation** without context switching; users continue to see all existing votes while entering or changing their own.
 
-## Zusammenfassung je Termin
-- Unterhalb der Tabelle gibt es eine Zeile mit Summen (Anzahl der Stimmen pro Termin).
-- Der beste Termin kann visuell markiert werden (z. B. Stern).
+## Summary Per Date
+- Below the table there is a summary row with totals (number of votes per date).
+- The best date may be visually highlighted (for example with a star).
 
-## Aktionen
-- Primäre Aktion: **„Speichern“** für neue oder geänderte Stimmen.
+## Actions
+- Primary action: **`Speichern`** for new or changed votes.
 
-# Edge Cases (beobachtet)
-- Schritt 1: Leere Pflichtfelder (Name/Titel) verhindern das Weitergehen, aber es erscheint keine sichtbare Fehlermeldung im Formular.
-- Schritt 2: Ungültiges Datum `2026-13-40` wird akzeptiert und als **2027-02-09** normalisiert (Überlauf in Monat/Tag).
-- Schritt 2: Nur ein Termin ist möglich (Weiter zu Schritt 3 klappt), obwohl der Hinweis „mindestens zwei alternative Zeitpunkte“ sagt.
-- Schritt 2: Doppelte Termine sind erlaubt (derselbe Tag erscheint zweimal in der Zusammenfassung).
-- Schritt 3: Löschdatum vor dem letzten Termin (z. B. `2026-02-10` bei letztem Termin `2026-02-11`) wird akzeptiert, keine sichtbare Validierung.
+# Edge Cases (Observed)
+- Step 1: empty required fields (name/title) block continuation, but no visible validation error appears in the form.
+- Step 2: invalid date `2026-13-40` is accepted and normalized to **`2027-02-09`** (overflow in month/day).
+- Step 2: only one date option is possible (`Weiter` to step 3 works), although the hint says `mindestens zwei alternative Zeitpunkte`.
+- Step 2: duplicate dates are allowed (the same day appears twice in the summary).
+- Step 3: deletion date before the last date (for example `2026-02-10` when the last date is `2026-02-11`) is accepted, with no visible validation.
 
-# Fachliche Vorgaben (Persistenz & Identifikation)
-- Keine Userverwaltung.
-- Keine Account-/Passwort-Logins; E-Mail-Adressen bleiben fachlich relevant und dürfen validiert werden.
-- Jede neue Umfrage erzeugt eine UUID als Primärschlüssel.
-- Unter dieser UUID werden Stammdaten der Umfrage sowie später die Auswahl/Antworten der Teilnehmenden gespeichert.
-- Jede Umfrage ist ausschließlich über einen Link erreichbar, der die UUID enthält.
-- Speicherung erfolgt in Amazon S3 (keine Datenbank).
-- Das gespeicherte Poll-JSON enthält ein Top-Level-Feld `schemaVersion` (Standard `"1"`, konfigurierbar über `woodle.poll.schema-version`).
-- Bei jeder Änderung des Poll-JSON-Schemas muss `schemaVersion` erhöht werden, damit ältere Polls erkannt und migriert/konvertiert werden können.
-- Beim Lesen einer Umfrage gilt: fehlt `schemaVersion` oder ist sie kleiner als `woodle.poll.schema-version`, wird die Umfrage auf das aktuelle Schema migriert und sofort in S3 überschrieben, bevor die Antwort an die UI zurückgeht.
-- Umfragen werden nach Ablauf des Verfallsdatums vollständig gelöscht (inklusive aller Antworten).
+# Domain Requirements (Persistence & Identification)
+- No user management.
+- No account/password logins; email addresses remain domain-relevant and may be validated.
+- Every new poll gets a UUID as the primary key.
+- Under that UUID, the poll's master data and later participant selections/responses are stored.
+- Every poll is reachable exclusively by a link that contains the UUID.
+- Storage is in Amazon S3 (no database).
+- The stored poll JSON contains a top-level field `schemaVersion` (default `"1"`, configurable via `woodle.poll.schema-version`).
+- Every change to the poll JSON schema must increment `schemaVersion` so older polls can be detected and migrated/converted.
+- On poll read: if `schemaVersion` is missing or lower than `woodle.poll.schema-version`, the poll is migrated to the current schema and immediately overwritten in S3 before the response is returned to the UI.
+- Polls are fully deleted after expiry (including all responses).
 
-# Flow (Event-Typ und Zeitlogik)
-- Schritt 2 startet mit der Auswahl des Event-Typs.
-- Ganz-/Mehrtägig:
-  - Eingabe nur für Tage/Datumsbereiche.
-  - Keine Uhrzeiten, keine Dauer, keine Startzeiten.
-- Untertägig:
-  - Jeder Eintrag ist eine **Tag+Startzeit**‑Kombination; **eine globale Dauer** gilt für alle Varianten.
-  - Globales Dauerfeld ist erforderlich und muss positiv sein (z. B. `180` Minuten).
-  - Startzeit-Format: `HH:MM` im 24h-Format.
-  - Validierung: Keine leeren Startzeiten; Dauerfeld muss gesetzt sein.
+# Flow (Event Type and Time Logic)
+- Step 2 starts with event-type selection.
+- All-day / multi-day:
+  - input only for days/date ranges.
+  - no times, no duration, no start times.
+- Intraday:
+  - each entry is a **day+start-time** combination; **one global duration** applies to all variants.
+  - global duration field is required and must be positive (for example `180` minutes).
+  - start-time format: `HH:MM` in 24-hour format.
+  - validation: no empty start times; duration field must be set.
 
-# Routing-Fallback (neu)
-- Für **alle undefinierten Pfade** soll die Anwendung **nicht** auf eine Fehlerseite (z. B. 404/Whitelabel) gehen.
-- Stattdessen erfolgt eine Weiterleitung auf die Startseite zum Erstellen einer neuen Umfrage:
-  - Ziel: `/poll/new`
-- Dies gilt für alle HTTP-Methoden (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`).
+# Routing Fallback
+- For **all undefined paths**, the application should **not** go to an error page (for example 404/Whitelabel).
+- Instead, it redirects to the start page for creating a new poll:
+  - target: `/poll/new`
+- This applies to all HTTP methods (`GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`).
 
-# Domain- und URL-Anforderung (neu)
-- Die Benutzerführung bleibt durchgehend auf der Frontend-Domain:
+# Domain and URL Requirement
+- The user journey must stay entirely on the frontend domain:
   - `https://woodle.click/...`
-- Das gilt mindestens für:
-  - Schritt 1: `/poll/new` bzw. `/poll/new-step1.html`
-  - Schritt 2: `/poll/step-2`
-  - Schritt 3: `/poll/step-3`
-  - Abstimmung/Teilnahme: `/poll/{pollId}` und Admin-Ansicht
-- Während normaler Nutzung dürfen keine sichtbaren Weiterleitungen auf technische Backend-Domains (z. B. `*.execute-api.*.amazonaws.com`) stattfinden.
+- This applies at minimum to:
+  - step 1: `/poll/new` or `/poll/new-step1.html`
+  - step 2: `/poll/step-2`
+  - step 3: `/poll/step-3`
+  - voting/participation: `/poll/{pollId}` and admin view
+- During normal usage, there must be no visible redirects to technical backend domains (for example `*.execute-api.*.amazonaws.com`).

@@ -42,9 +42,9 @@ When moving a Java class to a new package, **never** delete and recreate it; use
 **not** a Thymeleaf template rendered by Lambda. This is a deliberate Lambda warm-up strategy:
 
 1. The static HTML is delivered instantly from CloudFront (no Lambda cold start).
-2. While the user fills out the form, HTMX fires a background request to `/poll/active-count` ("Anzahl aktiver Umfragen").
+2. While the user fills out the form, HTMX fires a background request to `/poll/active-count` (`Anzahl aktiver Umfragen`).
 3. That request spins up the Lambda container in the background.
-4. By the time the user clicks "Weiter zum 2. Schritt", the Lambda is already warm and answers immediately.
+4. By the time the user clicks `Weiter zum 2. Schritt`, the Lambda is already warm and answers immediately.
 
 **Do not convert step 1 to a Thymeleaf-rendered route.** The duplicate between
 `templates/poll/new-step1.html` (used for HTMX fragments only) and `static/poll/new-step1.html`

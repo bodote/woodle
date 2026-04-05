@@ -83,8 +83,8 @@ Rules:
 Step 1 (`/poll/new-step1.html`) is a **static HTML file** served directly from S3 via CloudFront — it is **not** rendered by the Lambda/Spring Boot backend. This is intentional:
 
 *   CloudFront delivers the page instantly, with no Lambda cold-start delay.
-*   While the user fills in the form, HTMX fires a background request to `/poll/active-count` ("Anzahl aktiver Umfragen"). This request warms up the Lambda container in the background — the number itself is cosmetic.
-*   By the time the user clicks "Weiter zum 2. Schritt", Lambda is already warm and responds immediately.
+*   While the user fills in the form, HTMX fires a background request to `/poll/active-count` (`Anzahl aktiver Umfragen`). This request warms up the Lambda container in the background; the number itself is cosmetic.
+*   By the time the user clicks `Weiter zum 2. Schritt`, Lambda is already warm and responds immediately.
 
 **Consequence:** Two files must be kept in sync manually:
 
@@ -93,7 +93,7 @@ Step 1 (`/poll/new-step1.html`) is a **static HTML file** served directly from S
 
 ## Step-1 UX Optimizations
 
-*   The footer shows **Anzahl aktiver Umfragen** and loads the value via HTMX from `/poll/active-count` with a spinner fallback while loading.
+*   The footer shows **`Anzahl aktiver Umfragen`** and loads the value via HTMX from `/poll/active-count` with a spinner fallback while loading.
 *   Step-1 submit (`Weiter zum 2. Schritt`) uses a transient error handler for `502/503/504` with up to **10 retries** and **1000ms** delay.
 *   The loading hint `Schritt 2 wird geladen...` includes a spinner and is shown with a short delay (200ms), so very fast responses do not flicker.
 *   The active poll count request uses the same transient retry strategy (**10 retries**, **1000ms**).
@@ -244,19 +244,19 @@ Cleanup:
 
 Operational note:
 
-*   If Playwright/Chrome hangs with “Wird in einer aktuellen Browsersitzung geöffnet”, fully quit Chrome and restart it.
+*   If Playwright/Chrome hangs with `Wird in einer aktuellen Browsersitzung geöffnet`, fully quit Chrome and restart it.
 
 ## References
 
 *   Tech stack and architecture: `/Users/bodo.te/dev/woodle/woodle-tech-stack.md`
 *   Test strategy: `/Users/bodo.te/dev/woodle/test-strategie.md`
 *   Product spec: `/Users/bodo.te/dev/woodle/woodle-create-poll-date-spec.md`
-*   AWS deployment guide: `deploy-on-aws.md` (Architektur, Deploy-Flows, Smoke-Checks)
-*   Native deployment gotchas: `docs/native-deploy-gotchas.md` (GraalVM/AOT Fallstricke, Logs, Smoke-Checks)
-*   HTMX usability guidance: `docs/usability-htmx-guide.md` (UX-/Interaktionsregeln für HTMX-Seiten)
-*   HTMX vs. additional JavaScript in this repo: `docs/htmx-javascript-readme.md` (warum HTMX meist reicht und wo bewusst JavaScript ergänzt wurde)
-*   Infra module overview: `infra/README.md` (AWS-Infrastrukturstruktur und Templates)
-*   IAM policy notes for deploy identity: `infra/iam-deploy-identity-policies.md` (benötigte Deploy-Berechtigungen)
+*   AWS deployment guide: `deploy-on-aws.md` (architecture, deployment flows, smoke checks)
+*   Native deployment gotchas: `docs/native-deploy-gotchas.md` (GraalVM/AOT pitfalls, logs, smoke checks)
+*   HTMX usability guidance: `docs/usability-htmx-guide.md` (UX and interaction rules for HTMX pages)
+*   HTMX vs. additional JavaScript in this repo: `docs/htmx-javascript-readme.md` (why HTMX is usually sufficient here and where JavaScript is intentionally added)
+*   Infra module overview: `infra/README.md` (AWS infrastructure structure and templates)
+*   IAM policy notes for deploy identity: `infra/iam-deploy-identity-policies.md` (required deployment permissions)
 
 ```
 docker run --rm -it -v "$PWD":/data -w /data jetbrains/qodana-jvm-community:latest
