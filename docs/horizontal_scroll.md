@@ -1,54 +1,54 @@
-# Plan: Horizontales Scrollen nur für Terminspalten in der Teilnehmeransicht
+# Plan: Horizontal Scrolling Only for Date Columns in the Participant View
 
-## Zusammenfassung
-Die bestehende Teilnehmeransicht bleibt als eine einzige HTMX-kompatible Tabelle erhalten. Statt die Tabelle in mehrere Teilbereiche aufzuteilen, wird die aktuelle Struktur so angepasst, dass nur der Terminbereich horizontal scrollt, während die linke Spalte `Teilnehmende` und die rechte Spalte `Bearbeiten` per CSS `position: sticky` immer sichtbar bleiben. Das ist die kleinste und robusteste Änderung, weil alle bestehenden HTMX-Row-Replacements weiter auf derselben Tabellenstruktur arbeiten.
+## Summary
+The existing participant view remains a single HTMX-compatible table. Instead of splitting the table into multiple sections, the current structure should be adjusted so that only the date column area scrolls horizontally, while the left `Teilnehmende` column and the right `Bearbeiten` column remain permanently visible via CSS `position: sticky`. This is the smallest and most robust change because all existing HTMX row replacements continue to work on the same table structure.
 
-## Geplante Änderungen
-- TDD zuerst in `PollParticipantViewTest`:
-  - Einen neuen API/View-Test mit vielen Terminspalten anlegen, der absichtlich zunächst fehlschlägt.
-  - Der Test soll das neue Markup absichern:
-    - Scroll-Container für die Teilnehmer-Tabelle vorhanden.
-    - Sticky-Klassen/Attribute für linke Namensspalte und rechte Bearbeiten-Spalte vorhanden.
-    - Header-Platzhalterzellen in den oberen Kopfzeilen ebenfalls als linke/rechte Sticky-Zellen markiert.
-    - Add-Row, bestehende Teilnehmerzeilen, Edit-Fragment und Summary-Zeile bleiben im gleichen Tabellenmodell nutzbar.
-- Template-Anpassung in `src/main/resources/templates/poll/view.html`:
-  - Den bestehenden `votes-table-wrap` beibehalten und semantisch als horizontalen Scroll-Container für die Tabelle verwenden.
-  - Den Kopfzeilen links und rechts explizite Sticky-Hilfsklassen geben, auch für die heute leeren `th` in Zeile 2 und 3.
-  - Die mittleren Terminspalten unverändert durch `th:each` rendern, damit HTMX und Server-Rendering unverändert bleiben.
-- Fragment-Anpassungen:
-  - `poll/participant-row.html`, `poll/participant-row-edit.html` und `poll/summary-row.html` so angleichen, dass linke Namens-/Summenspalte und rechte Aktions-/Leerzelle dieselben Sticky-Klassen tragen wie die Hauptansicht.
-  - Keine Änderung an HTMX-Endpunkten, `hx-get`, `hx-post`, `hx-target` oder `hx-swap`; nur Klassen/Markup für Layout-Stabilität ergänzen.
-- CSS-Anpassung in `src/main/resources/static/css/app.css`:
-  - `votes-table-wrap` als horizontalen Scroll-Container belassen.
-  - Tabelle auf `width: max-content` / `min-width: 100%` behalten, damit nur bei Bedarf horizontal gescrollt wird.
-  - Linke Spalte (`Teilnehmende`, Teilnehmername, Summenslabel, Add-Row-Name) mit `position: sticky; left: 0; z-index: ...; background: ...` fixieren.
-  - Rechte Spalte (`Bearbeiten`, Buttons, rechte Leerzelle in Footer/Header) mit `position: sticky; right: 0; z-index: ...; background: ...` fixieren.
-  - Für Sticky-Spalten klare Hintergrundfarben und Trennkanten/Schatten ergänzen, damit die scrollenden Terminspalten optisch darunter durchlaufen, ohne Lesbarkeitsprobleme.
-  - Mobile-Regel bei `max-width: 740px` anpassen: kein `display: block` direkt auf `.votes-table`, weil das Sticky-Verhalten an der echten Tabelle hängen soll; horizontales Scrollen bleibt am Wrapper.
-  - Selektbreiten der Terminzellen so belassen, dass die Terminspalten ihre natürliche Breite haben und nur der Mittelteil scrollt.
+## Planned Changes
+- TDD first in `PollParticipantViewTest`:
+  - Add a new API/view test with many date columns that intentionally fails at first.
+  - The test should protect the new markup:
+    - scroll container for the participant table exists.
+    - sticky classes/attributes for the left name column and right `Bearbeiten` column exist.
+    - header placeholder cells in the upper header rows are also marked as left/right sticky cells.
+    - add-row, existing participant rows, edit fragment, and summary row remain usable in the same table model.
+- Template change in `src/main/resources/templates/poll/view.html`:
+  - keep the existing `votes-table-wrap` and use it semantically as the horizontal scroll container for the table.
+  - add explicit sticky helper classes to the left and right header columns, including the currently empty `th` elements in rows 2 and 3.
+  - keep rendering the middle date columns unchanged with `th:each`, so HTMX and server rendering remain unchanged.
+- Fragment changes:
+  - align `poll/participant-row.html`, `poll/participant-row-edit.html`, and `poll/summary-row.html` so the left name/summary column and right action/empty cell use the same sticky classes as the main view.
+  - do not change HTMX endpoints, `hx-get`, `hx-post`, `hx-target`, or `hx-swap`; only add classes/markup needed for layout stability.
+- CSS change in `src/main/resources/static/css/app.css`:
+  - keep `votes-table-wrap` as the horizontal scroll container.
+  - keep the table at `width: max-content` / `min-width: 100%` so horizontal scrolling only appears when needed.
+  - pin the left column (`Teilnehmende`, participant name, summary label, add-row name) with `position: sticky; left: 0; z-index: ...; background: ...`.
+  - pin the right column (`Bearbeiten`, buttons, right empty footer/header cell) with `position: sticky; right: 0; z-index: ...; background: ...`.
+  - add clear background colors and separator edges/shadows for sticky columns so the scrolling date columns can visually move underneath without readability problems.
+  - adjust the mobile rule at `max-width: 740px`: no `display: block` directly on `.votes-table`, because sticky behavior should remain attached to the real table; horizontal scrolling stays on the wrapper.
+  - keep select widths in the date cells so the date columns keep their natural width and only the middle area scrolls.
 
-## Öffentliche Interfaces / Verhalten
-- Keine Änderung an URLs, HTMX-Verträgen, Controllern oder DTOs.
-- HTML-Struktur der Teilnehmeransicht ändert sich nur insofern, dass zusätzliche CSS-Klassen für Sticky-Links/Rechts-Spalten und Scroll-Container-Absicherung eingeführt werden.
-- HTMX-Fragmentantworten bleiben weiterhin vollständige `<tr>`-Fragmente innerhalb derselben Tabelle.
+## Public Interfaces / Behavior
+- No change to URLs, HTMX contracts, controllers, or DTOs.
+- The HTML structure of the participant view changes only by adding CSS classes for sticky left/right columns and scroll-container hardening.
+- HTMX fragment responses remain complete `<tr>` fragments inside the same table.
 
-## Testplan
-- Neuer fehlschlagender MockMvc-Test für Teilnehmeransicht mit vielen Optionen:
-  - prüft Scroll-Wrapper und Sticky-Klassen in Header, Body und Footer.
-  - prüft, dass `Teilnehmende` und `Bearbeiten` weiterhin im HTML vorhanden und separat markiert sind.
-- Bestehende View-Tests grün halten:
-  - normale Teilnehmeransicht.
-  - Edit-Row-Fragment.
-  - gruppierte Intraday-Header.
-- Browser-/E2E-Validierung:
-  - Teilnehmeransicht mit vielen Terminen in schmalem Viewport öffnen.
-  - horizontal scrollen und prüfen, dass Terminspalten erreichbar und klickbar bleiben.
-  - neue Zeile `Speichern`.
-  - bestehende Zeile `Bearbeiten`, ändern, erneut `Speichern`.
-  - dabei verifizieren, dass Name links und Bearbeiten/Speichern rechts sichtbar bleiben.
-- Vor Abschluss `./gradlew check` ausführen.
+## Test Plan
+- New failing MockMvc test for participant view with many options:
+  - checks scroll wrapper and sticky classes in header, body, and footer.
+  - checks that `Teilnehmende` and `Bearbeiten` are still present in the HTML and are marked separately.
+- Keep existing view tests green:
+  - normal participant view.
+  - edit-row fragment.
+  - grouped intraday headers.
+- Browser / E2E validation:
+  - open participant view with many dates in a narrow viewport.
+  - scroll horizontally and verify that date columns remain reachable and clickable.
+  - save a new row with `Speichern`.
+  - open an existing row with `Bearbeiten`, change it, and `Speichern` again.
+  - verify that the name stays visible on the left and `Bearbeiten` / `Speichern` stays visible on the right.
+- Before finishing, run `./gradlew check`.
 
-## Annahmen
-- Geltungsbereich ist nur die Teilnehmeransicht, nicht die Admin-Ansicht.
-- Das gewünschte Verhalten soll für Desktop und kleine Viewports gelten; es gibt keinen separaten Mobile-Only-Layoutwechsel für diese Tabelle.
-- Eine CSS-basierte Sticky-Lösung ist bevorzugt gegenüber einer Aufteilung in mehrere Tabellen, weil sie HTMX-Fragmente unverändert kompatibel hält und das Risiko deutlich kleiner ist.
+## Assumptions
+- Scope is only the participant view, not the admin view.
+- The desired behavior should work on desktop and small viewports; there is no separate mobile-only layout change for this table.
+- A CSS-based sticky solution is preferred over splitting the UI into multiple tables because it keeps HTMX fragments compatible and is substantially lower risk.

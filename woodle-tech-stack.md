@@ -1,46 +1,46 @@
-# Woodle Tech Stack & Code-Struktur
+# Woodle Tech Stack & Code Structure
 
-## Programmiersprache & Framework
+## Programming Language & Framework
 - Java
 - Spring Boot
-- Thymeleaf als HTML-Template-Engine
-- HTMX (https://htmx.org) für dynamische Elemente
-- HTMX wird als lokale statische Asset-Datei ausgeliefert (`/js/vendor/htmx.min.js`), nicht über Drittanbieter-CDNs.
+- Thymeleaf as the HTML template engine
+- HTMX (https://htmx.org) for dynamic interactions
+- HTMX is served as a local static asset (`/js/vendor/htmx.min.js`), not from third-party CDNs.
 
-## Laufzeit & Deployment
-- Kein dauerhaft laufender Spring-Boot-Server.
-- Deployment als AWS Lambda Functions, damit Kosten nur bei Nutzung entstehen.
+## Runtime & Deployment
+- No permanently running Spring Boot server.
+- Deployment as AWS Lambda functions so costs occur only when the app is used.
 
 ## Build & Quality
-- Build-Tool: Gradle (`build.gradle`).
-- Code Coverage: JaCoCo ist im `build.gradle` zu konfigurieren und wird für Coverage-Reports und Coverage-Checks genutzt.
-- Mutation Testing: Pitest ist im `build.gradle` zu konfigurieren (`gradle pitest`).
+- Build tool: Gradle (`build.gradle`).
+- Code coverage: JaCoCo is configured in `build.gradle` and used for coverage reports and coverage checks.
+- Mutation testing: Pitest is configured in `build.gradle` (`gradle pitest`).
 
-## Identifikation & Datenmodell
-- Keine Userverwaltung.
-- Jede neue Umfrage erzeugt eine UUID.
-- Unter dieser UUID werden Stammdaten der Umfrage sowie spätere Auswahl/Antworten der Teilnehmenden gespeichert.
-- Autor:innen-Zugriff erfolgt über eine zusätzliche Secret-Komponente in der Admin-URL (neben der UUID).
+## Identification & Data Model
+- No user management.
+- Every new poll gets a UUID.
+- The poll's master data and later participant selections/responses are stored under that UUID.
+- Author access uses an additional secret component in the admin URL, alongside the UUID.
 
-## URL-Pattern
-- Neue Umfrage: `<sitename>/poll/new`
-- Teilnehmer-Link: `<sitename>/poll/<UUID>`
-- Admin-Link: `<sitename>/poll/<UUID>-<admin-secret>`
-- `admin-secret` ist eine zufällige, URL-sichere Zeichenkette mit ca. 12 Zeichen (z. B. Base62).
+## URL Patterns
+- New poll: `<sitename>/poll/new`
+- Participant link: `<sitename>/poll/<UUID>`
+- Admin link: `<sitename>/poll/<UUID>-<admin-secret>`
+- `admin-secret` is a random, URL-safe string with about 12 characters (for example Base62).
 
-## Persistenz
-- Speicherung nicht in einer Datenbank.
-- Speicherung in Amazon S3 (z. B. JSON-Dateien pro Umfrage-UUID).
-- Für lokale Tests wird ein S3-kompatibler Server via Testcontainers genutzt.
+## Persistence
+- Storage is not in a database.
+- Data is stored in Amazon S3 (for example JSON files per poll UUID).
+- For local tests, an S3-compatible server is used via Testcontainers.
 
-## Datenlebenszyklus
-- Umfragen in S3 werden nach dem Verfallsdatum vollständig gelöscht.
+## Data Lifecycle
+- Polls in S3 are fully deleted after their expiry date.
 
-## Code-Struktur: Hexagonale Architektur
+## Code Structure: Hexagonal Architecture
 
-Ziel: klare Trennung von Fachlogik, Use Cases und technischen Adaptern. Es gibt keine Modulith-Module; die Struktur ist rein hexagonal.
+Goal: clear separation of domain logic, use cases, and technical adapters. There are no Modulith modules; the structure is purely hexagonal.
 
-### Zielstruktur (Root-Paket)
+### Target Structure (Root Package)
 
 ```
 io.github.bodote.woodle
@@ -62,23 +62,23 @@ io.github.bodote.woodle
 └── config
 ```
 
-### Bedeutung der Pakete
-- `domain`: Fachmodell, Invarianten, Value Objects, Domain-Events. Keine Abhängigkeit zu Spring oder technischen Details.
-- `application`: Use Cases und Ports. Definiert die Eingangs- und Ausgangsschnittstellen des Systems.
-- `adapter`: technische Umsetzung der Ports, z. B. Web-Controller, S3-Persistenz, externe Integrationen.
-- `config`: Spring-Wiring und technische Konfiguration.
+### Package Meanings
+- `domain`: domain model, invariants, value objects, domain events. No dependency on Spring or technical details.
+- `application`: use cases and ports. Defines the system's inbound and outbound interfaces.
+- `adapter`: technical implementations of ports, for example web controllers, S3 persistence, and external integrations.
+- `config`: Spring wiring and technical configuration.
 
-### Abhängigkeitsregeln
-- `domain` hängt von nichts anderem im Projekt ab.
-- `application` darf von `domain` abhängen, aber nie von `adapter` oder `config`.
-- `adapter` darf von `application`, `domain` und `config` abhängen.
-- `config` darf von allen Paketen abhängen; kein anderes Paket darf von `config` abhängen.
+### Dependency Rules
+- `domain` depends on nothing else in the project.
+- `application` may depend on `domain`, but never on `adapter` or `config`.
+- `adapter` may depend on `application`, `domain`, and `config`.
+- `config` may depend on all packages; no other package may depend on `config`.
 
-### Architekturtests (JUnit)
-Wir prüfen die Hexagonal-Regeln mit einem JUnit-Architekturtest (ArchUnit), damit Abhängigkeiten messbar bleiben.
-Abhängigkeit: `com.tngtech.archunit:archunit-junit5:latest`
+### Architecture Tests (JUnit)
+We verify the hexagonal rules with a JUnit architecture test (ArchUnit) so dependency boundaries stay measurable.
+Dependency: `com.tngtech.archunit:archunit-junit5:latest`
 
-Beispiel:
+Example:
 
 ```java
 @AnalyzeClasses(packages = "io.github.bodote.woodle")
@@ -95,32 +95,32 @@ class ArchitectureTest {
 }
 ```
 
-### Namenskonventionen
-- `DTO` ist ausschließlich für öffentliche API-Transfer-Typen erlaubt.
-- Interne/domain/application-Typen dürfen kein `DTO`-Suffix tragen.
-- `Optional` wird nur als Rückgabetyp verwendet, nie als Methodenparameter.
+### Naming Conventions
+- `DTO` is allowed only for public API transfer types.
+- Internal/domain/application types must not use the `DTO` suffix.
+- `Optional` is used only as a return type, never as a method parameter.
 
-## Lambda-Integration
+## Lambda Integration
 - API Gateway + Spring Cloud Function.
-- HTTP-Requests werden über Function-Adapter entgegengenommen, kein dauerhaft laufender Server.
+- HTTP requests are received through function adapters; there is no permanently running server.
 
-## E-Mail-Versand
-- Optionaler E-Mail-Versand nach erfolgreicher Umfrage-Erstellung über Amazon SES (AWS SDK v2 `SesV2Client`).
-- Konfiguration über:
+## Email Delivery
+- Optional email delivery after successful poll creation via Amazon SES (AWS SDK v2 `SesV2Client`).
+- Configuration via:
   - `woodle.email.enabled`
   - `woodle.email.from`
   - `woodle.email.subject-prefix`
-- Fallback bei deaktivierter E-Mail-Konfiguration: No-op Sender ohne Versand.
-- IAM-Berechtigung im Lambda-Kontext: `ses:SendEmail` mit Einschränkung auf die konfigurierte Absenderadresse.
+- Fallback when email is disabled: no-op sender without delivery.
+- IAM permission in the Lambda context: `ses:SendEmail` restricted to the configured sender address.
 
-## S3-Datenmodell (Empfehlung zur Review)
+## S3 Data Model (Review Recommendation)
 
-Ziel: genau **eine** JSON-Datei pro Umfrage. Der S3-Key ist die generierte UUID der Umfrage.
+Goal: exactly **one** JSON file per poll. The S3 key is the generated poll UUID.
 
-### S3-Keys
-- `polls/{pollId}.json` (ein einziges Dokument mit Stammdaten, Optionen und Antworten)
+### S3 Keys
+- `polls/{pollId}.json` (a single document containing master data, options, and responses)
 
-### poll.json (Gesamtdokument)
+### poll.json (Whole Document)
 ```json
 {
   "pollId": "UUID",
@@ -178,15 +178,15 @@ Ziel: genau **eine** JSON-Datei pro Umfrage. Der S3-Key ist die generierte UUID 
 }
 ```
 
-### Aufbewahrungsfrist
-- `expiresAt` = letzter Termin + 4 Wochen.
-- Danach vollständige Löschung aller `polls/{pollId}/**`-Objekte.
+### Retention Period
+- `expiresAt` = last date + 4 weeks.
+- After that, fully delete all `polls/{pollId}/**` objects.
 
-## Validierung
-- Keine User-Account-Verwaltung mit Login/Passwort.
-- Zugriff erfolgt über UUID und Admin-Secret.
-- E-Mail-Adressen bleiben fachlich relevant (z. B. für spätere Benachrichtigungen) und dürfen validiert werden.
+## Validation
+- No user-account management with login/password.
+- Access is via UUID and admin secret.
+- Email addresses remain domain-relevant data and may be validated.
 
-## Änderbarkeit der Optionen
-- `endTime` wird bei intraday explizit gespeichert und nicht nachträglich aus `startTime + durationMinutes` abgeleitet.
-- Autor:innen dürfen nach Erstellung Termine/Zeiten hinzufügen oder entfernen; bestehende Zeiten behalten ihre ursprünglich gespeicherten Werte.
+## Option Mutability
+- For intraday events, `endTime` is stored explicitly and is not derived later from `startTime + durationMinutes`.
+- Authors may add or remove dates/times after creation; existing times keep their originally stored values.
