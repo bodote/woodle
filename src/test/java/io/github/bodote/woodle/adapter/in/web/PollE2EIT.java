@@ -453,7 +453,7 @@ class PollE2EIT {
 
             @SuppressWarnings("unchecked")
             Map<String, Object> positions = (Map<String, Object>) page.evaluate("""
-                    () => {
+                    async () => {
                         const wrap = document.querySelector('.votes-table-wrap');
                         const row = document.querySelector('.votes-table tbody tr[data-add-row="true"]');
                         const cells = row.querySelectorAll('th, td');
@@ -463,6 +463,8 @@ class PollE2EIT {
                         const lastBefore = cells[cells.length - 1].getBoundingClientRect();
 
                         wrap.scrollLeft = wrap.scrollWidth - wrap.clientWidth;
+                        await new Promise((resolve) => requestAnimationFrame(resolve));
+                        await new Promise((resolve) => requestAnimationFrame(resolve));
 
                         const firstAfter = cells[0].getBoundingClientRect();
                         const middleAfter = cells[middleIndex].getBoundingClientRect();
