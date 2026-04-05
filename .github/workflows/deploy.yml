@@ -1,0 +1,64 @@
+name: Deploy QS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to deploy to the qs stage
+        required: false
+        default: main
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-qs-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-qs:
+    name: Test and deploy qs
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: qs
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'eu-central-1' }}
+      DEPLOY_RUNTIME: native
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || github.ref }}
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          cache: gradle
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+
+      - name: Install Playwright browser
+        run: ./gradlew installPlaywrightBrowsers
+
+      - name: Run verification suite
+        run: ./gradlew check
+
+      - name: Deploy qs
+        run: ./aws-deploy.sh

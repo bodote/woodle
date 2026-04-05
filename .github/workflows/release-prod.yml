@@ -1,0 +1,113 @@
+name: Release Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to promote to production
+        required: true
+        default: main
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+
+concurrency:
+  group: release-prod
+  cancel-in-progress: false
+
+jobs:
+  verify-qs-gate:
+    name: Verify qs gate
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+    steps:
+      - name: Resolve target commit
+        id: resolve
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = core.getInput('ref', { required: true });
+            const { owner, repo } = context.repo;
+            const commit = await github.rest.repos.getCommit({
+              owner,
+              repo,
+              ref
+            });
+            core.setOutput('sha', commit.data.sha);
+        env:
+          INPUT_REF: ${{ github.event.inputs.ref }}
+
+      - name: Check successful qs deployment for target commit
+        uses: actions/github-script@v7
+        env:
+          TARGET_SHA: ${{ steps.resolve.outputs.sha }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const targetSha = process.env.TARGET_SHA;
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              owner,
+              repo,
+              workflow_id: 'deploy.yml',
+              status: 'completed',
+              per_page: 100
+            });
+
+            const successfulRun = runs.find((run) =>
+              run.head_sha === targetSha &&
+              run.conclusion === 'success'
+            );
+
+            if (!successfulRun) {
+              core.setFailed(`No successful qs deployment found for commit ${targetSha}. Run the qs workflow first.`);
+              return;
+            }
+
+            core.info(`Found successful qs deployment run ${successfulRun.html_url} for ${targetSha}.`);
+
+  deploy-prod:
+    name: Test and deploy prod
+    needs: verify-qs-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'eu-central-1' }}
+      DEPLOY_RUNTIME: native
+    steps:
+      - name: Check out target commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify-qs-gate.outputs.sha }}
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          cache: gradle
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install AWS SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+
+      - name: Install Playwright browser
+        run: ./gradlew installPlaywrightBrowsers
+
+      - name: Run verification suite
+        run: ./gradlew check
+
+      - name: Deploy prod
+        run: ./aws-deploy.sh -prod

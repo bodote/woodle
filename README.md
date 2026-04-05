@@ -224,6 +224,41 @@ Dry-run example (validate config/preflight only, no AWS or Docker changes):
 DRY_RUN=true DEPLOY_RUNTIME=native ./aws-deploy.sh
 ```
 
+## GitHub Deployments
+
+This repository includes two GitHub Actions workflows:
+
+* `Deploy QS` in [/Users/bodo.te/dev/woodle/.github/workflows/deploy.yml](/Users/bodo.te/dev/woodle/.github/workflows/deploy.yml)
+* `Release Prod` in [/Users/bodo.te/dev/woodle/.github/workflows/release-prod.yml](/Users/bodo.te/dev/woodle/.github/workflows/release-prod.yml)
+
+`Deploy QS` runs automatically on every push to `main` and can also be started manually. It installs the Playwright browser, runs `./gradlew check`, and then deploys the `qs` stage via `DEPLOY_RUNTIME=native ./aws-deploy.sh`.
+
+`Release Prod` is manual only. It resolves the selected git ref to a commit SHA, checks that the same commit already completed the `Deploy QS` workflow successfully, and only then runs `./gradlew check` plus `./aws-deploy.sh -prod`.
+
+### Required GitHub Setup
+
+Create these GitHub environments:
+
+* `qs`
+* `production`
+
+Configure these values before running the workflows:
+
+* Environment secret `AWS_ROLE_TO_ASSUME` in `qs`
+* Environment secret `AWS_ROLE_TO_ASSUME` in `production`
+* Optional repo or environment variable `AWS_REGION` if you do not want the default `eu-central-1`
+
+For a public repository, add required reviewers to the `production` environment if you want an approval gate before the production deployment job starts.
+
+### Release Flow
+
+1. Push to `main`.
+2. Wait for `Deploy QS` to pass and finish the `qs` deployment.
+3. Trigger `Release Prod` manually from the Actions tab and choose the branch, tag, or commit to promote.
+4. Approve the `production` environment deployment if required reviewers are configured.
+
+If the selected ref has not already passed the `qs` workflow, `Release Prod` fails before any production deployment step runs.
+
 ### Native AWS Guardrails (GraalVM)
 
 For `DEPLOY_RUNTIME=native`, keep these rules to avoid runtime failures on Lambda:
