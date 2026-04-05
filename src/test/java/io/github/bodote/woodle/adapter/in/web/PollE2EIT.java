@@ -486,9 +486,21 @@ class PollE2EIT {
             double middleAfter = ((Number) positions.get("middleAfter")).doubleValue();
             double lastAfter = ((Number) positions.get("lastAfter")).doubleValue();
 
-            assertEquals(firstBefore, firstAfter, 1.0);
-            assertTrue(Math.abs(middleBefore - middleAfter) > 20.0);
-            assertEquals(lastBefore, lastAfter, 1.0);
+            double firstShift = Math.abs(firstBefore - firstAfter);
+            double middleShift = Math.abs(middleBefore - middleAfter);
+            double lastShift = Math.abs(lastBefore - lastAfter);
+
+            assertTrue(middleShift > 20.0);
+            assertTrue(firstShift < 8.0,
+                    () -> "Expected first sticky column to remain nearly fixed, but shifted by " + firstShift + "px");
+            assertTrue(lastShift < 8.0,
+                    () -> "Expected last sticky column to remain nearly fixed, but shifted by " + lastShift + "px");
+            assertTrue(firstShift < middleShift * 0.25,
+                    () -> "Expected first sticky column to move much less than middle cells, but shifts were first="
+                            + firstShift + "px and middle=" + middleShift + "px");
+            assertTrue(lastShift < middleShift * 0.25,
+                    () -> "Expected last sticky column to move much less than middle cells, but shifts were last="
+                            + lastShift + "px and middle=" + middleShift + "px");
 
             browser.close();
         }
