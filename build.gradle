@@ -58,10 +58,15 @@ tasks.register('integrationTest', Test) {
 
 tasks.register('installPlaywrightBrowsers', JavaExec) {
     group = 'verification'
-    description = 'Downloads Chromium browser for Playwright E2E tests.'
+    description = 'Downloads Chromium and installs required Linux browser dependencies for CI.'
     classpath = configurations.testRuntimeClasspath
     mainClass = 'com.microsoft.playwright.CLI'
-    args = ['install', 'chromium']
+    def playwrightArgs = ['install']
+    if (System.getProperty('os.name').toLowerCase().contains('linux')) {
+        playwrightArgs += ['--with-deps']
+    }
+    playwrightArgs += ['chromium']
+    args = playwrightArgs
 }
 
 jacocoTestReport {
