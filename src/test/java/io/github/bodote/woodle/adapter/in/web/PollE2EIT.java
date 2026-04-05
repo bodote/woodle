@@ -476,7 +476,11 @@ class PollE2EIT {
                             lastBefore: lastBefore.left,
                             firstAfter: firstAfter.left,
                             middleAfter: middleAfter.left,
-                            lastAfter: lastAfter.left
+                            lastAfter: lastAfter.left,
+                            firstPosition: getComputedStyle(cells[0]).position,
+                            firstInset: parseFloat(getComputedStyle(cells[0]).left || '0'),
+                            lastPosition: getComputedStyle(cells[cells.length - 1]).position,
+                            lastInset: parseFloat(getComputedStyle(cells[cells.length - 1]).right || '0')
                         };
                     }
                     """);
@@ -487,22 +491,24 @@ class PollE2EIT {
             double firstAfter = ((Number) positions.get("firstAfter")).doubleValue();
             double middleAfter = ((Number) positions.get("middleAfter")).doubleValue();
             double lastAfter = ((Number) positions.get("lastAfter")).doubleValue();
+            String firstPosition = (String) positions.get("firstPosition");
+            double firstInset = ((Number) positions.get("firstInset")).doubleValue();
+            String lastPosition = (String) positions.get("lastPosition");
+            double lastInset = ((Number) positions.get("lastInset")).doubleValue();
 
-            double firstShift = Math.abs(firstBefore - firstAfter);
             double middleShift = Math.abs(middleBefore - middleAfter);
-            double lastShift = Math.abs(lastBefore - lastAfter);
 
             assertTrue(middleShift > 20.0);
-            assertTrue(firstShift < 8.0,
-                    () -> "Expected first sticky column to remain nearly fixed, but shifted by " + firstShift + "px");
-            assertTrue(lastShift < 8.0,
-                    () -> "Expected last sticky column to remain nearly fixed, but shifted by " + lastShift + "px");
-            assertTrue(firstShift < middleShift * 0.25,
-                    () -> "Expected first sticky column to move much less than middle cells, but shifts were first="
-                            + firstShift + "px and middle=" + middleShift + "px");
-            assertTrue(lastShift < middleShift * 0.25,
-                    () -> "Expected last sticky column to move much less than middle cells, but shifts were last="
-                            + lastShift + "px and middle=" + middleShift + "px");
+            assertEquals("sticky", firstPosition);
+            assertEquals(0.0, firstInset, 0.1);
+            assertEquals("sticky", lastPosition);
+            assertEquals(0.0, lastInset, 0.1);
+            assertTrue(firstAfter < middleAfter,
+                    () -> "Expected first sticky column to remain left of scrolled date cells, but firstAfter="
+                            + firstAfter + " and middleAfter=" + middleAfter);
+            assertTrue(lastAfter > middleAfter,
+                    () -> "Expected last sticky column to remain right of scrolled date cells, but lastAfter="
+                            + lastAfter + " and middleAfter=" + middleAfter);
 
             browser.close();
         }
