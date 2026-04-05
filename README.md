@@ -20,7 +20,9 @@
 
 ## Overview
 
-Woodle is a date‑poll application. Users create a poll, share a participant link, and collect votes in a tabular view with inline editing. Admins manage options via a secret admin link.
+Woodle is a date‑poll application similar to Doodle but without the ads. Users create a poll, share a participant link, and collect votes in a tabular view with inline editing. Admins manage options via a secret admin link. Also I wanted to add some features i never found on any other Doodle clone.
+
+Also the source code is written by claude code and codex only. The requirements and technical guidelines were provided by the developer.
 
 ## Tech Stack
 
@@ -33,7 +35,7 @@ Woodle is a date‑poll application. Users create a poll, share a participant li
 
 ## AWS Resources and Running Costs
 
-The app uses these AWS resources in production:
+The app currently only supports deployment on Amazon AWS and uses these AWS resources in production (but you can deploy where ever you want if you figure out how):
 
 1.  Amazon S3 (static frontend bucket: `woodle-web-<env>`)
 2.  Amazon S3 (poll data bucket: `woodle-polls-<env>`)
