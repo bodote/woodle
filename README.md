@@ -1,3 +1,21 @@
+<p align="center">
+  <strong>Woodle lets you create a scheduling poll in 3 steps, share a participant link, and manage everything from a focused admin view.</strong>
+</p>
+
+<p align="center">
+  <img src="img/readme-step1.png" alt="Woodle step 1 with example author, title, and description" width="48%">
+  <img src="img/readme-step2.png" alt="Woodle step 2 with intraday event options and example dates and times" width="48%">
+</p>
+
+<p align="center">
+  <img src="img/readme-step3.png" alt="Woodle step 3 with review summary and expiry date" width="48%">
+  <img src="img/readme-participant-view.png" alt="Woodle participant view with existing votes and a prepared new entry" width="48%">
+</p>
+
+<p align="center">
+  <img src="img/readme-admin-view.png" alt="Woodle admin view with sharing links and option editing" width="70%">
+</p>
+
 # Woodle
 
 ## Overview
