@@ -58,14 +58,15 @@ tasks.register('integrationTest', Test) {
 
 tasks.register('installPlaywrightBrowsers', JavaExec) {
     group = 'verification'
-    description = 'Downloads Chromium and installs required Linux browser dependencies for CI.'
+    description = 'Installs Playwright browsers and Linux browser dependencies for CI.'
     classpath = configurations.testRuntimeClasspath
     mainClass = 'com.microsoft.playwright.CLI'
     def playwrightArgs = ['install']
     if (System.getProperty('os.name').toLowerCase().contains('linux')) {
         playwrightArgs += ['--with-deps']
+    } else {
+        playwrightArgs += ['chromium']
     }
-    playwrightArgs += ['chromium']
     args = playwrightArgs
 }
 

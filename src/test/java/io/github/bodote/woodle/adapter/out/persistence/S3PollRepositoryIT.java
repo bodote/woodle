@@ -1,6 +1,7 @@
 package io.github.bodote.woodle.adapter.out.persistence;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.bodote.woodle.adapter.out.persistence.S3PollRepository;
 import io.github.bodote.woodle.domain.model.EventType;
 import io.github.bodote.woodle.domain.model.Poll;
@@ -60,7 +61,7 @@ class S3PollRepositoryIT {
 
         s3Client.createBucket(CreateBucketRequest.builder().bucket(BUCKET).build());
 
-        S3PollRepository repository = new S3PollRepository(s3Client, new ObjectMapper(), BUCKET);
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper(), BUCKET);
 
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000002");
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -108,7 +109,7 @@ class S3PollRepositoryIT {
                 .build();
 
         s3Client.createBucket(CreateBucketRequest.builder().bucket(BUCKET).build());
-        S3PollRepository repository = new S3PollRepository(s3Client, new ObjectMapper(), BUCKET);
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper(), BUCKET);
 
         Optional<Poll> result = repository.findById(UUID.fromString("00000000-0000-0000-0000-00000000abcd"));
         assertTrue(result.isEmpty());
@@ -126,7 +127,7 @@ class S3PollRepositoryIT {
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
                 .build();
 
-        S3PollRepository repository = new S3PollRepository(s3Client, new ObjectMapper(), "missing-bucket");
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper(), "missing-bucket");
         assertThrows(IllegalStateException.class,
                 () -> repository.findById(UUID.fromString("00000000-0000-0000-0000-00000000dcba")));
     }
@@ -149,9 +150,15 @@ class S3PollRepositoryIT {
                 RequestBody.fromString("{invalid-json")
         );
 
-        S3PollRepository repository = new S3PollRepository(s3Client, new ObjectMapper(), BUCKET);
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper(), BUCKET);
         IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> repository.findById(UUID.fromString("00000000-0000-0000-0000-0000000000aa")));
         assertEquals("Failed to deserialize poll", exception.getMessage());
+    }
+
+    private ObjectMapper objectMapper() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        return objectMapper;
     }
 }
