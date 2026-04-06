@@ -1,11 +1,11 @@
 package io.github.bodote.woodle.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.env.MapPropertySource;
 import software.amazon.awssdk.services.s3.S3Client;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Map;
 

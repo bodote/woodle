@@ -1,8 +1,5 @@
 package io.github.bodote.woodle.adapter.out.persistence;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.bodote.woodle.application.model.WizardState;
 import io.github.bodote.woodle.domain.model.EventType;
 import org.junit.jupiter.api.DisplayName;
@@ -36,6 +33,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @DisplayName("S3WizardStateRepository")
 class S3WizardStateRepositoryTest {
@@ -69,7 +68,6 @@ class S3WizardStateRepositoryTest {
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
 
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3WizardStateRepository repository = new S3WizardStateRepository(s3Client, objectMapper, "woodle");
 
         WizardState state = new WizardState();
@@ -100,7 +98,6 @@ class S3WizardStateRepositoryTest {
         when(s3Client.getObject(any(GetObjectRequest.class)))
                 .thenThrow(NoSuchKeyException.builder().message("missing").build());
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3WizardStateRepository repository = new S3WizardStateRepository(s3Client, objectMapper, "woodle");
 
         Optional<WizardState> loaded = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000302"));
@@ -114,7 +111,6 @@ class S3WizardStateRepositoryTest {
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
                 .thenReturn(PutObjectResponse.builder().build());
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3WizardStateRepository repository = new S3WizardStateRepository(s3Client, objectMapper, "woodle");
 
         WizardState state = new WizardState();
@@ -134,7 +130,6 @@ class S3WizardStateRepositoryTest {
     void deleteRemovesDraftObjectFromS3() {
         S3Client s3Client = mock(S3Client.class);
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3WizardStateRepository repository = new S3WizardStateRepository(s3Client, objectMapper, "woodle");
         UUID draftId = UUID.fromString("00000000-0000-0000-0000-000000000303");
 
@@ -153,7 +148,6 @@ class S3WizardStateRepositoryTest {
         when(s3Client.getObject(any(GetObjectRequest.class)))
                 .thenThrow(S3Exception.builder().message("boom").build());
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3WizardStateRepository repository = new S3WizardStateRepository(s3Client, objectMapper, "woodle");
 
         IllegalStateException ex = assertThrows(
@@ -170,7 +164,6 @@ class S3WizardStateRepositoryTest {
         when(s3Client.getObject(any(GetObjectRequest.class)))
                 .thenThrow(SdkClientException.builder().message("network").build());
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3WizardStateRepository repository = new S3WizardStateRepository(s3Client, objectMapper, "woodle");
 
         IllegalStateException ex = assertThrows(
@@ -192,7 +185,6 @@ class S3WizardStateRepositoryTest {
         );
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3WizardStateRepository repository = new S3WizardStateRepository(s3Client, objectMapper, "woodle");
 
         IllegalStateException ex = assertThrows(
@@ -227,7 +219,6 @@ class S3WizardStateRepositoryTest {
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
 
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3WizardStateRepository repository = new S3WizardStateRepository(s3Client, objectMapper, "woodle");
 
         WizardState loaded = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000307"))
@@ -243,7 +234,6 @@ class S3WizardStateRepositoryTest {
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
                 .thenReturn(PutObjectResponse.builder().build());
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3WizardStateRepository repository = new S3WizardStateRepository(s3Client, objectMapper, "woodle");
 
         WizardState state = new WizardState();

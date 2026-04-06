@@ -1,6 +1,5 @@
 package io.github.bodote.woodle.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.bodote.woodle.application.port.out.PollEmailSender;
 import io.github.bodote.woodle.application.port.out.WizardStateRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -11,6 +10,7 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.mail.javamail.JavaMailSender;
 import software.amazon.awssdk.services.sesv2.SesV2Client;
 import software.amazon.awssdk.services.s3.S3Client;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Map;
 

@@ -1,8 +1,8 @@
 package io.github.bodote.woodle.adapter.out.persistence;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.bodote.woodle.application.port.out.PollRepository;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import io.github.bodote.woodle.domain.model.Poll;
 import io.github.bodote.woodle.domain.model.PollOption;
 import io.github.bodote.woodle.domain.model.PollResponse;
@@ -97,6 +97,8 @@ public class S3PollRepository implements PollRepository {
             throw new IllegalStateException("Failed to fetch poll from S3", e);
         } catch (SdkException e) {
             throw new IllegalStateException("Failed to fetch poll from S3", e);
+        } catch (JacksonException e) {
+            throw new IllegalStateException("Failed to deserialize poll", e);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to deserialize poll", e);
         } catch (IllegalArgumentException e) {
@@ -134,7 +136,7 @@ public class S3PollRepository implements PollRepository {
     private String writeJson(PollDAO pollDAO) {
         try {
             return objectMapper.writeValueAsString(pollDAO);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialize poll", e);
         }
     }

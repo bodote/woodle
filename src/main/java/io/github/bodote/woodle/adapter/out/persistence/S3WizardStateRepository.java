@@ -1,10 +1,10 @@
 package io.github.bodote.woodle.adapter.out.persistence;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.bodote.woodle.application.model.WizardState;
 import io.github.bodote.woodle.application.port.out.WizardStateRepository;
 import io.github.bodote.woodle.domain.model.EventType;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -68,6 +68,8 @@ public class S3WizardStateRepository implements WizardStateRepository {
             throw new IllegalStateException("Failed to fetch wizard draft from S3", e);
         } catch (SdkException e) {
             throw new IllegalStateException("Failed to fetch wizard draft from S3", e);
+        } catch (JacksonException e) {
+            throw new IllegalStateException("Failed to deserialize wizard draft", e);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to deserialize wizard draft", e);
         }
@@ -85,7 +87,7 @@ public class S3WizardStateRepository implements WizardStateRepository {
     private String writeJson(WizardStateDocument state) {
         try {
             return objectMapper.writeValueAsString(state);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialize wizard draft", e);
         }
     }

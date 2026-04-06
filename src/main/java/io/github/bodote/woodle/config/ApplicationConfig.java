@@ -18,7 +18,6 @@ import io.github.bodote.woodle.application.port.in.SubmitVoteUseCase;
 import io.github.bodote.woodle.application.service.SubmitVoteService;
 import io.github.bodote.woodle.application.port.in.AdminPollOptionsUseCase;
 import io.github.bodote.woodle.application.service.AdminPollOptionsService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -30,6 +29,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.sesv2.SesV2Client;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Properties;
 
