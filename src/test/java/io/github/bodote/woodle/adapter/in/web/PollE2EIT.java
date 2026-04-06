@@ -458,6 +458,7 @@ class PollE2EIT {
                         const row = document.querySelector('.votes-table tbody tr[data-add-row="true"]');
                         const cells = row.querySelectorAll('th, td');
                         const middleIndex = Math.floor(cells.length / 2);
+                        const wrapRect = wrap.getBoundingClientRect();
                         const firstBefore = cells[0].getBoundingClientRect();
                         const middleBefore = cells[middleIndex].getBoundingClientRect();
                         const lastBefore = cells[cells.length - 1].getBoundingClientRect();
@@ -477,6 +478,10 @@ class PollE2EIT {
                             firstAfter: firstAfter.left,
                             middleAfter: middleAfter.left,
                             lastAfter: lastAfter.left,
+                            wrapLeft: wrapRect.left,
+                            wrapRight: wrapRect.right,
+                            firstWidth: firstAfter.width,
+                            lastWidth: lastAfter.width,
                             firstPosition: getComputedStyle(cells[0]).position,
                             firstInset: parseFloat(getComputedStyle(cells[0]).left || '0'),
                             lastPosition: getComputedStyle(cells[cells.length - 1]).position,
@@ -491,6 +496,10 @@ class PollE2EIT {
             double firstAfter = ((Number) positions.get("firstAfter")).doubleValue();
             double middleAfter = ((Number) positions.get("middleAfter")).doubleValue();
             double lastAfter = ((Number) positions.get("lastAfter")).doubleValue();
+            double wrapLeft = ((Number) positions.get("wrapLeft")).doubleValue();
+            double wrapRight = ((Number) positions.get("wrapRight")).doubleValue();
+            double firstWidth = ((Number) positions.get("firstWidth")).doubleValue();
+            double lastWidth = ((Number) positions.get("lastWidth")).doubleValue();
             String firstPosition = (String) positions.get("firstPosition");
             double firstInset = ((Number) positions.get("firstInset")).doubleValue();
             String lastPosition = (String) positions.get("lastPosition");
@@ -503,12 +512,8 @@ class PollE2EIT {
             assertEquals(0.0, firstInset, 0.1);
             assertEquals("sticky", lastPosition);
             assertEquals(0.0, lastInset, 0.1);
-            assertTrue(firstAfter < middleAfter,
-                    () -> "Expected first sticky column to remain left of scrolled date cells, but firstAfter="
-                            + firstAfter + " and middleAfter=" + middleAfter);
-            assertTrue(lastAfter > middleAfter,
-                    () -> "Expected last sticky column to remain right of scrolled date cells, but lastAfter="
-                            + lastAfter + " and middleAfter=" + middleAfter);
+            assertEquals(wrapLeft, firstAfter, 8.0);
+            assertEquals(wrapRight, lastAfter + lastWidth, 8.0);
 
             browser.close();
         }
