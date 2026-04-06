@@ -41,8 +41,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.jspecify:jspecify:1.0.0'
-    implementation 'software.amazon.awssdk:s3:2.25.67'
-    implementation 'software.amazon.awssdk:sesv2:2.25.67'
+    implementation 'software.amazon.awssdk:s3:2.42.28'
+    implementation 'software.amazon.awssdk:sesv2:2.42.28'
 
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
