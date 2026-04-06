@@ -1,8 +1,5 @@
 package io.github.bodote.woodle.adapter.out.persistence;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -55,6 +52,8 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.exc.StreamWriteException;
+import tools.jackson.databind.ObjectMapper;
 
 @DisplayName("S3PollRepository")
 class S3PollRepositoryTest {
@@ -66,7 +65,6 @@ class S3PollRepositoryTest {
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
                 .thenReturn(PutObjectResponse.builder().build());
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000099");
@@ -122,7 +120,6 @@ class S3PollRepositoryTest {
                 .thenThrow(NoSuchKeyException.builder().message("not found").build());
 
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
         Optional<?> result = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000001"));
 
@@ -142,7 +139,6 @@ class S3PollRepositoryTest {
         when(s3Client.getObject(any(GetObjectRequest.class))).thenThrow(s3Exception);
 
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         IllegalStateException exception = assertThrows(IllegalStateException.class,
@@ -159,7 +155,6 @@ class S3PollRepositoryTest {
         when(s3Client.getObject(any(GetObjectRequest.class))).thenThrow(sdkClientException);
 
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         IllegalStateException exception = assertThrows(IllegalStateException.class,
@@ -180,7 +175,6 @@ class S3PollRepositoryTest {
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
 
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         IllegalStateException exception = assertThrows(IllegalStateException.class,
@@ -222,7 +216,6 @@ class S3PollRepositoryTest {
         );
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         Optional<Poll> found = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000021"));
@@ -278,7 +271,6 @@ class S3PollRepositoryTest {
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
                 .thenReturn(PutObjectResponse.builder().build());
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         Optional<Poll> found = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000031"));
@@ -340,7 +332,6 @@ class S3PollRepositoryTest {
 
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.registerModule(new JavaTimeModule());
             S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
             repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000061"));
 
@@ -392,7 +383,6 @@ class S3PollRepositoryTest {
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
                 .thenReturn(PutObjectResponse.builder().build());
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         Optional<Poll> found = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000041"));
@@ -444,7 +434,6 @@ class S3PollRepositoryTest {
         );
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         Optional<Poll> found = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000051"));
@@ -487,7 +476,6 @@ class S3PollRepositoryTest {
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
 
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         IllegalStateException exception = assertThrows(
@@ -518,7 +506,6 @@ class S3PollRepositoryTest {
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
                 .thenReturn(firstPage, secondPage);
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         long count = repository.countActivePolls();
@@ -533,7 +520,6 @@ class S3PollRepositoryTest {
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
                 .thenThrow(S3Exception.builder().statusCode(500).message("boom").build());
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, repository::countActivePolls);
@@ -548,7 +534,6 @@ class S3PollRepositoryTest {
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
                 .thenThrow(SdkClientException.builder().message("network down").build());
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, repository::countActivePolls);
@@ -568,7 +553,6 @@ class S3PollRepositoryTest {
                 .build();
         when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(response);
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         long count = repository.countActivePolls();
@@ -583,7 +567,6 @@ class S3PollRepositoryTest {
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
                 .thenReturn(PutObjectResponse.builder().build());
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000120");
@@ -648,7 +631,6 @@ class S3PollRepositoryTest {
         );
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         Poll poll = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000130")).orElseThrow();
@@ -659,10 +641,10 @@ class S3PollRepositoryTest {
 
     @Test
     @DisplayName("save throws when poll serialization fails")
-    void saveThrowsWhenPollSerializationFails() throws JsonProcessingException {
+    void saveThrowsWhenPollSerializationFails() {
         S3Client s3Client = mock(S3Client.class);
         ObjectMapper objectMapper = mock(ObjectMapper.class);
-        doThrow(new JsonProcessingException("boom") {}).when(objectMapper).writeValueAsString(any(PollDAO.class));
+        doThrow(new StreamWriteException(null, "boom")).when(objectMapper).writeValueAsString(any(PollDAO.class));
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000140");
@@ -696,7 +678,6 @@ class S3PollRepositoryTest {
         when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
                 .thenReturn(PutObjectResponse.builder().build());
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000150");
@@ -758,7 +739,6 @@ class S3PollRepositoryTest {
         );
         when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(stream);
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
         S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
 
         Poll poll = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000151")).orElseThrow();

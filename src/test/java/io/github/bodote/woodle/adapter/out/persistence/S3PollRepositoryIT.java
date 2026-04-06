@@ -1,7 +1,5 @@
 package io.github.bodote.woodle.adapter.out.persistence;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.github.bodote.woodle.adapter.out.persistence.S3PollRepository;
 import io.github.bodote.woodle.domain.model.EventType;
 import io.github.bodote.woodle.domain.model.Poll;
@@ -23,6 +21,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.core.sync.RequestBody;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -157,8 +156,6 @@ class S3PollRepositoryIT {
     }
 
     private ObjectMapper objectMapper() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        return objectMapper;
+        return new ObjectMapper();
     }
 }
