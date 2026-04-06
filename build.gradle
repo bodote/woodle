@@ -10,9 +10,25 @@ plugins {
 group = 'io.github.bodote'
 version = '0.0.1-SNAPSHOT'
 
+def nativeDockerBuild = providers.environmentVariable('WOODLE_NATIVE_DOCKER_BUILD')
+        .map { it.toBoolean() }
+        .orElse(false)
+        .get()
+
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+    if (nativeDockerBuild) {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    } else {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+}
+
+if (nativeDockerBuild) {
+    tasks.withType(JavaCompile).configureEach {
+        options.release = 21
     }
 }
 
@@ -136,7 +152,9 @@ pitest {
     timeoutFactor = 20.0
     outputFormats = ['HTML', 'XML']
     timestampedReports = false
-    jvmPath = javaToolchains.launcherFor {
-        languageVersion = JavaLanguageVersion.of(21)
-    }.get().executablePath.asFile.absolutePath
+    if (!nativeDockerBuild) {
+        jvmPath = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(21)
+        }.get().executablePath.asFile.absolutePath
+    }
 }

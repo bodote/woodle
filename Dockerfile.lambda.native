@@ -1,6 +1,10 @@
-FROM --platform=$BUILDPLATFORM ghcr.io/graalvm/native-image-community:21 AS native-builder
+# Pin the builder image. The floating `:21` tag is stuck on GraalVM 21.0.2,
+# which fails native linking for this project in CI.
+FROM --platform=$BUILDPLATFORM ghcr.io/graalvm/native-image-community:23.0.2-ol9 AS native-builder
 
 WORKDIR /workspace
+
+ENV WOODLE_NATIVE_DOCKER_BUILD=true
 
 RUN microdnf install -y findutils \
     && microdnf clean all

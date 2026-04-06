@@ -147,4 +147,17 @@ class NativeLambdaDeploymentModeTest {
                 dockerfile.contains("FROM public.ecr.aws/amazonlinux/amazonlinux:2023"),
                 "Expected native runtime stage to use a glibc-based amazonlinux image");
     }
+
+    @Test
+    @DisplayName("pins the native builder image and enables docker-specific gradle mode")
+    void pinsNativeBuilderImageAndEnablesDockerSpecificGradleMode() throws IOException {
+        String dockerfile = Files.readString(Path.of("Dockerfile.lambda.native"));
+
+        assertTrue(
+                dockerfile.contains("ghcr.io/graalvm/native-image-community:23.0.2-ol9"),
+                "Expected native Dockerfile to pin a current GraalVM builder image");
+        assertTrue(
+                dockerfile.contains("ENV WOODLE_NATIVE_DOCKER_BUILD=true"),
+                "Expected native Dockerfile to opt into docker-specific Gradle build settings");
+    }
 }

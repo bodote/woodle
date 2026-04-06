@@ -40,7 +40,7 @@ public class ThymeleafRuntimeHints implements RuntimeHintsRegistrar {
                 MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                 MemberCategory.INVOKE_DECLARED_METHODS,
                 MemberCategory.INVOKE_PUBLIC_METHODS,
-                MemberCategory.DECLARED_FIELDS,
-                MemberCategory.PUBLIC_FIELDS);
+                MemberCategory.ACCESS_DECLARED_FIELDS,
+                MemberCategory.ACCESS_PUBLIC_FIELDS);
     }
 }

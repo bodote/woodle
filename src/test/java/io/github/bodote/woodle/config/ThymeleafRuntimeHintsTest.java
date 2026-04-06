@@ -24,13 +24,13 @@ class ThymeleafRuntimeHintsTest {
         var pollHint = hints.reflection().getTypeHint(TypeReference.of("io.github.bodote.woodle.domain.model.Poll"));
         assertNotNull(pollHint);
         assertTrue(pollHint.getMemberCategories().contains(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS));
-        assertTrue(pollHint.getMemberCategories().contains(MemberCategory.DECLARED_FIELDS));
+        assertTrue(pollHint.getMemberCategories().contains(MemberCategory.ACCESS_DECLARED_FIELDS));
 
         var wizardDraftHint = hints.reflection().getTypeHint(
                 TypeReference.of("io.github.bodote.woodle.adapter.out.persistence.S3WizardStateRepository$WizardStateDocument"));
         assertNotNull(wizardDraftHint);
         assertTrue(wizardDraftHint.getMemberCategories().contains(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS));
-        assertTrue(wizardDraftHint.getMemberCategories().contains(MemberCategory.DECLARED_FIELDS));
+        assertTrue(wizardDraftHint.getMemberCategories().contains(MemberCategory.ACCESS_DECLARED_FIELDS));
 
         var dateGroupHint = hints.reflection().getTypeHint(
                 TypeReference.of("io.github.bodote.woodle.adapter.in.web.PollViewController$DateGroup"));
