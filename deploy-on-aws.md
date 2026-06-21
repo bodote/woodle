@@ -444,6 +444,38 @@ How to force realistic cold-start conditions for testing:
    - Important: `update-function-configuration --environment` replaces the full map; never update only one key without merging.
 3. Then run immediate UI smoke tests (step-1 submit and active-count load) and verify loading indicator + retry behavior.
 
+## 503 Throttling Runbook (Lambda Account Concurrency Limit)
+
+Decision (2026-06-21): **request AWS to restore the standard Lambda account concurrency limit (1000) from the new-account-restricted value of 10.** This is the only fix that removes the throttling exposure, and it is free.
+
+Background — what was observed:
+- On 2026-06-10 the prod API Gateway access log (`/aws/apigateway/woodle-prod`) recorded **262 `503` responses** out of 604 requests that day.
+- They were **not** real users and **not** an application bug: a vulnerability scanner (`34.106.36.92`, `34.158.243.104`) fired bursts of requests in the same second, probing for leaked secrets (`/.env`, `/actuator/*`, `*.sql`, `/.git/config`, `terraform.tf*`). The app correctly `302`'d or threw these away.
+
+Root cause — confirmed, not assumed:
+- The `503`s had integration latency of 3–34 ms (p50 9 ms) — far too fast to be a cold start, so the request was rejected before real work.
+- The Lambda `Throttles` metric shows **262 throttles on 2026-06-10**, a 1:1 match with the 262 `503`s. A `429 Throttled` from Lambda surfaces as `503` at API Gateway.
+- The account concurrency limit is **10** (`aws lambda get-account-settings` → `ConcurrentExecutions: 10`). A burst of dozens of simultaneous requests instantly exhausts 10 slots; the rest throttle.
+- Cold-start time is **not** the problem: prod already runs the **GraalVM native image** (`Dockerfile.lambda.native`, `DEPLOY_RUNTIME=native`) with Init Duration ~400 ms. Native already did its job.
+
+Why other levers were rejected:
+- **Reserved concurrency** — wrong: it *partitions* the 10-slot pool (floor + ceiling), it does not grow it. Reserving N for the app would cap the app at N and starve everything else.
+- **Provisioned concurrency** — unnecessary and not free: a 400 ms native cold start doesn't justify paying to keep instances warm.
+- **WAF / rate-limiting** — separate "stop scanner noise" hygiene, not the fix for the capacity limit. Deferred (~$8–12/mo; the API is an HTTP API (v2) which can't take WAF directly — it would need a dedicated CloudFront distribution in front, plus a us-east-1 `CLOUDFRONT`-scope Web ACL).
+
+Action required (manual — cannot be done via CLI):
+- The Service Quotas *increase* API rejects any value ≤ 1000 ("must be greater than the default quota value of 1000.0") because the account's restriction is an AWS-imposed new-account safeguard, not a normal quota; the applied value (10) sits below the Service Quotas default (1000).
+- `aws support create-case` is unavailable (Basic Support, no Premium subscription).
+- **File it from the AWS Console** — service-limit-increase cases are free on Basic Support:
+  - Service Quotas console → **AWS Lambda** → **Concurrent executions** (`quota-code L-B99A9384`, region `eu-central-1`) → *Request increase* (if blocked, it routes to a support case), **or**
+  - Support Center → *Create case* → **Looking for service limit increases?** → Service: **Lambda**, Limit: **Concurrent executions**, requested value **1000**, region **eu-central-1**.
+- Justification text: "New-account concurrency is restricted to 10; production workload throttles (429→503) under brief request bursts. Requesting restoration to the standard default of 1000 in eu-central-1."
+- Alternatively, the restriction often lifts automatically as the account matures and accrues billing history.
+
+Verification after the limit is raised:
+1. `aws lambda get-account-settings` → `ConcurrentExecutions` shows the new value.
+2. Re-run `jbang tools/WoodleLogStats.java --env prod --days 14` after the next scanner burst; throttle-driven `503`s should disappear from the status distribution.
+
 ## Definition of Done (Per Environment)
 1. All tests pass (`test`, targeted `*IT`, key E2E).
 2. Poll create/read/update/vote works via CloudFront frontend in AWS.

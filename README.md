@@ -301,8 +301,17 @@ Operational note:
 
 *   If Playwright/Chrome hangs with `Wird in einer aktuellen Browsersitzung geöffnet`, fully quit Chrome and restart it.
 
+## Operational Tooling
+
+*   Access-log analysis: `tools/WoodleLogStats.java` — JBang script that reports requests/day, distinct IPs, status distribution and error events from the API Gateway access logs (plus CloudFront frontend request counts). See `tools/README.md`. Quick start:
+
+    ```bash
+    jbang tools/WoodleLogStats.java --env prod --days 14 --cf-dist ECIPVF7FI5V4B
+    ```
+
 ## References
 
+*   Tools / operational scripts: `tools/README.md`
 *   Tech stack and architecture: `/Users/bodo.te/dev/woodle/woodle-tech-stack.md`
 *   Test strategy: `/Users/bodo.te/dev/woodle/test-strategie.md`
 *   Product spec: `/Users/bodo.te/dev/woodle/woodle-create-poll-date-spec.md`
