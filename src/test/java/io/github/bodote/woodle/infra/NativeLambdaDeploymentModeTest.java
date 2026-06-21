@@ -154,7 +154,7 @@ class NativeLambdaDeploymentModeTest {
         String dockerfile = Files.readString(Path.of("Dockerfile.lambda.native"));
 
         assertTrue(
-                dockerfile.contains("ghcr.io/graalvm/native-image-community:23.0.2-ol9"),
+                dockerfile.contains("ghcr.io/graalvm/native-image-community:25.0.2-ol9"),
                 "Expected native Dockerfile to pin a current GraalVM builder image");
         assertTrue(
                 dockerfile.contains("ENV WOODLE_NATIVE_DOCKER_BUILD=true"),

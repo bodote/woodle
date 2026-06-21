@@ -55,6 +55,8 @@ WOODLE_EMAIL_SMTP_HOST="${WOODLE_EMAIL_SMTP_HOST:-smtp.ionos.de}"
 WOODLE_EMAIL_SMTP_PORT="${WOODLE_EMAIL_SMTP_PORT:-587}"
 WOODLE_EMAIL_SMTP_USERNAME="${WOODLE_EMAIL_SMTP_USERNAME:-woodle@funknstein.de}"
 WOODLE_EMAIL_SMTP_PASSWORD_SECRET_ID="${WOODLE_EMAIL_SMTP_PASSWORD_SECRET_ID:-${DEFAULT_SMTP_PASSWORD_SECRET_ID}}"
+WOODLE_CLEANUP_TOKEN="${WOODLE_CLEANUP_TOKEN:-}"
+WOODLE_CLEANUP_TOKEN_SECRET_ID="${WOODLE_CLEANUP_TOKEN_SECRET_ID:-woodle/${DEPLOY_STAGE}/cleanup-token}"
 DRY_RUN="${DRY_RUN:-false}"
 
 if [[ -z "${WOODLE_EMAIL_FROM}" ]]; then
@@ -203,6 +205,24 @@ docker buildx build \
   -t "${IMAGE_URI}" \
   --push \
   .
+
+# Resolve the cleanup token from Secrets Manager unless an explicit env override was
+# given. This keeps the durable source of truth out of the shell/CI environment and
+# prevents deploys from silently disabling the /events endpoint (a missing token makes
+# the CleanupToken parameter default to "", which disables cleanup).
+if [[ -z "${WOODLE_CLEANUP_TOKEN}" && -n "${WOODLE_CLEANUP_TOKEN_SECRET_ID}" ]]; then
+  echo "Resolving cleanup token from Secrets Manager (${WOODLE_CLEANUP_TOKEN_SECRET_ID})..."
+  RESOLVED_CLEANUP_TOKEN="$(aws secretsmanager get-secret-value \
+    --secret-id "${WOODLE_CLEANUP_TOKEN_SECRET_ID}" \
+    --region "${AWS_REGION}" \
+    --query SecretString --output text 2>/dev/null || true)"
+  if [[ -n "${RESOLVED_CLEANUP_TOKEN}" && "${RESOLVED_CLEANUP_TOKEN}" != "None" ]]; then
+    WOODLE_CLEANUP_TOKEN="${RESOLVED_CLEANUP_TOKEN}"
+    echo "Cleanup token resolved; /events endpoint will be enabled."
+  else
+    echo "No cleanup token secret at ${WOODLE_CLEANUP_TOKEN_SECRET_ID}; /events endpoint will be disabled."
+  fi
+fi
 
 PARAMETER_OVERRIDES=(
   "EnvironmentName=${ENV_NAME}"

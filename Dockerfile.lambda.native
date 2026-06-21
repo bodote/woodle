@@ -1,6 +1,7 @@
 # Pin the builder image. The floating `:21` tag is stuck on GraalVM 21.0.2,
-# which fails native linking for this project in CI.
-FROM --platform=$BUILDPLATFORM ghcr.io/graalvm/native-image-community:23.0.2-ol9 AS native-builder
+# which fails native linking for this project in CI. GraalVM 25 is required by
+# the org.graalvm.buildtools.native 1.0.0 plugin's reachability-metadata schema.
+FROM --platform=$BUILDPLATFORM ghcr.io/graalvm/native-image-community:25.0.2-ol9 AS native-builder
 
 WORKDIR /workspace
 

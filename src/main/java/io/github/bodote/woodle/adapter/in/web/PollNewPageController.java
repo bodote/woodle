@@ -398,6 +398,10 @@ public class PollNewPageController {
             dateValues = dateValuesFromState(state, count);
         }
         model.addAttribute("dateValues", dateValues);
+        // Precompute 1-based index ranges in Java instead of #numbers.sequence(...) in the
+        // template: SpEL method calls become reflective invocations that fail under GraalVM
+        // native (see docs/native-deploy-gotchas.md).
+        model.addAttribute("dateIndexes", indexList(count));
 
         Integer durationMinutes = firstInteger(parameterMap, "durationMinutes");
         model.addAttribute("durationMinutes", durationMinutes != null ? durationMinutes : state.durationMinutes());
@@ -406,7 +410,20 @@ public class PollNewPageController {
             List<List<String>> startTimeValuesByDay = resolveStartTimeValuesByDay(parameterMap, state, timeCountByDay);
             model.addAttribute("timeCountByDay", timeCountByDay);
             model.addAttribute("startTimeValuesByDay", startTimeValuesByDay);
+            List<List<Integer>> timeIndexesByDay = new ArrayList<>();
+            for (int timeCount : timeCountByDay) {
+                timeIndexesByDay.add(indexList(timeCount));
+            }
+            model.addAttribute("timeIndexesByDay", timeIndexesByDay);
         }
+    }
+
+    private static List<Integer> indexList(int count) {
+        List<Integer> indexes = new ArrayList<>();
+        for (int i = 1; i <= count; i++) {
+            indexes.add(i);
+        }
+        return indexes;
     }
 
     private List<List<String>> resolveStartTimeValuesByDay(Map<String, String[]> parameterMap,
