@@ -16,6 +16,8 @@ import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
@@ -744,5 +746,109 @@ class S3PollRepositoryTest {
         Poll poll = repository.findById(UUID.fromString("00000000-0000-0000-0000-000000000151")).orElseThrow();
 
         assertTrue(poll.notifyOnComment());
+    }
+
+    @Test
+    @DisplayName("deletes poll by id using expected key")
+    void deletesPollByIdUsingExpectedKey() {
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.deleteObject(any(DeleteObjectRequest.class)))
+                .thenReturn(DeleteObjectResponse.builder().build());
+        ObjectMapper objectMapper = new ObjectMapper();
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+        UUID pollId = UUID.fromString("00000000-0000-0000-0000-000000000201");
+
+        repository.deleteById(pollId);
+
+        ArgumentCaptor<DeleteObjectRequest> requestCaptor = ArgumentCaptor.forClass(DeleteObjectRequest.class);
+        verify(s3Client).deleteObject(requestCaptor.capture());
+        assertEquals("woodle", requestCaptor.getValue().bucket());
+        assertEquals("polls/00000000-0000-0000-0000-000000000201.json", requestCaptor.getValue().key());
+    }
+
+    @Test
+    @DisplayName("throws delete error when S3 delete operation fails")
+    void throwsDeleteErrorWhenS3DeleteOperationFails() {
+        S3Client s3Client = mock(S3Client.class);
+        when(s3Client.deleteObject(any(DeleteObjectRequest.class)))
+                .thenThrow(S3Exception.builder().statusCode(500).message("boom").build());
+        ObjectMapper objectMapper = new ObjectMapper();
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> repository.deleteById(UUID.fromString("00000000-0000-0000-0000-000000000201")));
+
+        assertEquals("Failed to delete poll from S3", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("findExpiredPollIds returns only expired polls and skips non-json, missing, and never-expiring objects")
+    void findExpiredPollIdsReturnsOnlyExpired() {
+        S3Client s3Client = mock(S3Client.class);
+        UUID expired = UUID.fromString("00000000-0000-0000-0000-000000000301");
+        UUID future = UUID.fromString("00000000-0000-0000-0000-000000000302");
+        UUID noExpiry = UUID.fromString("00000000-0000-0000-0000-000000000303");
+        UUID missing = UUID.fromString("00000000-0000-0000-0000-000000000304");
+        ListObjectsV2Response listing = ListObjectsV2Response.builder()
+                .contents(
+                        S3Object.builder().key("polls/" + expired + ".json").build(),
+                        S3Object.builder().key("polls/" + future + ".json").build(),
+                        S3Object.builder().key("polls/" + noExpiry + ".json").build(),
+                        S3Object.builder().key("polls/" + missing + ".json").build(),
+                        S3Object.builder().key("polls/readme.txt").build(),
+                        S3Object.builder().key(null).build()
+                )
+                .build();
+        when(s3Client.listObjectsV2(any(ListObjectsV2Request.class))).thenReturn(listing);
+        when(s3Client.getObject(any(GetObjectRequest.class))).thenAnswer(invocation -> {
+            GetObjectRequest request = invocation.getArgument(0);
+            String key = request.key();
+            if (key.contains(missing.toString())) {
+                throw NoSuchKeyException.builder().message("gone").build();
+            }
+            String json;
+            if (key.contains(expired.toString())) {
+                json = pollJson(expired, "2026-03-01");
+            } else if (key.contains(future.toString())) {
+                json = pollJson(future, "2026-12-31");
+            } else {
+                json = pollJson(noExpiry, null);
+            }
+            return new ResponseInputStream<>(
+                    GetObjectResponse.builder().build(),
+                    AbortableInputStream.create(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)))
+            );
+        });
+        ObjectMapper objectMapper = new ObjectMapper();
+        S3PollRepository repository = new S3PollRepository(s3Client, objectMapper, "woodle");
+
+        List<UUID> result = repository.findExpiredPollIds(LocalDate.of(2026, 6, 21));
+
+        assertEquals(List.of(expired), result);
+    }
+
+    private static String pollJson(UUID pollId, String expiresAt) {
+        String expiresAtJson = expiresAt == null ? "null" : "\"" + expiresAt + "\"";
+        return """
+                {
+                  "pollId":"%s",
+                  "schemaVersion":"2",
+                  "type":"date",
+                  "title":"Title",
+                  "descriptionHtml":"Description",
+                  "language":"de",
+                  "createdAt":"2026-02-10T10:00:00Z",
+                  "updatedAt":"2026-02-10T10:00:00Z",
+                  "author":{"name":"Alice","email":"alice@invalid"},
+                  "access":{"customSlug":null,"passwordHash":null,"resultsPublic":true,"adminToken":"secret"},
+                  "permissions":{"voteChangePolicy":"ALL_CAN_EDIT"},
+                  "notifications":{"onVote":false,"onComment":false},
+                  "resultsVisibility":{"onlyAuthor":false},
+                  "status":"OPEN",
+                  "expiresAt":%s,
+                  "options":{"eventType":"ALL_DAY","durationMinutes":null,"items":[]},
+                  "responses":[]
+                }
+                """.formatted(pollId, expiresAtJson);
     }
 }

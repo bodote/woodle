@@ -268,6 +268,16 @@ class CreatePollServiceTest {
         public long countActivePolls() {
             return 0L;
         }
+
+        @Override
+        public java.util.List<java.util.UUID> findExpiredPollIds(java.time.LocalDate asOf) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void deleteById(java.util.UUID pollId) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private static final class CapturingPollEmailSender implements PollEmailSender {

@@ -220,6 +220,10 @@ if [[ -n "${WOODLE_EMAIL_SMTP_PASSWORD_SECRET_ID}" ]]; then
   PARAMETER_OVERRIDES+=("EmailSmtpPasswordSecretId=${WOODLE_EMAIL_SMTP_PASSWORD_SECRET_ID}")
 fi
 
+if [[ -n "${WOODLE_CLEANUP_TOKEN}" ]]; then
+  PARAMETER_OVERRIDES+=("CleanupToken=${WOODLE_CLEANUP_TOKEN}")
+fi
+
 if [[ -n "${APP_DOMAIN_NAME}" ]]; then
   PARAMETER_OVERRIDES+=("AppDomainName=${APP_DOMAIN_NAME}")
 fi

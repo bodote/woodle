@@ -10,6 +10,8 @@ import io.github.bodote.woodle.adapter.out.persistence.S3WizardStateRepository;
 import io.github.bodote.woodle.application.port.out.PollRepository;
 import io.github.bodote.woodle.application.port.out.PollEmailSender;
 import io.github.bodote.woodle.application.port.out.WizardStateRepository;
+import io.github.bodote.woodle.application.service.CleanupExpiredPollsService;
+import io.github.bodote.woodle.application.port.in.CleanupExpiredPollsUseCase;
 import io.github.bodote.woodle.application.service.CreatePollService;
 import io.github.bodote.woodle.application.port.in.CreatePollUseCase;
 import io.github.bodote.woodle.application.port.in.ReadPollUseCase;
@@ -31,6 +33,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.sesv2.SesV2Client;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Clock;
 import java.util.Properties;
 
 @Configuration
@@ -180,5 +183,16 @@ public class ApplicationConfig {
     @Bean
     public AdminPollOptionsUseCase adminPollOptionsUseCase(PollRepository pollRepository) {
         return new AdminPollOptionsService(pollRepository);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(Clock.class)
+    public Clock clock() {
+        return Clock.systemUTC();
+    }
+
+    @Bean
+    public CleanupExpiredPollsUseCase cleanupExpiredPollsUseCase(PollRepository pollRepository, Clock clock) {
+        return new CleanupExpiredPollsService(pollRepository, clock);
     }
 }

@@ -267,5 +267,15 @@ class AdminPollOptionsServiceTest {
         public long countActivePolls() {
             return existing == null ? 0L : 1L;
         }
+
+        @Override
+        public java.util.List<java.util.UUID> findExpiredPollIds(java.time.LocalDate asOf) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void deleteById(java.util.UUID pollId) {
+            throw new UnsupportedOperationException();
+        }
     }
 }

@@ -55,6 +55,19 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+// The GraalVM buildtools plugin pins junit-platform-launcher to 1.12.2, which is
+// incompatible with the JUnit Platform 6.0.x that Spring Boot 4 pulls in (missing
+// OutputDirectoryCreator -> test discovery and processTestAot fail). Re-align the
+// launcher with the platform. Applied after project evaluation so it overrides the
+// plugin's own resolution rule.
+gradle.projectsEvaluated {
+    configurations.all {
+        resolutionStrategy.dependencySubstitution {
+            substitute module('org.junit.platform:junit-platform-launcher') using module('org.junit.platform:junit-platform-launcher:6.0.3')
+        }
+    }
+}
+
 tasks.named('test') {
     useJUnitPlatform()
 }

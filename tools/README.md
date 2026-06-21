@@ -12,8 +12,8 @@ It also pulls the CloudFront frontend request count from CloudWatch metrics.
 
 - `jbang` installed (`brew install jbang`) — pulls Java 21 and the AWS SDK on first run.
 - AWS credentials in the environment / default profile with read access to CloudWatch
-  Logs (`logs:FilterLogEvents`), CloudWatch metrics (`cloudwatch:GetMetricStatistics`),
-  in the relevant regions.
+  Logs (`logs:FilterLogEvents`, `logs:DescribeLogGroups`), CloudWatch metrics
+  (`cloudwatch:GetMetricStatistics`), in the relevant regions.
 
 ### Usage
 
@@ -29,6 +29,7 @@ jbang tools/WoodleLogStats.java [--env prod] [--days 14] [--region eu-central-1]
 | `--region` | `eu-central-1` | Region of the API Gateway log group. |
 | `--cf-dist` | _(none)_ | CloudFront distribution id; adds the frontend daily request totals (metric is read from `us-east-1`). woodle.click = `ECIPVF7FI5V4B`. |
 | `--show-errors` | `30` | Max number of `status >= 400` events to print. |
+| `--lambda-log-group` | _(auto)_ | App Lambda log group for the cleanup section. Auto-discovered from the prefix `/aws/lambda/woodle-<env>-AppFunction`; override if your stack/function name differs. |
 
 Examples:
 
@@ -46,6 +47,11 @@ jbang tools/WoodleLogStats.java --env qs --days 7
 - **Requests per day** — total · `/v1` API · other · errors, with a TOTAL row.
 - **HTTP status distribution** and **top 15 paths**.
 - **Error events** (`status >= 400`) with timestamp, status, method, path, source IP.
+- **Poll cleanup job** — `POLL_CLEANUP` events from the app Lambda log (read from
+  `/aws/lambda/woodle-<env>-AppFunction…`): each run's *started / found N / deleted N of M*
+  lines, plus a summary of how many runs fired and how many polls were deleted in the window.
+  The weekly cleanup is invoked directly by EventBridge Scheduler (it does **not** traverse
+  API Gateway), so it does not appear in the access-log sections above — only here.
 - **CloudFront frontend daily request counts** (with `--cf-dist`).
 
 ### Important caveats (what these logs can and cannot tell you)

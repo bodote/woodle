@@ -3,6 +3,8 @@ package io.github.bodote.woodle.adapter.out.persistence;
 import io.github.bodote.woodle.application.port.out.PollRepository;
 import io.github.bodote.woodle.domain.model.Poll;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -25,5 +27,18 @@ public class InMemoryPollRepository implements PollRepository {
     @Override
     public long countActivePolls() {
         return storage.size();
+    }
+
+    @Override
+    public List<UUID> findExpiredPollIds(LocalDate asOf) {
+        return storage.values().stream()
+                .filter(poll -> poll.expiresAt() != null && poll.expiresAt().isBefore(asOf))
+                .map(Poll::pollId)
+                .toList();
+    }
+
+    @Override
+    public void deleteById(UUID pollId) {
+        storage.remove(pollId);
     }
 }

@@ -14,6 +14,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
@@ -21,6 +22,8 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -130,6 +133,75 @@ public class S3PollRepository implements PollRepository {
             throw new IllegalStateException("Failed to count polls from S3", e);
         } catch (SdkException e) {
             throw new IllegalStateException("Failed to count polls from S3", e);
+        }
+    }
+
+    @Override
+    public List<UUID> findExpiredPollIds(LocalDate asOf) {
+        try {
+            List<UUID> expired = new ArrayList<>();
+            String continuationToken = null;
+            do {
+                ListObjectsV2Request.Builder requestBuilder = ListObjectsV2Request.builder()
+                        .bucket(bucketName)
+                        .prefix("polls/");
+                if (continuationToken != null) {
+                    requestBuilder.continuationToken(continuationToken);
+                }
+                ListObjectsV2Response response = s3Client.listObjectsV2(requestBuilder.build());
+                for (S3Object object : response.contents()) {
+                    String key = object.key();
+                    if (key == null || !key.endsWith(".json")) {
+                        continue;
+                    }
+                    PollDAO pollDAO = readDaoByKey(key);
+                    if (pollDAO != null && pollDAO.expiresAt() != null
+                            && pollDAO.expiresAt().isBefore(asOf)) {
+                        expired.add(pollDAO.pollId());
+                    }
+                }
+                continuationToken = response.nextContinuationToken();
+            } while (continuationToken != null);
+            return expired;
+        } catch (S3Exception e) {
+            throw new IllegalStateException("Failed to list polls from S3", e);
+        } catch (SdkException e) {
+            throw new IllegalStateException("Failed to list polls from S3", e);
+        }
+    }
+
+    @Override
+    public void deleteById(UUID pollId) {
+        String key = "polls/" + pollId + ".json";
+        DeleteObjectRequest request = DeleteObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .build();
+        try {
+            s3Client.deleteObject(request);
+        } catch (S3Exception e) {
+            throw new IllegalStateException("Failed to delete poll from S3", e);
+        } catch (SdkException e) {
+            throw new IllegalStateException("Failed to delete poll from S3", e);
+        }
+    }
+
+    private PollDAO readDaoByKey(String key) {
+        GetObjectRequest request = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .build();
+        try (ResponseInputStream<GetObjectResponse> response = s3Client.getObject(request)) {
+            String json = new String(response.readAllBytes(), StandardCharsets.UTF_8);
+            return objectMapper.readValue(json, PollDAO.class);
+        } catch (NoSuchKeyException e) {
+            return null;
+        } catch (JacksonException e) {
+            throw new IllegalStateException("Failed to deserialize poll", e);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to deserialize poll", e);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("Failed to deserialize poll", e);
         }
     }
 

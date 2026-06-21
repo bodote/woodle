@@ -55,6 +55,11 @@ Parameters:
     Type: String
     Default: ""
     Description: Optional Secrets Manager secret id containing JSON field password for SMTP password
+  CleanupToken:
+    Type: String
+    Default: ""
+    NoEcho: true
+    Description: Shared secret guarding the weekly cleanup endpoint (leave empty to disable cleanup)
 
 Conditions:
   HasCustomDomain: !Not [!Equals [!Ref AppDomainName, ""]]
@@ -308,6 +313,7 @@ Resources:
           WOODLE_S3_REGION: !Ref AWS::Region
           WOODLE_S3_BUCKET: !Ref PollsBucket
           WOODLE_S3_PATH_STYLE: "false"
+          WOODLE_CLEANUP_TOKEN: !Ref CleanupToken
           WOODLE_EMAIL_ENABLED: !Ref EmailEnabled
           WOODLE_EMAIL_PROVIDER: !Ref EmailProvider
           WOODLE_EMAIL_FROM: !Ref EmailFromAddress
@@ -366,6 +372,12 @@ Resources:
             ApiId: !Ref Api
             Path: /
             Method: ANY
+        WeeklyCleanup:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: cron(0 3 ? * SUN *)
+            Description: Weekly deletion of expired polls
+            Input: !Sub '{"task":"cleanup-expired-polls","token":"${CleanupToken}"}'
 
 Outputs:
   ApiBaseUrl:
