@@ -45,8 +45,9 @@ Add two methods:
 ### Application service
 - `CleanupExpiredPollsService implements CleanupExpiredPollsUseCase`, constructed with
   `(PollRepository, Clock)`. Logic: `today = LocalDate.now(clock)`;
-  `ids = repo.findExpiredPollIds(today)`; delete each; log a summary; return `ids.size()`.
-  `Clock` keeps the "now" decision testable.
+  `ids = repo.findExpiredPollIds(today)`; delete each (catch per-id failures so one
+  failed delete does not abort the run); log a summary; return the number **successfully
+  deleted** (≤ `ids.size()`). `Clock` keeps the "now" decision testable.
 
 ### Adapter (in) — controller
 - `PollCleanupController` (`adapter.in.web`), `@PostMapping("/events")`:
