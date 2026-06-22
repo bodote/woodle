@@ -109,6 +109,14 @@ require_cmd docker
 require_cmd jq
 require_cmd rsync
 
+# Single EXIT trap for all temp dirs created below (a later `trap ... EXIT` would override
+# an earlier one, so everything is cleaned from one place).
+cleanup() {
+  [[ -n "${DOCKER_CONFIG_DIR:-}" ]] && rm -rf "${DOCKER_CONFIG_DIR}"
+  [[ -n "${TMP_STATIC_DIR:-}" ]] && rm -rf "${TMP_STATIC_DIR}"
+}
+trap cleanup EXIT
+
 echo "Resolving AWS account ID..."
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 if [[ -z "${ACCOUNT_ID}" || "${ACCOUNT_ID}" == "None" ]]; then
@@ -184,6 +192,23 @@ fi
 echo "Ensuring ECR repository exists: ${ECR_REPO_NAME}"
 if ! aws ecr describe-repositories --repository-names "${ECR_REPO_NAME}" --region "${AWS_REGION}" >/dev/null 2>&1; then
   aws ecr create-repository --repository-name "${ECR_REPO_NAME}" --region "${AWS_REGION}" >/dev/null
+fi
+
+# Authenticate to ECR without the docker credential helper. On macOS the "desktop"
+# credsStore (docker-credential-desktop) can hang `docker login` indefinitely. Use a
+# throwaway DOCKER_CONFIG with no credsStore so the ECR auth is written inline, while
+# still exposing the real CLI plugins (buildx) and current context. Cleaned up on EXIT.
+REAL_DOCKER_CONFIG="${DOCKER_CONFIG:-${HOME}/.docker}"
+DOCKER_CONFIG_DIR="$(mktemp -d)"
+export DOCKER_CONFIG="${DOCKER_CONFIG_DIR}"
+if [[ -f "${REAL_DOCKER_CONFIG}/config.json" ]]; then
+  jq 'del(.credsStore) | del(.credHelpers) | del(.auths)' "${REAL_DOCKER_CONFIG}/config.json" \
+    > "${DOCKER_CONFIG_DIR}/config.json" 2>/dev/null || printf '{}\n' > "${DOCKER_CONFIG_DIR}/config.json"
+else
+  printf '{}\n' > "${DOCKER_CONFIG_DIR}/config.json"
+fi
+if [[ -d "${REAL_DOCKER_CONFIG}/cli-plugins" ]]; then
+  ln -s "${REAL_DOCKER_CONFIG}/cli-plugins" "${DOCKER_CONFIG_DIR}/cli-plugins"
 fi
 
 echo "Logging in to ECR..."
@@ -304,7 +329,6 @@ if [[ -d "${STATIC_DIR}" ]]; then
   fi
 
   TMP_STATIC_DIR="$(mktemp -d)"
-  trap 'rm -rf "${TMP_STATIC_DIR}"' EXIT
 
   rsync -a "${STATIC_DIR}/" "${TMP_STATIC_DIR}/"
 
@@ -366,13 +390,13 @@ aws cloudformation describe-stacks \
   --query "Stacks[0].Outputs" \
   --output table
 
-# Post-deploy smoke test for native QS deployments. Verifies the native-only failure
-# modes the JVM build cannot catch (Thymeleaf/SpEL rendering, JSON @RequestBody
+# Post-deploy smoke test for native deployments (qs and prod). Verifies the native-only
+# failure modes the JVM build cannot catch (Thymeleaf/SpEL rendering, JSON @RequestBody
 # deserialization) against the live stack, hitting API Gateway directly to bypass the
 # CloudFront cache. Implemented as a JBang script rather than inline shell. A failure
 # here aborts before the success message so a broken native rollout is loud.
-if [[ "${DEPLOY_RUNTIME}" == "native" && "${DEPLOY_STAGE}" == "qs" ]]; then
-  echo "Running post-deploy smoke test (native QS)..."
+if [[ "${DEPLOY_RUNTIME}" == "native" ]]; then
+  echo "Running post-deploy smoke test (native ${DEPLOY_STAGE})..."
   if command -v jbang >/dev/null 2>&1; then
     API_BASE_URL="$(aws cloudformation describe-stacks \
       --stack-name "${STACK_NAME}" \

@@ -79,9 +79,9 @@ catch: Thymeleaf/SpEL rendering of the step-2 option fragments, and Jackson
 `@RequestBody` deserialization of `CleanupEventDTO` on `/events`. It hits the **API
 Gateway** URL directly (not CloudFront) so caching cannot mask backend errors.
 
-`aws-deploy.sh` runs it automatically at the end of a native QS deploy
-(`DEPLOY_RUNTIME=native ./aws-deploy.sh`); a smoke failure aborts before the success
-message. It can also be run by hand.
+`aws-deploy.sh` runs it automatically at the end of a native deploy — both qs and prod
+(`DEPLOY_RUNTIME=native ./aws-deploy.sh [-prod]`); a smoke failure aborts before the
+success message. It can also be run by hand.
 
 ### Prerequisites
 
