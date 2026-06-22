@@ -34,6 +34,10 @@ public class ThymeleafRuntimeHints implements RuntimeHintsRegistrar {
         registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.S3WizardStateRepository$WizardStateDocument");
         registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.S3WizardStateRepository$WizardDayDocument");
         registerType(hints, "io.github.bodote.woodle.adapter.out.persistence.S3WizardStateRepository$LegacySelection");
+        // Thymeleaf exposes the iteration-status variable (th:each="x, xStat : ...") through
+        // reflective getter calls such as IterationStatusVar.getIndex(); the step-3 review
+        // page uses dateStat/timeStat.index, which fails under native image without this.
+        registerType(hints, "org.thymeleaf.engine.IterationStatusVar");
     }
 
     private void registerType(RuntimeHints hints, String typeName) {

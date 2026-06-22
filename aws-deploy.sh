@@ -366,5 +366,32 @@ aws cloudformation describe-stacks \
   --query "Stacks[0].Outputs" \
   --output table
 
+# Post-deploy smoke test for native QS deployments. Verifies the native-only failure
+# modes the JVM build cannot catch (Thymeleaf/SpEL rendering, JSON @RequestBody
+# deserialization) against the live stack, hitting API Gateway directly to bypass the
+# CloudFront cache. Implemented as a JBang script rather than inline shell. A failure
+# here aborts before the success message so a broken native rollout is loud.
+if [[ "${DEPLOY_RUNTIME}" == "native" && "${DEPLOY_STAGE}" == "qs" ]]; then
+  echo "Running post-deploy smoke test (native QS)..."
+  if command -v jbang >/dev/null 2>&1; then
+    API_BASE_URL="$(aws cloudformation describe-stacks \
+      --stack-name "${STACK_NAME}" \
+      --region "${AWS_REGION}" \
+      --query "Stacks[0].Outputs[?OutputKey=='ApiBaseUrl'].OutputValue | [0]" \
+      --output text)"
+    if [[ -n "${API_BASE_URL}" && "${API_BASE_URL}" != "None" ]]; then
+      if [[ -n "${APP_DOMAIN_NAME}" ]]; then
+        jbang tools/PostDeploySmokeTest.java "${API_BASE_URL}" "https://${APP_DOMAIN_NAME}"
+      else
+        jbang tools/PostDeploySmokeTest.java "${API_BASE_URL}"
+      fi
+    else
+      echo "Could not resolve ApiBaseUrl from stack outputs; skipping smoke test." >&2
+    fi
+  else
+    echo "jbang not installed; skipping post-deploy smoke test (install: brew install jbang)." >&2
+  fi
+fi
+
 DEPLOYED_AT="$(date '+%Y-%m-%d %H:%M:%S %Z')"
 echo "Deployment erfolgreich am: ${DEPLOYED_AT}"

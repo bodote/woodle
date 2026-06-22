@@ -38,6 +38,11 @@ class ThymeleafRuntimeHintsTest {
         assertTrue(wizardDayHint.getMemberCategories().contains(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS));
         assertTrue(wizardDayHint.getMemberCategories().contains(MemberCategory.INVOKE_DECLARED_METHODS));
 
+        var iterationStatusHint = hints.reflection().getTypeHint(
+                TypeReference.of("org.thymeleaf.engine.IterationStatusVar"));
+        assertNotNull(iterationStatusHint);
+        assertTrue(iterationStatusHint.getMemberCategories().contains(MemberCategory.INVOKE_PUBLIC_METHODS));
+
         var dateGroupHint = hints.reflection().getTypeHint(
                 TypeReference.of("io.github.bodote.woodle.adapter.in.web.PollViewController$DateGroup"));
         assertNotNull(dateGroupHint);

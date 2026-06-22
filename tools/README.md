@@ -69,3 +69,57 @@ jbang tools/WoodleLogStats.java --env qs --days 7
 
 - Used in the [503 Throttling Runbook](../deploy-on-aws.md) to confirm throttle-driven `503`s
   disappear after the Lambda account concurrency limit is raised.
+
+## PostDeploySmokeTest.java — post-deploy native smoke test
+
+A self-contained [JBang](https://www.jbang.dev/) script that verifies a live Woodle
+deployment behaves correctly. It targets the failure modes that pass on the JVM but can
+break only in a real GraalVM **native** image — and which the build's AOT step does not
+catch: Thymeleaf/SpEL rendering of the step-2 option fragments, and Jackson
+`@RequestBody` deserialization of `CleanupEventDTO` on `/events`. It hits the **API
+Gateway** URL directly (not CloudFront) so caching cannot mask backend errors.
+
+`aws-deploy.sh` runs it automatically at the end of a native QS deploy
+(`DEPLOY_RUNTIME=native ./aws-deploy.sh`); a smoke failure aborts before the success
+message. It can also be run by hand.
+
+### Prerequisites
+
+- `jbang` installed (`brew install jbang`). No AWS SDK or credentials needed — it only
+  makes HTTP requests, using the JDK's built-in `HttpClient` (no `//DEPS`).
+
+### Usage
+
+```bash
+jbang tools/PostDeploySmokeTest.java <apiBaseUrl> [publicBaseUrl]
+```
+
+| Arg | Required | Meaning |
+|-----|----------|---------|
+| `apiBaseUrl` | yes | API Gateway base URL, e.g. `https://xxxx.execute-api.eu-central-1.amazonaws.com` (stack output `ApiBaseUrl`). |
+| `publicBaseUrl` | no | Public/CloudFront origin, e.g. `https://qs.woodle.click`; adds the static `new-step1.html` check. |
+
+Exit code `0` = all checks passed, `1` = at least one failed, `2` = usage error.
+
+### Checks (all non-destructive)
+
+- `GET /poll/active-count` → `200` (backend is up).
+- `POST /poll/step-2` → `200` and the body contains a `dateOption1` input (native
+  Thymeleaf/SpEL render of the option fragment works).
+- `POST /events` with a deliberately **invalid** token → `403` (the cleanup controller and
+  `CleanupEventDTO` deserialization loaded in native; the bad token means no real poll
+  deletion is triggered).
+- `GET <publicBaseUrl>/poll/new-step1.html` → `200` (static entrypoint, when given).
+
+It waits out Lambda cold start (polls `active-count` until `200`) before asserting.
+
+### Coverage caveat
+
+This is a **fast confidence check on critical paths, not exhaustive** native verification.
+A missing reflection hint or bad SpEL is only caught if the corresponding code path is
+actually executed. It currently does **not** exercise the intraday `step2-datetime-options`
+fragment, the full poll lifecycle (`poll/view` for participant/admin, voting, admin option
+editing — each with their own template model types), the `/events` success path, or legacy
+wizard-state deserialization. The only way to detect a *missing* hint across all paths is to
+build/run a real native image — the `nativeTest` Gradle task (reachability analysis over the
+JUnit suite) or the deploy itself.

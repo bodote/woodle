@@ -72,6 +72,20 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+// Applying the GraalVM buildtools plugin makes the regular JVM `test` task depend on
+// Spring Boot AOT context generation (processTestAot -> compileAotTestJava ->
+// aotTestClasses), adding ~10 min per run. The tests still run on the HotSpot JVM, not
+// natively, and processTestAot does NOT run GraalVM reachability analysis (it only emits
+// the hints you declared; it never discovers a MISSING one) — so it does not catch the
+// reflection/SpEL failures that surface only in a real native image. Those are caught
+// only by building/running an actual native image: the `nativeTest` task (reachability
+// analysis over whatever paths the test suite exercises) or the native deploy plus the
+// post-deploy smoke test (tools/PostDeploySmokeTest.java), which covers the critical
+// paths it hits but is NOT exhaustive. Skip the AOT generation here only to keep the JVM
+// test loop fast; `nativeCompile` for deploys (the real native build) is unaffected.
+tasks.matching { it.name in ['processTestAot', 'processAotTestResources'] }
+        .configureEach { enabled = false }
+
 tasks.register('integrationTest', Test) {
     useJUnitPlatform()
     include '**/*IT.class'
