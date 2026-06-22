@@ -375,6 +375,9 @@ Resources:
         WeeklyCleanup:
           Type: ScheduleV2
           Properties:
+            # Stage-qualified so the qs and prod stacks do not collide on the same
+            # schedule name in the default scheduler group (account/region shared).
+            Name: !Sub woodle-${EnvironmentName}-weekly-cleanup
             ScheduleExpression: cron(0 3 ? * SUN *)
             Description: Weekly deletion of expired polls
             Input: !Sub '{"task":"cleanup-expired-polls","token":"${CleanupToken}"}'
