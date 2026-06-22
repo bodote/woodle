@@ -5,3 +5,6 @@ build/
 bin/    
 .claude/settings.local.json
 .claude/worktrees
+
+# Playwright MCP output dir — ad-hoc test/verification screenshots land here
+.playwright-mcp/
